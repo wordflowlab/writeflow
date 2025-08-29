@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx tsc:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
