@@ -1,5 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { UIMode, InputMode, UIState, UIMessage } from '../types/index.js'
+
+// 消息ID计数器，确保唯一性
+let messageIdCounter = 0
 
 export function useUIState() {
   const [state, setState] = useState<UIState>({
@@ -21,13 +24,28 @@ export function useUIState() {
   const addMessage = useCallback((message: Omit<UIMessage, 'id' | 'timestamp'>) => {
     const newMessage: UIMessage = {
       ...message,
-      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `msg-${++messageIdCounter}-${Date.now()}`,
       timestamp: new Date()
     }
-    setState(prev => ({ 
-      ...prev, 
-      messages: [...prev.messages, newMessage] 
-    }))
+    
+    setState(prev => {
+      // 检查是否存在重复消息（基于内容和类型）
+      const isDuplicate = prev.messages.some(msg => 
+        msg.type === message.type && 
+        msg.content === message.content &&
+        // 只检查最近的5条消息以提高性能
+        prev.messages.indexOf(msg) >= Math.max(0, prev.messages.length - 5)
+      )
+      
+      if (isDuplicate) {
+        return prev // 跳过重复消息
+      }
+      
+      return { 
+        ...prev, 
+        messages: [...prev.messages, newMessage] 
+      }
+    })
   }, [])
 
   const setLoading = useCallback((loading: boolean) => {

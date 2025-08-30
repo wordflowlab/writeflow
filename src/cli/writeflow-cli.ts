@@ -4,6 +4,7 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { WriteFlowApp } from './writeflow-app.js'
 import { AIWritingConfig } from '../types/writing.js'
+import { displayCLILogo, displayMiniLogo } from '../utils/cli-logo.js'
 
 /**
  * WriteFlow CLI 主入口
@@ -78,7 +79,8 @@ export class WriteFlowCLI {
    * 启动交互式模式
    */
   private async startInteractiveMode(options: any): Promise<void> {
-    console.log(chalk.cyan.bold('🚀 WriteFlow AI 写作助手'))
+    // 显示彩色ASCII Logo
+    displayCLILogo()
     console.log(chalk.gray('输入斜杠命令开始使用，输入 /help 查看帮助\n'))
 
     try {
@@ -98,6 +100,10 @@ export class WriteFlowCLI {
     if (!command.startsWith('/')) {
       command = '/' + command
     }
+
+    // 显示简化版Logo
+    console.log(`${displayMiniLogo()} ${chalk.gray('AI Writing Assistant')}`)
+    console.log()
 
     const spinner = ora(`执行命令: ${command}`).start()
 

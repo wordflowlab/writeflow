@@ -6,7 +6,7 @@ interface MessageRendererProps {
   message: UIMessage
 }
 
-export function MessageRenderer({ message }: MessageRendererProps) {
+export const MessageRenderer = React.memo(function MessageRenderer({ message }: MessageRendererProps) {
   const getMessagePrefix = () => {
     switch (message.type) {
       case 'user':
@@ -47,4 +47,4 @@ export function MessageRenderer({ message }: MessageRendererProps) {
       </Text>
     </Box>
   )
-}
+})

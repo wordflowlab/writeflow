@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Box, Text } from 'ink'
 import { MessageRenderer } from './MessageRenderer.js'
 import { UIMessage } from '../types/index.js'
@@ -9,14 +9,17 @@ interface MessageListProps {
   showScrollIndicator?: boolean
 }
 
-export function MessageList({ 
+export const MessageList = React.memo(function MessageList({ 
   messages, 
   maxVisible = 20, 
   showScrollIndicator = true 
 }: MessageListProps) {
-  // 显示最近的消息
-  const visibleMessages = messages.slice(-maxVisible)
-  const hasMoreMessages = messages.length > maxVisible
+  // 使用useMemo缓存计算结果，避免重复计算
+  const { visibleMessages, hasMoreMessages } = useMemo(() => {
+    const visible = messages.slice(-maxVisible)
+    const hasMore = messages.length > maxVisible
+    return { visibleMessages: visible, hasMoreMessages: hasMore }
+  }, [messages, maxVisible])
 
   return (
     <Box flexDirection="column" flexGrow={1}>
@@ -37,4 +40,4 @@ export function MessageList({
       </Box>
     </Box>
   )
-}
+})

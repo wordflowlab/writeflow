@@ -1,6 +1,7 @@
 import React from 'react'
 import { Box, Text } from 'ink'
 import { UIMode } from '../types/index.js'
+import { getVersion } from '../../utils/version.js'
 
 interface HeaderProps {
   mode: UIMode
@@ -8,7 +9,7 @@ interface HeaderProps {
   version?: string
 }
 
-export function Header({ mode, projectName = 'WriteFlow', version = '2.0.0' }: HeaderProps) {
+export function Header({ mode, projectName = 'WriteFlow', version = getVersion() }: HeaderProps) {
   const getModeIcon = (mode: UIMode): string => {
     switch (mode) {
       case UIMode.Plan:

@@ -15,6 +15,7 @@ import { useKeyboard } from './hooks/useKeyboard.js'
 import { useInputProcessor } from './components/InputProcessor.js'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { UIMode, InputMode } from './types/index.js'
+import { getVersionString } from '../utils/version.js'
 
 interface AppProps {
   writeFlowApp: WriteFlowApp
@@ -127,11 +128,11 @@ export function App({ writeFlowApp }: AppProps) {
   }
 
 
-  // 欢迎消息
+  // 欢迎消息 - 使用空依赖数组确保只执行一次
   useEffect(() => {
     addMessage({
       type: 'system',
-      content: '🚀 WriteFlow v2.0.0 已启动 | 输入 /help 查看帮助'
+      content: `🚀 WriteFlow ${getVersionString()} 已启动 | 输入 /help 查看帮助`
     })
   }, [])
 

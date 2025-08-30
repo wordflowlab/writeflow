@@ -3,6 +3,7 @@ import path from 'path'
 import readline from 'readline'
 import chalk from 'chalk'
 import enquirer from 'enquirer'
+import { getVersion } from '../utils/version.js'
 
 // 核心组件
 import { H2AAsyncMessageQueue } from '../core/queue/h2A-queue.js'
@@ -476,7 +477,7 @@ export class WriteFlowApp {
    */
   async getSystemStatus(): Promise<Record<string, any>> {
     return {
-      version: '2.0.0',
+      version: getVersion(),
       initialized: this.isInitialized,
       messageQueueSize: this.messageQueue?.getMetrics().queueSize || 0,
       activeTools: this.toolManager?.getAvailableTools().length || 0,

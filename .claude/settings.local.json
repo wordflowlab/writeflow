@@ -17,7 +17,10 @@
       "Bash(npx tsx:*)",
       "WebFetch(domain:yunwu.apifox.cn)",
       "mcp__playwright__browser_navigate",
-      "WebSearch"
+      "WebSearch",
+      "Bash(export API_PROVIDER=\"deepseek\")",
+      "Bash(node:*)",
+      "Bash(npx jest:*)"
     ],
     "deny": [],
     "ask": []
