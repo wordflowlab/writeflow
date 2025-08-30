@@ -134,36 +134,26 @@ export class WriteFlowApp {
    */
   private async initializeCoreComponents(): Promise<void> {
     // h2A 消息队列
-    this.messageQueue = new H2AAsyncMessageQueue({
-      maxSize: 10000,
-      compressionThreshold: 0.92
-    })
+    this.messageQueue = new H2AAsyncMessageQueue(10000, 8000)
 
     // wU2 上下文压缩器
     this.contextCompressor = new WU2ContextCompressor({
-      compressionThreshold: 0.92,
-      maxContextLength: 8000,
-      preserveRecentMessages: 10
+      threshold: 0.92,
+      preserveRatio: 0.3,
+      maxResearchItems: 20,
+      maxDialogueHistory: 50,
+      maxReferenceArticles: 10,
+      intelligentRanking: true
     })
 
     // 上下文管理器
-    this.contextManager = new ContextManager(
-      this.contextCompressor,
-      this.messageQueue
-    )
+    this.contextManager = new ContextManager()
 
     // 六层安全验证器
     this.securityValidator = new SixLayerSecurityValidator(this.config)
 
-    // nO Agent 引擎
-    this.agentEngine = new NOMainAgentEngine({
-      messageQueue: this.messageQueue,
-      contextManager: this.contextManager,
-      securityValidator: this.securityValidator,
-      planMode: PlanMode.Default,
-      maxConcurrentTasks: 5,
-      taskTimeout: 300000
-    })
+    // nO Agent 引擎  
+    this.agentEngine = new NOMainAgentEngine()
   }
 
   /**
@@ -209,9 +199,18 @@ export class WriteFlowApp {
   }
 
   /**
-   * 启动交互式会话
+   * 启动交互式会话 (React+Ink UI)
    */
   async startInteractiveSession(): Promise<void> {
+    // 动态导入UI组件以避免循环依赖
+    const { startWriteFlowUI } = await import('../ui/WriteFlowUIApp.js')
+    await startWriteFlowUI(this)
+  }
+
+  /**
+   * 启动传统终端会话 (备用)
+   */
+  async startLegacySession(): Promise<void> {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
