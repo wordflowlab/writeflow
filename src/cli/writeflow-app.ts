@@ -394,9 +394,9 @@ export class WriteFlowApp {
    */
   async getSystemStatus(): Promise<Record<string, any>> {
     return {
-      version: '1.0.0',
+      version: '2.0.0',
       initialized: this.isInitialized,
-      messageQueueSize: this.messageQueue?.size || 0,
+      messageQueueSize: this.messageQueue?.getMetrics().queueSize || 0,
       activeTools: this.toolManager?.getAvailableTools().length || 0,
       availableCommands: this.commandExecutor?.getAvailableCommands().length || 0,
       currentModel: this.config.model,

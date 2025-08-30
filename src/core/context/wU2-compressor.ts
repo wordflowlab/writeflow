@@ -1,4 +1,5 @@
 import { ArticleContext } from '../../types/agent.js'
+import { Message } from '../../types/message.js'
 import { 
   ResearchItem, 
   DialogueItem, 
@@ -30,7 +31,7 @@ export class WU2ContextCompressor {
 
   private compressionHistory: ContextCompressionResult[] = []
   
-  constructor(private config: CompressionConfig = {}) {
+  constructor(private config: Partial<CompressionConfig> = {}) {
     this.config = { ...this.DEFAULT_CONFIG, ...config }
   }
 
@@ -47,7 +48,7 @@ export class WU2ContextCompressor {
     const maxTokens = this.getMaxContextTokens()
     
     // 检查是否需要压缩
-    if (originalTokens < maxTokens * this.config.threshold) {
+    if (originalTokens < maxTokens * (this.config.threshold || 0.92)) {
       return {
         compressed: context,
         result: {
@@ -60,7 +61,7 @@ export class WU2ContextCompressor {
       }
     }
 
-    console.log(`[wU2] 触发上下文压缩: ${originalTokens} tokens > ${Math.floor(maxTokens * this.config.threshold)} tokens`)
+    console.log(`[wU2] 触发上下文压缩: ${originalTokens} tokens > ${Math.floor(maxTokens * (this.config.threshold || 0.92))} tokens`)
 
     // 执行智能压缩
     const compressed = await this.performIntelligentCompression(context)
@@ -123,8 +124,8 @@ export class WU2ContextCompressor {
     
     // 保留前N个最重要的内容
     const keepCount = Math.min(
-      Math.ceil(materials.length * this.config.preserveRatio),
-      this.config.maxResearchItems
+      Math.ceil(materials.length * (this.config.preserveRatio || 0.3)),
+      this.config.maxResearchItems || 20
     )
     
     const kept = scored.slice(0, keepCount)
@@ -412,7 +413,7 @@ export class WU2ContextCompressor {
   shouldCompress(context: ArticleContext): boolean {
     const tokens = this.calculateTokens(context)
     const maxTokens = this.getMaxContextTokens()
-    return tokens >= maxTokens * this.config.threshold
+    return tokens >= maxTokens * (this.config.threshold || 0.92)
   }
 
   /**

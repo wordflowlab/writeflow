@@ -118,7 +118,7 @@ export class NOMainAgentEngine {
     }
 
     // 检查当前状态
-    return this.currentContext.planMode
+    return this.currentContext.planMode || PlanMode.Default
   }
 
   /**
@@ -333,7 +333,9 @@ export class NOMainAgentEngine {
    */
   private async *handleError(error: Error): AsyncGenerator<AgentResponse> {
     console.error('[nO] Agent 错误:', error)
-    this.currentContext.statistics.errorCount++
+    if (this.currentContext.statistics) {
+      this.currentContext.statistics.errorCount++
+    }
     
     yield {
       type: 'error',
@@ -345,12 +347,14 @@ export class NOMainAgentEngine {
    * 更新统计信息
    */
   private updateStatistics(message: Message): void {
+    if (!this.currentContext.statistics) return
+
     this.currentContext.statistics.messagesProcessed++
     this.currentContext.statistics.lastActivity = Date.now()
     
     // 计算平均响应时间
     const responseTime = Date.now() - message.timestamp
-    const { averageResponseTime, messagesProcessed } = this.currentContext.statistics
+    const { averageResponseTime = 0, messagesProcessed } = this.currentContext.statistics
     
     this.currentContext.statistics.averageResponseTime = 
       (averageResponseTime * (messagesProcessed - 1) + responseTime) / messagesProcessed
@@ -410,13 +414,14 @@ export class NOMainAgentEngine {
     queueHealth: any
     statistics: any
   } {
-    const queueHealth = this.messageQueue.getHealthStatus()
+    const queueHealth = this.messageQueue?.getHealthStatus()
+    const stats = this.currentContext.statistics
     
     return {
-      healthy: queueHealth.healthy && this.currentContext.statistics.errorCount < 10,
-      state: this.currentContext.currentState,
+      healthy: queueHealth?.healthy !== false && (stats?.errorCount || 0) < 10,
+      state: this.currentContext.currentState || AgentState.Idle,
       queueHealth,
-      statistics: this.currentContext.statistics
+      statistics: stats
     }
   }
 }

@@ -1,4 +1,4 @@
-import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { WritingTool, ToolInput, ToolResult } from '../types/tool.js'
 import { ReadArticleTool, WriteArticleTool, EditArticleTool } from './base/index.js'
 
 /**
