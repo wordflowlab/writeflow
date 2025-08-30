@@ -103,20 +103,33 @@ export function InputArea({
 
   return (
     <Box flexDirection="column">
-      {/* 输入行 */}
-      <Box flexDirection="row">
-        <Text color={getPromptColor()} bold>
-          {getModePrefix()}{getInputModeIndicator()}{'> '}
-        </Text>
-        <Text>
-          {input || (placeholder && !isLoading ? <Text color="gray">{placeholder}</Text> : '')}
-        </Text>
-        {!isLoading && <Text color={getPromptColor()}>▋</Text>}
-        {isLoading && <Text color="yellow">⏳</Text>}
+      {/* 输入框 - 带边框 */}
+      <Box 
+        borderStyle="round"
+        borderColor={getPromptColor()}
+        paddingX={1}
+        paddingY={0}
+        minHeight={3}
+        flexDirection="column"
+      >
+        {/* 输入行 */}
+        <Box flexDirection="row" alignItems="center">
+          <Text color={getPromptColor()} bold>
+            {getModePrefix()}{getInputModeIndicator()}{'> '}
+          </Text>
+          <Text>
+            {input || (placeholder && !isLoading ? <Text color="gray">{placeholder}</Text> : '')}
+          </Text>
+          {!isLoading && <Text color={getPromptColor()}>▋</Text>}
+          {isLoading && <Text color="yellow">⏳</Text>}
+        </Box>
       </Box>
 
       {/* 快捷键提示 */}
       <Box marginTop={1}>
+        <Text color="gray" dimColor>
+          ! = bash执行 | # = 笔记记录 | / = 斜杠命令 | /help = 帮助 | /exit = 退出
+        </Text>
         <Text color="gray" dimColor>
           Ctrl+C 清空 | Ctrl+L 清屏 | Shift+Tab 切换模式
         </Text>

@@ -314,7 +314,7 @@ export class WriteFlowApp {
   /**
    * 处理自由文本输入
    */
-  private async handleFreeTextInput(input: string): Promise<string> {
+  async handleFreeTextInput(input: string): Promise<string> {
     try {
       // 直接使用AI进行对话，而不是简单的意图匹配
       const response = await this.processAIQuery([{

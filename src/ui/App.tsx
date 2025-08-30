@@ -12,6 +12,7 @@ import { useUIState } from './hooks/useUIState.js'
 import { useMode } from './hooks/useMode.js'
 import { useAgent } from './hooks/useAgent.js'
 import { useKeyboard } from './hooks/useKeyboard.js'
+import { useInputProcessor } from './components/InputProcessor.js'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { UIMode, InputMode } from './types/index.js'
 
@@ -44,6 +45,16 @@ export function App({ writeFlowApp }: AppProps) {
     processInput,
     clearExecutions
   } = useAgent(writeFlowApp)
+
+  // 输入处理逻辑
+  const { detectInputMode } = useInputProcessor(() => {})
+
+  // 检查是否为只读命令（Plan模式限制）
+  const isReadOnlyCommand = (input: string): boolean => {
+    const readOnlyCommands = ['/help', '/status', '/list', '/read']
+    const cmd = input.split(' ')[0]
+    return readOnlyCommands.includes(cmd) || !input.startsWith('/')
+  }
 
   // 键盘事件处理
   const keyboardHandlers = {
@@ -85,7 +96,19 @@ export function App({ writeFlowApp }: AppProps) {
         return
       }
 
-      const response = await processInput(inputText, inputMode)
+      let response: string
+      
+      // 区分命令和自由对话
+      if (inputText.startsWith('/')) {
+        // 斜杠命令
+        response = await writeFlowApp.executeCommand(inputText)
+      } else if (inputText.startsWith('!') || inputText.startsWith('#')) {
+        // 特殊模式输入，通过processInput处理
+        response = await processInput(inputText, inputMode)
+      } else {
+        // 自由对话，直接调用AI
+        response = await writeFlowApp.handleFreeTextInput(inputText)
+      }
       
       addMessage({
         type: 'assistant',
@@ -103,16 +126,6 @@ export function App({ writeFlowApp }: AppProps) {
     }
   }
 
-  const detectInputMode = (input: string): InputMode => {
-    if (input.startsWith('!')) return InputMode.Bash
-    if (input.startsWith('#')) return InputMode.Memory
-    return InputMode.Prompt
-  }
-
-  const isReadOnlyCommand = (command: string): boolean => {
-    const readOnlyCommands = ['/read', '/search', '/status', '/help', '/settings']
-    return readOnlyCommands.some(cmd => command.startsWith(cmd))
-  }
 
   // 欢迎消息
   useEffect(() => {
@@ -146,7 +159,9 @@ export function App({ writeFlowApp }: AppProps) {
 
       {/* 工具执行显示 */}
       {executions.length > 0 && (
-        <ToolDisplay executions={executions} />
+        <Box marginBottom={1}>
+          <Text color="cyan" bold>🔧 执行历史</Text>
+        </Box>
       )}
 
       {/* 消息历史 */}
