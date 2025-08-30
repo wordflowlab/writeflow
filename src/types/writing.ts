@@ -77,6 +77,7 @@ export interface GrammarCheckResult {
 export interface AIWritingConfig {
   anthropicApiKey: string
   apiBaseUrl?: string
+  apiProvider?: 'anthropic' | 'deepseek' | 'qwen3' | 'glm4.5'
   model: string
   temperature: number
   maxTokens: number

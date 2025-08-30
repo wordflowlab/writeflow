@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box } from 'ink'
+import { Box, Text } from 'ink'
 import { MessageRenderer } from './MessageRenderer.js'
 import { UIMessage } from '../types/index.js'
 

@@ -22,7 +22,10 @@ import {
   ContentRewriterTool,
   StyleAdapterTool,
   GrammarCheckerTool,
-  AnthropicClientTool
+  AnthropicClientTool,
+  DeepseekClientTool,
+  QwenClientTool,
+  GLMClientTool
 } from '../tools/writing/index.js'
 import { WebSearchTool, CitationManagerTool } from '../tools/research/index.js'
 import { WeChatConverterTool } from '../tools/publish/index.js'
@@ -58,14 +61,48 @@ export class WriteFlowApp {
   }
 
   /**
+   * 获取默认模型
+   */
+  private getDefaultModel(): string {
+    const provider = process.env.API_PROVIDER
+    switch (provider) {
+      case 'deepseek':
+        return 'deepseek-chat'
+      case 'qwen3':
+        return 'qwen-max'
+      case 'glm4.5':
+        return 'glm-4.5'
+      default:
+        return 'claude-opus-4-1-20250805'
+    }
+  }
+
+  /**
+   * 获取客户端名称
+   */
+  private getClientName(): string {
+    switch (this.config.apiProvider) {
+      case 'deepseek':
+        return 'deepseek_client'
+      case 'qwen3':
+        return 'qwen_client'
+      case 'glm4.5':
+        return 'glm_client'
+      default:
+        return 'anthropic_client'
+    }
+  }
+
+  /**
    * 获取默认配置
    */
   private getDefaultConfig(): AIWritingConfig & SecurityConfig {
     return {
       // AI 配置
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+      anthropicApiKey: process.env.ANTHROPIC_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.QWEN_API_KEY || process.env.GLM_API_KEY || '',
       apiBaseUrl: process.env.API_BASE_URL,
-      model: process.env.AI_MODEL || 'claude-opus-4-1-20250805',
+      apiProvider: (process.env.API_PROVIDER as 'anthropic' | 'deepseek' | 'qwen3' | 'glm4.5') || 'anthropic',
+      model: process.env.AI_MODEL || this.getDefaultModel(),
       temperature: 0.7,
       maxTokens: 4000,
       systemPrompt: '你是WriteFlow AI写作助手，专门帮助用户进行技术文章写作。',
@@ -169,10 +206,27 @@ export class WriteFlowApp {
       new OutlineGeneratorTool(this.config),
       new ContentRewriterTool(this.config),
       new StyleAdapterTool(this.config),
-      new GrammarCheckerTool(this.config),
-      new AnthropicClientTool(this.config)
+      new GrammarCheckerTool(this.config)
     ]
     this.toolManager.registerTools(writingTools)
+    
+    // 根据配置的API提供商注册对应的客户端
+    const aiClients = []
+    switch (this.config.apiProvider) {
+      case 'deepseek':
+        aiClients.push(new DeepseekClientTool(this.config))
+        break
+      case 'qwen3':
+        aiClients.push(new QwenClientTool(this.config))
+        break
+      case 'glm4.5':
+        aiClients.push(new GLMClientTool(this.config))
+        break
+      default:
+        aiClients.push(new AnthropicClientTool(this.config))
+        break
+    }
+    this.toolManager.registerTools(aiClients)
 
     // 注册研究工具
     const researchTools = [
@@ -290,14 +344,15 @@ export class WriteFlowApp {
     allowedTools?: string[]
   ): Promise<string> {
     
-    // 使用AnthropicClient处理AI查询
-    const anthropicClient = this.toolManager.getToolInfo('anthropic_client')
+    // 根据配置的API提供商选择对应的客户端
+    const clientName = this.getClientName()
+    const aiClient = this.toolManager.getToolInfo(clientName)
     
-    if (!anthropicClient) {
-      throw new Error('AI客户端未初始化')
+    if (!aiClient) {
+      throw new Error(`AI客户端(${clientName})未初始化`)
     }
 
-    const result = await this.toolManager.executeTool('anthropic_client', {
+    const result = await this.toolManager.executeTool(clientName, {
       messages,
       systemPrompt: this.config.systemPrompt,
       temperature: this.config.temperature,

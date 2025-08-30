@@ -14,7 +14,10 @@
       "Read(/opt/homebrew/lib/node_modules/writeflow/**)",
       "Bash(chmod:*)",
       "Read(/opt/homebrew/lib/node_modules/writeflow/src/tools/writing/**)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "WebFetch(domain:yunwu.apifox.cn)",
+      "mcp__playwright__browser_navigate",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
