@@ -20,7 +20,8 @@
       "WebSearch",
       "Bash(export API_PROVIDER=\"deepseek\")",
       "Bash(node:*)",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Read(/private/tmp/**)"
     ],
     "deny": [],
     "ask": []
