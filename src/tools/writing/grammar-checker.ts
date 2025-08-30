@@ -1,5 +1,5 @@
-import { WritingTool, ToolInput, ToolResult } from '@/types/tool.js'
-import { GrammarCheck, GrammarCheckResult, AIWritingConfig } from '@/types/writing.js'
+import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { GrammarCheck, GrammarCheckResult, AIWritingConfig } from '../../types/writing.js'
 
 /**
  * GrammarChecker 工具

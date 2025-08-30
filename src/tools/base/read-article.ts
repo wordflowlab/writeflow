@@ -8,7 +8,7 @@ import {
   FileMetadata, 
   FileFormat, 
   ReadOptions 
-} from '@/types/tool.js'
+} from '../../types/tool.js'
 
 /**
  * ReadArticle 工具

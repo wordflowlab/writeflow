@@ -7,7 +7,7 @@ import {
   ToolResult, 
   FileState, 
   WriteOptions 
-} from '@/types/tool.js'
+} from '../../types/tool.js'
 import { ReadArticleTool } from './read-article.js'
 
 /**

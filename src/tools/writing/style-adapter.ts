@@ -1,5 +1,5 @@
-import { WritingTool, ToolInput, ToolResult } from '@/types/tool.js'
-import { StyleAdaptationResult, AIWritingConfig } from '@/types/writing.js'
+import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { StyleAdaptationResult, AIWritingConfig } from '../../types/writing.js'
 
 /**
  * StyleAdapter 工具

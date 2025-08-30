@@ -1,5 +1,5 @@
-import { WritingTool, ToolInput, ToolResult } from '@/types/tool.js'
-import { ArticleOutline, AIWritingConfig } from '@/types/writing.js'
+import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { ArticleOutline, AIWritingConfig } from '../../types/writing.js'
 
 /**
  * OutlineGenerator 工具

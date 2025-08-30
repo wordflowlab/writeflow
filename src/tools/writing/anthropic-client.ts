@@ -1,5 +1,5 @@
-import { WritingTool, ToolInput, ToolResult } from '@/types/tool.js'
-import { AIWritingConfig } from '@/types/writing.js'
+import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { AIWritingConfig } from '../../types/writing.js'
 
 /**
  * AnthropicClient 工具

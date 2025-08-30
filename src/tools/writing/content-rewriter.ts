@@ -1,6 +1,6 @@
-import { WritingTool, ToolInput, ToolResult } from '@/types/tool.js'
-import { RewriteOptions, AIWritingConfig } from '@/types/writing.js'
-import { ReadArticleTool } from '@/tools/base/read-article.js'
+import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { RewriteOptions, AIWritingConfig } from '../../types/writing.js'
+import { ReadArticleTool } from './base/read-article.js'
 
 /**
  * ContentRewriter 工具

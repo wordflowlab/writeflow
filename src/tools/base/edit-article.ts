@@ -6,7 +6,7 @@ import {
   ToolInput, 
   ToolResult, 
   FileState 
-} from '@/types/tool.js'
+} from '../../types/tool.js'
 import { ReadArticleTool } from './read-article.js'
 import { WriteArticleTool } from './write-article.js'
 

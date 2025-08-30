@@ -1,5 +1,5 @@
-import { WritingTool, ToolInput, ToolResult } from '@/types/tool.js'
-import { SearchResult, ResearchRequest } from '@/types/research.js'
+import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { SearchResult, ResearchRequest } from '../../types/research.js'
 
 /**
  * WebSearch 工具

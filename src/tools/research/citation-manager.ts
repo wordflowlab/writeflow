@@ -1,5 +1,5 @@
-import { WritingTool, ToolInput, ToolResult } from '@/types/tool.js'
-import { Citation, SearchResult } from '@/types/research.js'
+import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
+import { Citation, SearchResult } from '../../types/research.js'
 
 /**
  * CitationManager 工具
