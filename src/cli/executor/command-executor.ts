@@ -2,6 +2,10 @@ import { SlashCommand, ParsedCommand, CommandResult, CommandExecutorConfig } fro
 import { AgentContext } from '../../types/agent.js'
 import { SlashCommandParser } from '../parser/slash-parser.js'
 import { coreCommands } from '../commands/core-commands.js'
+import { systemCommands } from '../commands/system-commands.js'
+import { fileCommands } from '../commands/file-commands.js'
+import { publishCommands } from '../commands/publish-commands.js'
+import { styleCommands } from '../commands/style-commands.js'
 
 /**
  * 命令执行器
@@ -13,7 +17,13 @@ export class CommandExecutor {
   private runningCommands = new Set<string>()
 
   constructor(private config: CommandExecutorConfig) {
-    this.availableCommands = [...coreCommands]
+    this.availableCommands = [
+      ...coreCommands,
+      ...systemCommands, 
+      ...fileCommands,
+      ...publishCommands,
+      ...styleCommands
+    ]
   }
 
   /**

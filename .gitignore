@@ -73,3 +73,5 @@ config/production.json
 .writeflow/
 writeflow.config.json
 CLAUDE.md
+
+other/

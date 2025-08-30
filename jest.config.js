@@ -16,7 +16,7 @@ export default {
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: true }]
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@/core/(.*)$': '<rootDir>/src/core/$1',
     '^@/cli/(.*)$': '<rootDir>/src/cli/$1',
