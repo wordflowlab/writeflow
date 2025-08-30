@@ -1,6 +1,6 @@
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { WeChatFormat, PlatformConfig } from '../../types/publish.js'
-import { ReadArticleTool } from './base/read-article.js'
+import { ReadArticleTool } from '../base/read-article.js'
 
 /**
  * WeChatConverter 工具

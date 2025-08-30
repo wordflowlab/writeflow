@@ -1,6 +1,6 @@
 {
   "name": "writeflow",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "AI 写作助手 - 基于 Claude Code 架构",
   "main": "src/cli/index.ts", 
   "type": "module",

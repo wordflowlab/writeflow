@@ -12,7 +12,9 @@
       "Bash(find:*)",
       "Read(/opt/homebrew/lib/node_modules/writeflow/**)",
       "Read(/opt/homebrew/lib/node_modules/writeflow/**)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Read(/opt/homebrew/lib/node_modules/writeflow/src/tools/writing/**)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []
