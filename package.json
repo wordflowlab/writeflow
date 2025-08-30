@@ -1,11 +1,11 @@
 {
   "name": "writeflow",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "AI 写作助手 - 基于 Claude Code 架构",
   "main": "src/cli/index.ts", 
   "type": "module",
   "bin": {
-    "writeflow": "./src/cli/index.ts"
+    "writeflow": "./bin/writeflow.js"
   },
   "engines": {
     "node": ">=18.0.0"

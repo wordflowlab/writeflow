@@ -9,7 +9,10 @@
       "Bash(npm run build:*)",
       "Bash(npm install)",
       "Bash(npm:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Read(/opt/homebrew/lib/node_modules/writeflow/**)",
+      "Read(/opt/homebrew/lib/node_modules/writeflow/**)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
