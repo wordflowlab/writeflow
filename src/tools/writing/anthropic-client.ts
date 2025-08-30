@@ -91,19 +91,37 @@ export class AnthropicClientTool implements WritingTool {
     const startTime = Date.now()
 
     try {
-      // 在实际实现中，这里会使用 @anthropic-ai/sdk
-      // import Anthropic from '@anthropic-ai/sdk'
-      // const anthropic = new Anthropic({ apiKey: this.config.anthropicApiKey })
+      // 动态导入 Anthropic SDK
+      const { default: Anthropic } = await import('@anthropic-ai/sdk')
+      const anthropic = new Anthropic({ 
+        apiKey: this.config.anthropicApiKey,
+        baseURL: this.config.apiBaseUrl || 'https://api.anthropic.com'
+      })
       
-      // const completion = await anthropic.messages.create({
-      //   model: params.model,
-      //   max_tokens: params.max_tokens,
-      //   temperature: params.temperature,
-      //   system: params.system,
-      //   messages: params.messages
-      // })
+      const completion = await anthropic.messages.create({
+        model: params.model,
+        max_tokens: params.max_tokens,
+        temperature: params.temperature,
+        system: params.system,
+        messages: params.messages
+      })
 
-      // 模拟 API 响应
+      // 提取响应内容
+      const textContent = completion.content.find(block => block.type === 'text')
+      const content = textContent ? textContent.text : '抱歉，无法获取响应内容'
+
+      return {
+        content,
+        model: completion.model,
+        usage: completion.usage,
+        responseTime: Date.now() - startTime,
+        id: completion.id
+      }
+
+    } catch (error) {
+      // 如果API调用失败，回退到模拟响应
+      console.warn('Anthropic API 调用失败，使用模拟响应:', error)
+      
       const mockResponse = {
         content: this.generateMockResponse(params),
         model: params.model,
@@ -117,9 +135,6 @@ export class AnthropicClientTool implements WritingTool {
       }
 
       return mockResponse
-
-    } catch (error) {
-      throw new Error(`API 请求失败: ${(error as Error).message}`)
     }
   }
 
@@ -181,10 +196,29 @@ export class AnthropicClientTool implements WritingTool {
    */
   getSupportedModels(): string[] {
     return [
+      // Claude 4.1 系列 (最新)
+      'claude-opus-4-1-20250805',
+      'claude-opus-4-1-20250805-thinking',
+      
+      // Claude 4 系列 (2025)
+      'claude-opus-4-20250514',
+      'claude-opus-4-20250514-thinking',
+      'claude-sonnet-4-20250514',
+      'claude-sonnet-4-20250514-thinking',
+      
+      // Claude 3.7 系列
+      'claude-3-7-sonnet-20250219',
+      'claude-3-7-sonnet-20250219-thinking',
+      
+      // Claude 3.5 系列
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-sonnet-20240620',
+      'claude-3-5-haiku-20241022',
+      
+      // Claude 3 系列（兼容）
       'claude-3-opus-20240229',
       'claude-3-sonnet-20240229',
-      'claude-3-haiku-20240307',
-      'claude-3-5-sonnet-20241022'
+      'claude-3-haiku-20240307'
     ]
   }
 

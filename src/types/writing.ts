@@ -76,6 +76,7 @@ export interface GrammarCheckResult {
 
 export interface AIWritingConfig {
   anthropicApiKey: string
+  apiBaseUrl?: string
   model: string
   temperature: number
   maxTokens: number

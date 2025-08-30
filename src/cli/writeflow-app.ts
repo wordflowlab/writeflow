@@ -64,7 +64,8 @@ export class WriteFlowApp {
     return {
       // AI 配置
       anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
-      model: 'claude-3-sonnet-20240229',
+      apiBaseUrl: process.env.API_BASE_URL,
+      model: process.env.AI_MODEL || 'claude-opus-4-1-20250805',
       temperature: 0.7,
       maxTokens: 4000,
       systemPrompt: '你是WriteFlow AI写作助手，专门帮助用户进行技术文章写作。',
@@ -314,7 +315,26 @@ export class WriteFlowApp {
    * 处理自由文本输入
    */
   private async handleFreeTextInput(input: string): Promise<string> {
-    // 智能判断用户意图并转换为命令
+    try {
+      // 直接使用AI进行对话，而不是简单的意图匹配
+      const response = await this.processAIQuery([{
+        role: 'user',
+        content: input
+      }])
+      
+      return response
+      
+    } catch (error) {
+      // 如果AI调用失败，回退到意图检测
+      console.warn('AI对话失败，回退到意图检测:', error)
+      return this.fallbackToIntentDetection(input)
+    }
+  }
+
+  /**
+   * 回退的意图检测逻辑
+   */
+  private async fallbackToIntentDetection(input: string): Promise<string> {
     const intent = await this.detectUserIntent(input)
     
     switch (intent.type) {
@@ -328,7 +348,14 @@ export class WriteFlowApp {
         return await this.executeCommand(`/research ${intent.topic}`)
       
       default:
-        return '我理解您的输入，但暂时无法处理。请尝试使用斜杠命令，或输入 /help 查看帮助。'
+        // 提供更友好的响应，而不是错误
+        return `你好！我是WriteFlow AI写作助手。你可以：
+• 直接与我对话："${input}"
+• 使用斜杠命令：/help 查看帮助
+• 生成大纲：/outline [主题]
+• 改写内容：/rewrite [内容]
+
+有什么我可以帮助你的吗？`
     }
   }
 
