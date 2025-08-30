@@ -29,11 +29,19 @@ export interface AgentResponse {
 export interface AgentContext {
   userId?: string
   sessionId: string
-  currentState: AgentState
-  planMode: PlanMode
-  activeTools: string[]
-  configuration: AgentConfiguration
-  statistics: AgentStatistics
+  workingDirectory?: string
+  currentProject?: string
+  preferences?: {
+    language: string
+    outputStyle: string
+  }
+  tools?: string[]
+  conversationHistory?: any[]
+  currentState?: AgentState
+  planMode?: PlanMode
+  activeTools?: string[]
+  configuration?: AgentConfiguration
+  statistics?: AgentStatistics
 }
 
 export interface AgentConfiguration {

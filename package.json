@@ -1,14 +1,14 @@
 {
   "name": "writeflow",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "AI 写作助手 - 基于 Claude Code 架构",
-  "main": "dist/cli/index.js",
+  "main": "src/cli/index.ts", 
   "type": "module",
   "bin": {
-    "writeflow": "./dist/cli/index.js"
+    "writeflow": "./src/cli/index.ts"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
@@ -25,7 +25,7 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "start": "node dist/cli/index.js",
     "clean": "rm -rf dist",
-    "prepublishOnly": "echo 'Skipping build for initial publish'"
+    "prepublishOnly": "echo 'Preparing for publish'"
   },
   "keywords": [
     "ai",
@@ -46,7 +46,8 @@
     "ora": "^8.0.0",
     "enquirer": "^2.4.0",
     "ink": "^4.0.0",
-    "commander": "^12.0.0"
+    "commander": "^12.0.0",
+    "tsx": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

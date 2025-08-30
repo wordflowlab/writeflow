@@ -5,32 +5,32 @@ import chalk from 'chalk'
 import enquirer from 'enquirer'
 
 // 核心组件
-import { H2AAsyncMessageQueue } from '@/core/queue/h2A-queue.js'
-import { NOMainAgentEngine } from '@/core/agent/nO-engine.js'
-import { WU2ContextCompressor } from '@/core/context/wU2-compressor.js'
-import { ContextManager } from '@/core/context/context-manager.js'
-import { SixLayerSecurityValidator } from '@/core/security/six-layer-validator.js'
+import { H2AAsyncMessageQueue } from '../core/queue/h2A-queue.js'
+import { NOMainAgentEngine } from '../core/agent/nO-engine.js'
+import { WU2ContextCompressor } from '../core/context/wU2-compressor.js'
+import { ContextManager } from '../core/context/context-manager.js'
+import { SixLayerSecurityValidator } from '../core/security/six-layer-validator.js'
 
 // CLI 组件
 import { CommandExecutor } from './executor/command-executor.js'
 import { coreCommands } from './commands/core-commands.js'
 
 // 工具系统
-import { ToolManager } from '@/tools/tool-manager.js'
+import { ToolManager } from '../tools/tool-manager.js'
 import { 
   OutlineGeneratorTool,
   ContentRewriterTool,
   StyleAdapterTool,
   GrammarCheckerTool,
   AnthropicClientTool
-} from '@/tools/writing/index.js'
-import { WebSearchTool, CitationManagerTool } from '@/tools/research/index.js'
-import { WeChatConverterTool } from '@/tools/publish/index.js'
+} from '../tools/writing/index.js'
+import { WebSearchTool, CitationManagerTool } from '../tools/research/index.js'
+import { WeChatConverterTool } from '../tools/publish/index.js'
 
 // 类型定义
-import { AIWritingConfig } from '@/types/writing.js'
-import { AgentContext, PlanMode } from '@/types/agent.js'
-import { SecurityConfig } from '@/types/security.js'
+import { AIWritingConfig } from '../types/writing.js'
+import { AgentContext, PlanMode } from '../types/agent.js'
+import { SecurityConfig } from '../types/security.js'
 
 /**
  * WriteFlow 主应用类
@@ -160,7 +160,7 @@ export class WriteFlowApp {
       messageQueue: this.messageQueue,
       contextManager: this.contextManager,
       securityValidator: this.securityValidator,
-      planMode: PlanMode.DEFAULT,
+      planMode: PlanMode.Default,
       maxConcurrentTasks: 5,
       taskTimeout: 300000
     })

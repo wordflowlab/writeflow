@@ -1,7 +1,7 @@
-import { SlashCommand, ParsedCommand, CommandResult, CommandExecutorConfig } from '@/types/command.js'
-import { AgentContext } from '@/types/agent.js'
-import { SlashCommandParser } from '@/cli/parser/slash-parser.js'
-import { coreCommands } from '@/cli/commands/core-commands.js'
+import { SlashCommand, ParsedCommand, CommandResult, CommandExecutorConfig } from '../../types/command.js'
+import { AgentContext } from '../../types/agent.js'
+import { SlashCommandParser } from '../parser/slash-parser.js'
+import { coreCommands } from '../commands/core-commands.js'
 
 /**
  * 命令执行器

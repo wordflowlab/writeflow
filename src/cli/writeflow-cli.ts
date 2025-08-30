@@ -3,7 +3,7 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import ora from 'ora'
 import { WriteFlowApp } from './writeflow-app.js'
-import { AIWritingConfig } from '@/types/writing.js'
+import { AIWritingConfig } from '../types/writing.js'
 
 /**
  * WriteFlow CLI 主入口

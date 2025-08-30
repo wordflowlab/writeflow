@@ -1,4 +1,4 @@
-import { Message, MessageType, QueueMetrics } from '@/types/message.js'
+import { Message, MessageType, QueueMetrics } from '../../types/message.js'
 
 /**
  * h2A 双缓冲异步消息队列

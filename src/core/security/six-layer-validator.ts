@@ -5,7 +5,7 @@ import {
   ValidationLayer, 
   LayerResult,
   SecurityConfig
-} from '@/types/security.js'
+} from '../../types/security.js'
 
 /**
  * 六层安全验证器

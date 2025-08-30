@@ -1,4 +1,4 @@
-import { ParsedCommand, SlashCommand } from '@/types/command.js'
+import { ParsedCommand, SlashCommand } from '../../types/command.js'
 
 /**
  * 斜杠命令解析器

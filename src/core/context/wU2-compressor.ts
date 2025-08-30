@@ -1,4 +1,4 @@
-import { ArticleContext } from '@/types/agent.js'
+import { ArticleContext } from '../../types/agent.js'
 import { 
   ResearchItem, 
   DialogueItem, 
@@ -6,7 +6,7 @@ import {
   ContextCompressionResult,
   CompressionConfig,
   ContextMetrics
-} from '@/types/context.js'
+} from '../../types/context.js'
 
 /**
  * wU2 上下文压缩器

@@ -15,19 +15,18 @@
 ### 安装
 
 ```bash
-# 克隆项目
+# 方法一：从 NPM 安装（推荐）
+npm install -g writeflow
+
+# 方法二：从源码安装
 git clone https://github.com/wordflowlab/writeflow.git
 cd writeflow
-
-# 安装依赖
 npm install
-
-# 构建项目
 npm run build
-
-# 全局安装
 npm install -g .
 ```
+
+**系统要求**: Node.js >= 18.0.0
 
 ### 配置 API 密钥
 

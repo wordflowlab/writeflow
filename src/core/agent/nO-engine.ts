@@ -1,5 +1,5 @@
-import { H2AAsyncMessageQueue } from '@/core/queue/h2A-queue.js'
-import { Message, MessageType } from '@/types/message.js'
+import { H2AAsyncMessageQueue } from '../queue/h2A-queue.js'
+import { Message, MessageType } from '../../types/message.js'
 import { 
   AgentResponse, 
   AgentContext, 
@@ -7,7 +7,7 @@ import {
   PlanMode, 
   UserIntent,
   ArticleContext 
-} from '@/types/agent.js'
+} from '../../types/agent.js'
 
 /**
  * nO Agent 主循环引擎

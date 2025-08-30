@@ -1,5 +1,5 @@
-import { SlashCommand } from '@/types/command.js'
-import { AgentContext } from '@/types/agent.js'
+import { SlashCommand } from '../../types/command.js'
+import { AgentContext } from '../../types/agent.js'
 
 /**
  * 核心写作命令实现
