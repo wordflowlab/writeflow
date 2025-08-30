@@ -16,6 +16,7 @@ import { useInputProcessor } from './components/InputProcessor.js'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { UIMode, InputMode } from './types/index.js'
 import { getVersionString } from '../utils/version.js'
+import { Logo } from './components/Logo.js'
 
 interface AppProps {
   writeFlowApp: WriteFlowApp
@@ -23,6 +24,7 @@ interface AppProps {
 
 export function App({ writeFlowApp }: AppProps) {
   const [input, setInput] = useState('')
+  const [showWelcomeLogo, setShowWelcomeLogo] = useState(true)
   
   const {
     state: uiState,
@@ -77,6 +79,11 @@ export function App({ writeFlowApp }: AppProps) {
 
   const handleInput = async (inputText: string) => {
     const inputMode = detectInputMode(inputText)
+    
+    // 用户开始输入后隐藏欢迎Logo
+    if (showWelcomeLogo) {
+      setShowWelcomeLogo(false)
+    }
     
     // 添加用户消息
     addMessage({
@@ -138,6 +145,13 @@ export function App({ writeFlowApp }: AppProps) {
 
   return (
     <Box flexDirection="column" height="100%" padding={1}>
+      {/* 启动欢迎Logo */}
+      {showWelcomeLogo && uiState.messages.length <= 1 && (
+        <Box marginBottom={2}>
+          <Logo variant="full" />
+        </Box>
+      )}
+
       {/* 顶部标题栏 */}
       <Header mode={currentMode} />
 
