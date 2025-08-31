@@ -17,7 +17,6 @@ interface UsePromptHintsProps {
 
 export function usePromptHints({ mode, isLoading, messageCount, hasInput }: UsePromptHintsProps) {
   const [currentHint, setCurrentHint] = useState<HintConfig | null>(null)
-  const [hintIndex, setHintIndex] = useState(0)
 
   // 定义所有可能的提示文案
   const hints: HintConfig[] = [
@@ -103,10 +102,19 @@ export function usePromptHints({ mode, isLoading, messageCount, hasInput }: UseP
 
   // 轮换提示文案
   useEffect(() => {
+    let localIndex = 0
     const availableHints = getAvailableHints()
     
     if (availableHints.length === 0) {
       setCurrentHint(null)
+      return
+    }
+
+    // 立即设置第一个提示
+    setCurrentHint(availableHints[0])
+
+    // 如果只有一个提示，不需要轮换
+    if (availableHints.length === 1) {
       return
     }
 
@@ -116,29 +124,13 @@ export function usePromptHints({ mode, isLoading, messageCount, hasInput }: UseP
     const timer = setInterval(() => {
       const newAvailable = getAvailableHints()
       if (newAvailable.length > 0) {
-        setHintIndex(prev => (prev + 1) % newAvailable.length)
-        setCurrentHint(newAvailable[hintIndex % newAvailable.length])
+        localIndex = (localIndex + 1) % newAvailable.length
+        setCurrentHint(newAvailable[localIndex])
       }
     }, interval)
 
-    // 立即设置第一个提示
-    if (availableHints.length > 0) {
-      setCurrentHint(availableHints[0])
-    }
-
     return () => clearInterval(timer)
-  }, [mode, isLoading, messageCount, hasInput, hintIndex])
-
-  // 当状态变化时立即更新提示
-  useEffect(() => {
-    const availableHints = getAvailableHints()
-    if (availableHints.length > 0) {
-      setCurrentHint(availableHints[0])
-      setHintIndex(0)
-    } else {
-      setCurrentHint(null)
-    }
-  }, [mode, isLoading, hasInput])
+  }, [mode, isLoading, messageCount, hasInput])
 
   return {
     currentHint,

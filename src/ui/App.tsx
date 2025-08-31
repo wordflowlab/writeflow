@@ -143,8 +143,11 @@ export function App({ writeFlowApp }: AppProps) {
         // 特殊模式输入，通过processInput处理
         response = await processInput(inputText, inputMode)
       } else {
-        // 自由对话，直接调用AI
-        response = await writeFlowApp.handleFreeTextInput(inputText, { signal: controller.signal })
+        // 自由对话，直接调用AI - 传递完整对话历史
+        response = await writeFlowApp.handleFreeTextInput(inputText, { 
+          signal: controller.signal,
+          messages: uiState.messages
+        })
       }
       
       // 直接添加响应，不添加AI提供商标识

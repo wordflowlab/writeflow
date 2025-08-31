@@ -125,9 +125,17 @@ export function InputArea({
       >
         {/* 输入行 */}
         <Box flexDirection="row" alignItems="center">
+          {/* 模式指示器 */}
+          {getInputModeIndicator() && (
+            <Text color={getPromptColor()} bold>
+              {getInputModeIndicator()}{' '}
+            </Text>
+          )}
+          {/* 提示符 */}
           <Text color={getPromptColor()} bold>
-            {getInputModeIndicator() ? getInputModeIndicator() + ' ' : ''}{'> '}
+            {'> '}
           </Text>
+          {/* 用户输入 */}
           <Text>
             {input}
           </Text>

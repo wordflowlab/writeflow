@@ -72,6 +72,6 @@ config/production.json
 # CLI specific
 .writeflow/
 writeflow.config.json
-CLAUDE.md
+# CLAUDE.md
 
 other/

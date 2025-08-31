@@ -376,13 +376,68 @@ export class WriteFlowApp {
   /**
    * 处理自由文本输入
    */
-  async handleFreeTextInput(input: string, options: { signal?: AbortSignal } = {}): Promise<string> {
+  async handleFreeTextInput(input: string, options: { 
+    signal?: AbortSignal, 
+    messages?: Array<{ type: string; content: string }> 
+  } = {}): Promise<string> {
     try {
-      // 直接使用AI进行对话，而不是简单的意图匹配
-      const response = await this.processAIQuery([{
+      // 构建完整的对话历史
+      const conversationHistory: Array<{ role: string; content: string }> = []
+      
+      // 如果有历史消息，先转换格式
+      if (options.messages && options.messages.length > 0) {
+        // 只保留最近20轮对话，避免token过多
+        const recentMessages = options.messages.slice(-20)
+        
+        for (const msg of recentMessages) {
+          let role: string
+          switch (msg.type) {
+            case 'user':
+              role = 'user'
+              break
+            case 'assistant':
+              role = 'assistant'
+              break
+            case 'system':
+              role = 'system'
+              break
+            default:
+              continue // 跳过未知类型
+          }
+          
+          conversationHistory.push({
+            role,
+            content: msg.content
+          })
+        }
+      }
+      
+      // 添加当前输入
+      conversationHistory.push({
         role: 'user',
         content: input
-      }], undefined, options.signal)
+      })
+      
+      // 使用完整对话历史调用AI
+      const response = await this.processAIQuery(conversationHistory, undefined, options.signal)
+      
+      // 更新上下文管理器中的对话历史
+      if (conversationHistory.length > 0) {
+        const userMessage = conversationHistory[conversationHistory.length - 1]
+        await this.contextManager.updateContext({
+          id: `msg-${Date.now()}`,
+          content: userMessage.content,
+          role: 'user',
+          timestamp: Date.now()
+        } as any, {
+          dialogueHistory: conversationHistory.map(msg => ({
+            id: `msg-${Date.now()}-${Math.random()}`,
+            content: msg.content,
+            role: msg.role as any,
+            timestamp: Date.now()
+          }) as any)
+        })
+      }
       
       return response
       
