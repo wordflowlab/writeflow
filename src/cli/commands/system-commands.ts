@@ -18,33 +18,99 @@ export const systemCommands: SlashCommand[] = [
     ],
     
     async call(args: string, context: AgentContext): Promise<string> {
-      const modelName = args.trim()
+      const input = args.trim()
       
-      if (!modelName) {
-        return `当前模型: ${context.configuration?.maxContextTokens ? 'claude-3-opus-20240229' : 'claude-3-opus-20240229'}
-        
-可用模型:
-- claude-3-opus-20240229 (最强推理能力)
-- claude-3-sonnet-20240229 (平衡性能)
-- claude-3-haiku-20240307 (最快响应)
-
-使用方法: /model <模型名>`
+      // 获取默认模型的辅助函数
+      const getDefaultModel = (provider: string): string => {
+        switch (provider) {
+          case 'deepseek': return 'deepseek-chat'
+          case 'qwen3': return 'qwen-max'  
+          case 'glm4.5': return 'glm-4.5'
+          default: return 'claude-opus-4-1-20250805'
+        }
       }
       
-      const validModels = [
-        'claude-3-opus-20240229',
-        'claude-3-sonnet-20240229', 
-        'claude-3-haiku-20240307'
-      ]
+      // 获取当前配置
+      const currentProvider = process.env.API_PROVIDER || 'anthropic'
+      const currentModel = process.env.AI_MODEL || getDefaultModel(currentProvider)
       
-      if (!validModels.includes(modelName)) {
-        return `无效的模型名: ${modelName}
-        
-可用模型: ${validModels.join(', ')}`
+      // 定义所有支持的模型
+      const supportedModels = {
+        anthropic: [
+          { name: 'claude-opus-4-1-20250805', desc: 'Opus 4.1 - 最强推理', default: true },
+          { name: 'claude-opus-4-1-20250805-thinking', desc: 'Opus 4.1 思维链' },
+          { name: 'claude-opus-4-20250514', desc: 'Opus 4 - 强大推理' },
+          { name: 'claude-sonnet-4-20250514', desc: 'Sonnet 4 - 平衡性能' },
+          { name: 'claude-3-5-sonnet-20241022', desc: 'Sonnet 3.5 - 快速响应' },
+          { name: 'claude-3-5-haiku-20241022', desc: 'Haiku 3.5 - 极速' }
+        ],
+        deepseek: [
+          { name: 'deepseek-chat', desc: '通用对话模型', default: true },
+          { name: 'deepseek-reasoner', desc: '深度推理模型' },
+          { name: 'deepseek-v3-chat', desc: 'v3 对话模型' },
+          { name: 'deepseek-v3-reasoner', desc: 'v3 推理模型' }
+        ],
+        qwen3: [
+          { name: 'qwen-max', desc: '最强版本', default: true },
+          { name: 'qwen-plus', desc: '高性价比版本' },
+          { name: 'qwen-turbo', desc: '速度优先版本' }
+        ],
+        'glm4.5': [
+          { name: 'glm-4.5', desc: '升级版本', default: true },
+          { name: 'glm-4', desc: '标准版本' },
+          { name: 'glm-4-air', desc: '轻量快速版本' },
+          { name: 'glm-4-flash', desc: '极速响应版本' },
+          { name: 'glm-4v', desc: '多模态版本' }
+        ]
       }
       
-      // 模型设置成功提示
-      return `已切换到模型: ${modelName}`
+      if (!input) {
+        // 显示当前配置和所有可用模型
+        let result = `当前配置:\n  提供商: ${currentProvider}\n  模型: ${currentModel}\n\n可用模型:\n\n`
+        
+        Object.entries(supportedModels).forEach(([provider, models]) => {
+          const providerNames = {
+            anthropic: 'Anthropic Claude',
+            deepseek: 'Deepseek v3.1',
+            qwen3: '通义千问 Qwen3',
+            'glm4.5': '智谱 GLM-4.5'
+          }
+          
+          result += `【${providerNames[provider as keyof typeof providerNames]}】\n`
+          models.forEach(model => {
+            const defaultMark = model.default ? ' (默认)' : ''
+            result += `  • ${model.name}${defaultMark} - ${model.desc}\n`
+          })
+          result += '\n'
+        })
+        
+        result += '使用方法:\n  /model <提供商>        - 切换提供商\n  /model <模型名>       - 切换具体模型'
+        return result
+      }
+      
+      // 检查是否是提供商切换
+      if (Object.keys(supportedModels).includes(input)) {
+        const defaultModel = supportedModels[input as keyof typeof supportedModels]
+          .find(model => model.default)?.name || supportedModels[input as keyof typeof supportedModels][0].name
+        return `已切换到提供商: ${input}\n默认模型: ${defaultModel}\n\n请设置环境变量:\nexport API_PROVIDER=${input}\nexport AI_MODEL=${defaultModel}`
+      }
+      
+      // 检查具体模型名
+      const allModels = Object.values(supportedModels).flat().map(m => m.name)
+      if (!allModels.includes(input)) {
+        return `无效的模型名: ${input}\n\n使用 /model 查看所有可用模型`
+      }
+      
+      // 找到模型对应的提供商
+      let targetProvider = ''
+      for (const [provider, models] of Object.entries(supportedModels)) {
+        if (models.some(model => model.name === input)) {
+          targetProvider = provider
+          break
+        }
+      }
+      
+      return `已切换到模型: ${input}\n提供商: ${targetProvider}\n\n请设置环境变量:\nexport API_PROVIDER=${targetProvider}\nexport AI_MODEL=${input}`
     },
     
     userFacingName: () => 'model'
@@ -57,6 +123,18 @@ export const systemCommands: SlashCommand[] = [
     aliases: ['设置', 'config'],
     
     async call(_args: string, context: AgentContext): Promise<string> {
+      const getDefaultModel = (provider: string): string => {
+        switch (provider) {
+          case 'deepseek': return 'deepseek-chat'
+          case 'qwen3': return 'qwen-max'  
+          case 'glm4.5': return 'glm-4.5'
+          default: return 'claude-opus-4-1-20250805'
+        }
+      }
+      
+      const currentProvider = process.env.API_PROVIDER || 'anthropic'
+      const currentModel = process.env.AI_MODEL || getDefaultModel(currentProvider)
+      
       return `WriteFlow 设置
 
 📝 写作设置:
@@ -65,8 +143,8 @@ export const systemCommands: SlashCommand[] = [
   自动大纲: 启用
   
 🤖 AI 设置:
-  提供商: anthropic
-  模型: claude-3-opus-20240229
+  提供商: ${currentProvider}
+  模型: ${currentModel}
   温度: 0.7
   
 📤 发布设置:

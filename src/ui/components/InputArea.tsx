@@ -89,16 +89,8 @@ export function InputArea({
   }
 
   const getModePrefix = (): string => {
-    switch (mode) {
-      case UIMode.Plan:
-        return 'plan'
-      case UIMode.AcceptEdits:
-        return 'accept'
-      case UIMode.BypassPermissions:
-        return 'bypass'
-      default:
-        return 'writeflow'
-    }
+    // 不显示任何前缀，保持简洁
+    return ''
   }
 
   return (
@@ -115,7 +107,7 @@ export function InputArea({
         {/* 输入行 */}
         <Box flexDirection="row" alignItems="center">
           <Text color={getPromptColor()} bold>
-            {getModePrefix()}{getInputModeIndicator()}{'> '}
+            {getInputModeIndicator() ? getInputModeIndicator() + ' ' : ''}{'> '}
           </Text>
           <Text>
             {input || (placeholder && !isLoading ? <Text color="gray">{placeholder}</Text> : '')}
@@ -125,13 +117,17 @@ export function InputArea({
         </Box>
       </Box>
 
-      {/* 快捷键提示 */}
+      {/* 模式提示 */}
       <Box marginTop={1}>
         <Text color="gray" dimColor>
-          ! = bash执行 | # = 笔记记录 | / = 斜杠命令 | /help = 帮助 | /exit = 退出
-        </Text>
-        <Text color="gray" dimColor>
-          Ctrl+C 清空 | Ctrl+L 清屏 | Shift+Tab 切换模式
+          {mode !== UIMode.Default && (
+            <>
+              {mode === UIMode.Plan && "📋 plan mode on"}
+              {mode === UIMode.AcceptEdits && "✅ accept edits on"}
+              {mode === UIMode.BypassPermissions && "🔓 bypass permissions on"}
+              <Text color="gray"> (shift+tab to cycle)</Text>
+            </>
+          )}
         </Text>
       </Box>
     </Box>

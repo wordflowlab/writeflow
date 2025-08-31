@@ -29,15 +29,23 @@ export function useUIState() {
     }
     
     setState(prev => {
-      // 检查是否存在重复消息（基于内容和类型）
-      const isDuplicate = prev.messages.some(msg => 
-        msg.type === message.type && 
-        msg.content === message.content &&
-        // 只检查最近的5条消息以提高性能
-        prev.messages.indexOf(msg) >= Math.max(0, prev.messages.length - 5)
-      )
+      // 增强的去重逻辑：基于内容、类型和时间窗口
+      const now = Date.now()
+      const timeWindow = 2000 // 2秒时间窗口
+      
+      const isDuplicate = prev.messages.some(msg => {
+        const timeDiff = now - msg.timestamp.getTime()
+        return (
+          msg.type === message.type && 
+          msg.content === message.content &&
+          timeDiff < timeWindow && // 在时间窗口内
+          // 只检查最近的3条消息以提高性能
+          prev.messages.indexOf(msg) >= Math.max(0, prev.messages.length - 3)
+        )
+      })
       
       if (isDuplicate) {
+        console.warn('检测到重复消息，跳过添加:', message.type, message.content.substring(0, 50))
         return prev // 跳过重复消息
       }
       

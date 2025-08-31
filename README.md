@@ -39,16 +39,12 @@ export ANTHROPIC_API_KEY="your-api-key-here"
 ```bash
 # 启动交互模式（推荐）
 writeflow
-writeflow> /outline AI技术发展趋势
-writeflow> /rewrite 通俗 ./article.md
-writeflow> /research 量子计算应用
-writeflow> /publish wechat ./article.md
 
 # 直接执行单个斜杠命令
 writeflow exec "/outline AI技术发展趋势"
-writeflow exec "/rewrite 通俗 ./article.md"
-writeflow exec "/research 量子计算应用"
 ```
+
+📚 **详细使用说明请查看 [快速入门指南](docs/quick-start.md)**
 
 ## 📋 命令参考
 

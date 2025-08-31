@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Box, Text } from 'ink'
-import { Header } from './components/Header.js'
+// import { Header } from './components/Header.js'
 import { ModeIndicator } from './components/ModeIndicator.js'
 import { MessageList } from './components/MessageList.js'
 import { InputArea } from './components/InputArea.js'
 import { StatusBar } from './components/StatusBar.js'
 import { ToolDisplay } from './components/ToolDisplay.js'
-import { PlanMode } from './modes/PlanMode.js'
-import { AcceptEditsMode } from './modes/AcceptEditsMode.js'
+// import { PlanMode } from './modes/PlanMode.js'
+// import { AcceptEditsMode } from './modes/AcceptEditsMode.js'
 import { useUIState } from './hooks/useUIState.js'
 import { useMode } from './hooks/useMode.js'
 import { useAgent } from './hooks/useAgent.js'
@@ -25,6 +25,7 @@ interface AppProps {
 export function App({ writeFlowApp }: AppProps) {
   const [input, setInput] = useState('')
   const [showWelcomeLogo, setShowWelcomeLogo] = useState(true)
+  const isProcessingRef = useRef(false)
   
   const {
     state: uiState,
@@ -78,23 +79,30 @@ export function App({ writeFlowApp }: AppProps) {
   useKeyboard(input, keyboardHandlers, isProcessing)
 
   const handleInput = async (inputText: string) => {
-    const inputMode = detectInputMode(inputText)
-    
-    // 用户开始输入后隐藏欢迎Logo
-    if (showWelcomeLogo) {
-      setShowWelcomeLogo(false)
+    // 防止重复处理
+    if (isProcessingRef.current) {
+      console.warn('正在处理中，忽略重复请求')
+      return
     }
     
-    // 添加用户消息
-    addMessage({
-      type: 'user',
-      content: inputText,
-      mode: inputMode
-    })
-
-    setLoading(true)
+    isProcessingRef.current = true
+    const inputMode = detectInputMode(inputText)
     
     try {
+      // 用户开始输入后隐藏欢迎Logo
+      if (showWelcomeLogo) {
+        setShowWelcomeLogo(false)
+      }
+      
+      // 添加用户消息
+      addMessage({
+        type: 'user',
+        content: inputText,
+        mode: inputMode
+      })
+
+      setLoading(true)
+      
       // 检查模式限制
       if (currentMode === UIMode.Plan && !isReadOnlyCommand(inputText)) {
         addMessage({
@@ -118,6 +126,7 @@ export function App({ writeFlowApp }: AppProps) {
         response = await writeFlowApp.handleFreeTextInput(inputText)
       }
       
+      // 直接添加响应，不添加AI提供商标识
       addMessage({
         type: 'assistant',
         content: response
@@ -131,17 +140,20 @@ export function App({ writeFlowApp }: AppProps) {
     } finally {
       setLoading(false)
       setStatus('Ready')
+      isProcessingRef.current = false
     }
   }
 
 
-  // 欢迎消息 - 使用空依赖数组确保只执行一次
+  // 欢迎消息 - 注释掉以保持极简
+  /*
   useEffect(() => {
     addMessage({
       type: 'system',
-      content: `🚀 WriteFlow ${getVersionString()} 已启动 | 输入 /help 查看帮助`
+      content: `🚀 WriteFlow ${getVersionString()}`
     })
   }, [])
+  */
 
   return (
     <Box flexDirection="column" height="100%" padding={1}>
@@ -152,10 +164,11 @@ export function App({ writeFlowApp }: AppProps) {
         </Box>
       )}
 
-      {/* 顶部标题栏 */}
-      <Header mode={currentMode} />
+      {/* 顶部标题栏 - 移除以保持极简 */}
+      {/* <Header mode={currentMode} /> */}
 
-      {/* 模式特定界面 */}
+      {/* 模式特定界面 - 注释掉以保持极简设计 */}
+      {/* 
       {currentMode === UIMode.Plan && (
         <PlanMode 
           state={uiState}
@@ -171,6 +184,7 @@ export function App({ writeFlowApp }: AppProps) {
           pendingEdits={0} // 可以从执行状态中计算
         />
       )}
+      */}
 
       {/* 工具执行显示 */}
       {executions.length > 0 && (
@@ -196,6 +210,7 @@ export function App({ writeFlowApp }: AppProps) {
         status={uiState.statusText}
         isLoading={uiState.isLoading || isProcessing}
         totalMessages={uiState.messages.length}
+        shortcuts={false}
       />
     </Box>
   )
