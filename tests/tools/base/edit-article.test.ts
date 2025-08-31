@@ -81,12 +81,12 @@ describe('EditArticleTool', () => {
           new_string: '更新的测试文章'
         },
         {
-          old_string: '第一章',
-          new_string: '第一部分'
+          old_string: '## 第一章',
+          new_string: '## 第一部分'
         },
         {
-          old_string: '第二章',
-          new_string: '第二部分'
+          old_string: '## 第二章',
+          new_string: '## 第二部分'
         }
       ]
     })

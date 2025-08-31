@@ -14,19 +14,11 @@ export default {
       tsconfig: 'tsconfig.json'
     }]
   },
+  resolver: '<rootDir>/jest.resolver.cjs',
   moduleNameMapper: {
+    // 绝对路径映射
     '^@/(.*)\.js$': '<rootDir>/src/$1.ts',
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@/core/(.*)\.js$': '<rootDir>/src/core/$1.ts',
-    '^@/core/(.*)$': '<rootDir>/src/core/$1',
-    '^@/cli/(.*)\.js$': '<rootDir>/src/cli/$1.ts',
-    '^@/cli/(.*)$': '<rootDir>/src/cli/$1',
-    '^@/tools/(.*)\.js$': '<rootDir>/src/tools/$1.ts',
-    '^@/tools/(.*)$': '<rootDir>/src/tools/$1',
-    '^@/types/(.*)\.js$': '<rootDir>/src/types/$1.ts',
-    '^@/types/(.*)$': '<rootDir>/src/types/$1',
-    '^@/utils/(.*)\.js$': '<rootDir>/src/utils/$1.ts',
-    '^@/utils/(.*)$': '<rootDir>/src/utils/$1'
+    '^@/(.*)$': '<rootDir>/src/$1'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: [

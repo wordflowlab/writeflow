@@ -130,7 +130,9 @@ export class GLMClientTool implements WritingTool {
 
     } catch (error) {
       // 如果API调用失败，回退到模拟响应
-      console.warn('GLM-4.5 API 调用失败，使用模拟响应:', error)
+      if (process.env.NODE_ENV !== 'test') {
+        console.warn('GLM-4.5 API 调用失败，使用模拟响应:', error instanceof Error ? error.message : String(error))
+      }
       
       const mockResponse = {
         content: this.generateMockResponse(params),

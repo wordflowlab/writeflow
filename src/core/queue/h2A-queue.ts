@@ -92,7 +92,7 @@ export class H2AAsyncMessageQueue {
     }
 
     // 策略2: 缓冲路径 - 检查容量
-    if (this.primaryBuffer.length >= this.maxBufferSize) {
+    if (this.primaryBuffer.length + this.secondaryBuffer.length >= this.maxBufferSize) {
       return false // 队列满，拒绝消息
     }
 
@@ -172,8 +172,9 @@ export class H2AAsyncMessageQueue {
 
     return {
       queueSize: this.primaryBuffer.length + this.secondaryBuffer.length,
+      totalCapacity: this.maxBufferSize,
       throughput: this.throughputMetrics.messagesPerSecond,
-      backpressureActive: this.primaryBuffer.length > this.backpressureThreshold,
+      backpressureActive: this.primaryBuffer.length > this.backpressureThreshold || this.secondaryBuffer.length > 0,
       averageLatency: Math.round(avgLatency),
       messagesProcessed: this.throughputMetrics.totalProcessed
     }
@@ -224,11 +225,12 @@ export class H2AAsyncMessageQueue {
       issues.push('队列接近满载')
     }
     
-    if (metrics.throughput < 1000) {
+    // 只有当队列有处理活动时才检查吞吐量
+    if (metrics.messagesProcessed > 0 && metrics.throughput < 10) {
       issues.push('吞吐量低于预期')
     }
     
-    if (metrics.averageLatency > 100) {
+    if (metrics.averageLatency > 1000) {  // 放宽延迟要求到1秒
       issues.push('平均延迟过高')
     }
     

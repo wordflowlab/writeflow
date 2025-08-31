@@ -108,6 +108,17 @@ export class WriteArticleTool implements WritingTool {
     try {
       const readResult = await this.readTool.execute({ file_path: filePath })
       if (!readResult.success) {
+        // 检查是否是因为文件不存在而失败
+        if (readResult.error?.includes('文件不存在')) {
+          // 对于新文件，允许写入
+          this.fileStates.set(filePath, {
+            path: filePath,
+            lastRead: now,
+            checksum: '',
+            isModified: false
+          })
+          return { success: true }
+        }
         return readResult
       }
 

@@ -71,10 +71,13 @@ export class NOMainAgentEngine {
       const messageIterator = this.messageQueue[Symbol.asyncIterator]()
       
       while (this.isRunning) {
+        let currentMessage: Message | null = null
         try {
           // 1. 获取下一个消息
           const { value: message, done } = await messageIterator.next()
           if (done) break
+          
+          currentMessage = message
 
           console.log(`[nO] 处理消息: ${message.type} from ${message.source}`)
 
@@ -88,6 +91,10 @@ export class NOMainAgentEngine {
           this.updateStatistics(message)
 
         } catch (error) {
+          // 即使出错也要更新统计信息
+          if (currentMessage) {
+            this.updateStatistics(currentMessage)
+          }
           yield* this.handleError(error as Error)
         }
       }
@@ -224,7 +231,7 @@ export class NOMainAgentEngine {
    * 解析用户意图
    */
   private async parseUserIntent(payload: any): Promise<UserIntent> {
-    const text = typeof payload === 'string' ? payload : payload.text || ''
+    const text = typeof payload === 'string' ? payload : (payload?.text || '')
     
     // 检测斜杠命令
     if (text.startsWith('/')) {

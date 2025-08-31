@@ -201,28 +201,49 @@ class AutoSecurityCheckLayer implements ValidationLayer {
     const risks: SecurityRisk[] = []
 
     // 恶意内容检测
-    if (this.config.maliciousDetection && request.content) {
+    if (this.config.maliciousDetection) {
       const maliciousPatterns = [
         /eval\s*\(/i,
         /exec\s*\(/i,
         /system\s*\(/i,
         /__import__/i,
         /document\.cookie/i,
-        /localStorage\./i
+        /localStorage\./i,
+        /rm\s+-rf\s+\//i,
+        /rm\s+-rf/i,
+        /sudo\s+rm/i,
+        /\>\s*\/dev\/null/i,
+        /wget\s+.*\|\s*sh/i,
+        /curl\s+.*\|\s*sh/i,
+        /dd\s+if=/i
       ]
 
-      const content = typeof request.content === 'string' 
-        ? request.content 
-        : JSON.stringify(request.content)
+      // 检查所有可能包含代码的字段
+      const contentToCheck: string[] = []
+      
+      if (request.content) {
+        contentToCheck.push(typeof request.content === 'string' 
+          ? request.content 
+          : JSON.stringify(request.content))
+      }
+      
+      if (request.input) {
+        contentToCheck.push(typeof request.input === 'string' 
+          ? request.input 
+          : JSON.stringify(request.input))
+      }
 
-      for (const pattern of maliciousPatterns) {
-        if (pattern.test(content)) {
-          risks.push({
-            level: 'high',
-            type: 'malicious_code',
-            description: `检测到潜在恶意模式: ${pattern.source}`,
-            impact: '可能执行危险操作'
-          })
+      for (const content of contentToCheck) {
+        for (const pattern of maliciousPatterns) {
+          if (pattern.test(content)) {
+            risks.push({
+              level: 'high',
+              type: 'malicious_code',
+              description: `检测到潜在恶意模式: ${pattern.source}`,
+              impact: '可能执行危险操作'
+            })
+            break // 找到一个就够了
+          }
         }
       }
     }
@@ -249,10 +270,11 @@ class AutoSecurityCheckLayer implements ValidationLayer {
     }
 
     return {
-      passed: risks.filter(r => r.level === 'critical').length === 0,
+      passed: risks.filter(r => r.level === 'critical' || r.level === 'high').length === 0,
       warnings,
       risks,
-      action: risks.length > 0 ? 'prompt' : 'allow'
+      action: risks.filter(r => r.level === 'critical' || r.level === 'high').length > 0 ? 'deny' : 
+              risks.length > 0 ? 'prompt' : 'allow'
     }
   }
 }

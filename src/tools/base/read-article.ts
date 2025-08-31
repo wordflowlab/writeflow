@@ -118,14 +118,12 @@ export class ReadArticleTool implements WritingTool {
    * 验证文件路径安全性
    */
   private async validateFilePath(filePath: string): Promise<{ valid: boolean; reason?: string }> {
-    const resolvedPath = path.resolve(filePath)
-    
-    // 检查路径遍历攻击
-    if (!filePath.startsWith('.') && !path.isAbsolute(filePath)) {
-      if (resolvedPath.includes('..')) {
-        return { valid: false, reason: '检测到路径遍历攻击' }
-      }
+    // 检查路径遍历攻击 - 检测 .. 序列
+    if (filePath.includes('..')) {
+      return { valid: false, reason: '检测到路径遍历攻击' }
     }
+    
+    const resolvedPath = path.resolve(filePath)
 
     // 检查受限目录
     const blockedPaths = ['/etc', '/var', '/sys', '/proc', '/dev']

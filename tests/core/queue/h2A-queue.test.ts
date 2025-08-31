@@ -130,7 +130,17 @@ describe('H2AAsyncMessageQueue', () => {
   })
 
   test('健康状态检查应该工作', () => {
+    // 先处理一些消息来提高吞吐量指标
+    for (let i = 0; i < 10; i++) {
+      const message = H2AAsyncMessageQueue.createMessage(
+        MessageType.UserInput,
+        `test message ${i}`
+      )
+      queue.enqueue(message)
+    }
+    
     const health = queue.getHealthStatus()
+    console.log('Health check result:', health) // 添加调试信息
     expect(health.healthy).toBe(true)
     expect(health.issues).toHaveLength(0)
     expect(health.metrics).toBeDefined()

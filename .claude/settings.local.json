@@ -21,7 +21,12 @@
       "Bash(export API_PROVIDER=\"deepseek\")",
       "Bash(node:*)",
       "Bash(npx jest:*)",
-      "Read(/private/tmp/**)"
+      "Read(/private/tmp/**)",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_click",
+      "Bash(npx bmad-method@stable install)",
+      "Bash(npx bmad-method:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

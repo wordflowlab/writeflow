@@ -28,6 +28,7 @@ export enum MessagePriority {
 
 export interface QueueMetrics {
   queueSize: number
+  totalCapacity: number
   throughput: number
   backpressureActive: boolean
   averageLatency: number

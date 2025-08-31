@@ -19,11 +19,11 @@ describe('WU2ContextCompressor', () => {
     
     expect(compressor.shouldCompress(smallContext)).toBe(false)
     
-    // 创建大上下文（超过92%阈值）
+    // 创建大上下文（超过92%阈值，需要超过117760 tokens）
     const largeContext: ArticleContext = {
-      currentArticle: 'x'.repeat(100000), // 大量内容
-      researchMaterial: Array(100).fill(0).map(() => ({
-        content: 'x'.repeat(1000)
+      currentArticle: '中文测试内容'.repeat(30000), // 约120000 tokens
+      researchMaterial: Array(50).fill(0).map(() => ({
+        content: '研究材料内容'.repeat(1000) // 每个约5000 tokens
       })),
       dialogueHistory: []
     }
@@ -32,9 +32,9 @@ describe('WU2ContextCompressor', () => {
   })
 
   test('应该正确压缩研究材料', async () => {
-    const researchItems: ResearchItem[] = Array(50).fill(0).map((_, i) => ({
+    const researchItems: ResearchItem[] = Array(100).fill(0).map((_, i) => ({
       id: `item-${i}`,
-      content: `研究内容 ${i} ` + 'x'.repeat(1000),
+      content: `研究内容详细描述 ${i} ` + '这是非常长的研究内容，包含大量的文字描述和分析'.repeat(200), // 更长的内容
       source: 'web',
       createdAt: Date.now() - i * 24 * 60 * 60 * 1000, // 按天递减
       referenceCount: Math.random() * 10,
@@ -43,6 +43,7 @@ describe('WU2ContextCompressor', () => {
     }))
 
     const context: ArticleContext = {
+      currentArticle: '主文章内容' + '大量文本内容'.repeat(20000), // 确保总量够大
       researchMaterial: researchItems,
       dialogueHistory: []
     }
@@ -76,8 +77,9 @@ describe('WU2ContextCompressor', () => {
 
   test('应该记录压缩统计', async () => {
     const context: ArticleContext = {
+      currentArticle: '主文章内容' + '大量文本内容以确保触发压缩'.repeat(25000), // 足够大的内容
       researchMaterial: Array(100).fill(0).map(() => ({
-        content: 'x'.repeat(1000)
+        content: '详细研究内容'.repeat(1000)
       }))
     }
 

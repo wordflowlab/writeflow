@@ -35,7 +35,7 @@ export class ContentRewriterTool implements WritingTool {
         targetAudience?: string
       }
 
-      if (!content && !filePath) {
+      if (content === undefined && !filePath) {
         return {
           success: false,
           error: '必须提供内容或文件路径'
@@ -68,7 +68,7 @@ export class ContentRewriterTool implements WritingTool {
       if (originalContent.trim().length === 0) {
         return {
           success: false,
-          error: '内容为空'
+          error: '内容为空，无法进行改写'
         }
       }
 
@@ -222,16 +222,26 @@ ${content}
         case 'technical':
           // 保持技术术语，增加精确性
           return line
+            .replace(/方案/g, '解决方案')
             .replace(/方法/g, '技术方案')
             .replace(/问题/g, '技术难题')
-            .replace(/解决/g, '解决方案')
+            .replace(/优化/g, '技术优化')
 
         case 'marketing':
           return line
             .replace(/好的/g, '卓越的')
+            .replace(/很好的/g, '卓越的')
             .replace(/有效的/g, '高效的')
             .replace(/可以/g, '能够')
-            .replace(/帮助/g, '助力')
+            .replace(/帮助/g, '助您')
+            .replace(/助力/g, '助您')
+
+        case 'academic':
+          return line
+            .replace(/这个/g, '该')
+            .replace(/很好/g, '表现良好')
+            .replace(/可以/g, '能够')
+            .replace(/方法/g, '研究表明该方法')
 
         default:
           return line
