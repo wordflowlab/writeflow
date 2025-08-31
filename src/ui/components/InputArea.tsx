@@ -1,26 +1,49 @@
 import React, { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
 import { UIMode, InputMode } from '../types/index.js'
+import { usePromptHints } from '../hooks/usePromptHints.js'
 
 interface InputAreaProps {
   mode: UIMode
   onInput: (input: string, inputMode: InputMode) => void
   onModeSwitch: () => void
+  onInterrupt?: () => void
   isLoading?: boolean
-  placeholder?: string
+  messageCount?: number
 }
 
 export function InputArea({ 
   mode, 
   onInput, 
-  onModeSwitch, 
+  onModeSwitch,
+  onInterrupt,
   isLoading = false,
-  placeholder = "输入命令或问题..." 
+  messageCount = 0
 }: InputAreaProps) {
   const [input, setInput] = useState('')
+  
+  // 使用动态提示Hook
+  const { currentHint, hasHint } = usePromptHints({
+    mode,
+    isLoading,
+    messageCount,
+    hasInput: input.length > 0
+  })
 
   useInput((inputChar, key) => {
-    if (isLoading) return // 加载时禁用输入
+    // ESC 键处理 - 优先级最高
+    if (key.escape) {
+      if (isLoading) {
+        // 正在加载时触发中断
+        onInterrupt?.()
+      } else {
+        // 未加载时清空输入
+        setInput('')
+      }
+      return
+    }
+
+    if (isLoading) return // 加载时禁用其他输入
 
     // Shift+Tab 模式切换
     if (key.shift && key.tab) {
@@ -88,10 +111,6 @@ export function InputArea({
     return ''
   }
 
-  const getModePrefix = (): string => {
-    // 不显示任何前缀，保持简洁
-    return ''
-  }
 
   return (
     <Box flexDirection="column">
@@ -110,26 +129,30 @@ export function InputArea({
             {getInputModeIndicator() ? getInputModeIndicator() + ' ' : ''}{'> '}
           </Text>
           <Text>
-            {input || (placeholder && !isLoading ? <Text color="gray">{placeholder}</Text> : '')}
+            {input}
           </Text>
+          {/* 动态提示文案 - 只在没有输入时显示 */}
+          {!input && hasHint && currentHint && (
+            <Text color={currentHint.color} dimColor>
+              {currentHint.text}
+            </Text>
+          )}
+          {/* 光标 */}
           {!isLoading && <Text color={getPromptColor()}>▋</Text>}
           {isLoading && <Text color="yellow">⏳</Text>}
         </Box>
       </Box>
 
-      {/* 模式提示 */}
-      <Box marginTop={1}>
-        <Text color="gray" dimColor>
-          {mode !== UIMode.Default && (
-            <>
-              {mode === UIMode.Plan && "📋 plan mode on"}
-              {mode === UIMode.AcceptEdits && "✅ accept edits on"}
-              {mode === UIMode.BypassPermissions && "🔓 bypass permissions on"}
-              <Text color="gray"> (shift+tab to cycle)</Text>
-            </>
-          )}
-        </Text>
-      </Box>
+      {/* 简化的模式提示 - 只在特殊模式下显示 */}
+      {mode !== UIMode.Default && (
+        <Box marginTop={1}>
+          <Text color="gray" dimColor>
+            {mode === UIMode.Plan && "📋 Plan Mode"}
+            {mode === UIMode.AcceptEdits && "✅ Accept Edits"}  
+            {mode === UIMode.BypassPermissions && "🔓 Bypass Permissions"}
+          </Text>
+        </Box>
+      )}
     </Box>
   )
 }

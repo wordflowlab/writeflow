@@ -326,7 +326,7 @@ export class WriteFlowApp {
 
       // 如果需要AI查询
       if (result.shouldQuery && result.messages) {
-        return await this.processAIQuery(result.messages, result.allowedTools)
+        return await this.processAIQuery(result.messages, result.allowedTools, options.signal)
       }
 
       // 返回直接结果
@@ -342,8 +342,14 @@ export class WriteFlowApp {
    */
   private async processAIQuery(
     messages: Array<{ role: string; content: string }>,
-    allowedTools?: string[]
+    allowedTools?: string[],
+    signal?: AbortSignal
   ): Promise<string> {
+    
+    // 检查是否已经被中断
+    if (signal?.aborted) {
+      throw new Error('操作已被中断')
+    }
     
     // 根据配置的API提供商选择对应的客户端
     const clientName = this.getClientName()
@@ -370,13 +376,13 @@ export class WriteFlowApp {
   /**
    * 处理自由文本输入
    */
-  async handleFreeTextInput(input: string): Promise<string> {
+  async handleFreeTextInput(input: string, options: { signal?: AbortSignal } = {}): Promise<string> {
     try {
       // 直接使用AI进行对话，而不是简单的意图匹配
       const response = await this.processAIQuery([{
         role: 'user',
         content: input
-      }])
+      }], undefined, options.signal)
       
       return response
       

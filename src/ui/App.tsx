@@ -26,6 +26,7 @@ export function App({ writeFlowApp }: AppProps) {
   const [input, setInput] = useState('')
   const [showWelcomeLogo, setShowWelcomeLogo] = useState(true)
   const isProcessingRef = useRef(false)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
   
   const {
     state: uiState,
@@ -60,6 +61,22 @@ export function App({ writeFlowApp }: AppProps) {
     return readOnlyCommands.includes(cmd) || !input.startsWith('/')
   }
 
+  // 处理中断操作
+  const handleInterrupt = () => {
+    if (abortController) {
+      console.log('⚠️ 用户中断操作')
+      abortController.abort()
+      setAbortController(null)
+      setLoading(false)
+      isProcessingRef.current = false
+      
+      addMessage({
+        type: 'system',
+        content: '⚠️ 操作已中断'
+      })
+    }
+  }
+
   // 键盘事件处理
   const keyboardHandlers = {
     onModeSwitch: switchToNextMode,
@@ -87,6 +104,10 @@ export function App({ writeFlowApp }: AppProps) {
     
     isProcessingRef.current = true
     const inputMode = detectInputMode(inputText)
+    
+    // 创建新的 AbortController
+    const controller = new AbortController()
+    setAbortController(controller)
     
     try {
       // 用户开始输入后隐藏欢迎Logo
@@ -117,13 +138,13 @@ export function App({ writeFlowApp }: AppProps) {
       // 区分命令和自由对话
       if (inputText.startsWith('/')) {
         // 斜杠命令
-        response = await writeFlowApp.executeCommand(inputText)
+        response = await writeFlowApp.executeCommand(inputText, { signal: controller.signal })
       } else if (inputText.startsWith('!') || inputText.startsWith('#')) {
         // 特殊模式输入，通过processInput处理
         response = await processInput(inputText, inputMode)
       } else {
         // 自由对话，直接调用AI
-        response = await writeFlowApp.handleFreeTextInput(inputText)
+        response = await writeFlowApp.handleFreeTextInput(inputText, { signal: controller.signal })
       }
       
       // 直接添加响应，不添加AI提供商标识
@@ -141,6 +162,7 @@ export function App({ writeFlowApp }: AppProps) {
       setLoading(false)
       setStatus('Ready')
       isProcessingRef.current = false
+      setAbortController(null) // 清理 AbortController
     }
   }
 
@@ -201,8 +223,9 @@ export function App({ writeFlowApp }: AppProps) {
         mode={currentMode}
         onInput={handleInput}
         onModeSwitch={switchToNextMode}
+        onInterrupt={handleInterrupt}
         isLoading={isProcessing}
-        placeholder="输入命令或问题..."
+        messageCount={uiState.messages.length}
       />
 
       {/* 底部状态栏 */}
