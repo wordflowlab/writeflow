@@ -1,7 +1,7 @@
 {
   "name": "writeflow",
-  "version": "2.3.1",
-  "description": "AI 写作助手 - React+Ink 现代终端界面，完全复刻 Claude Code 交互体验",
+  "version": "2.3.2",
+  "description": "AI 写作助手",
   "main": "src/cli/index.ts",
   "type": "module",
   "bin": {

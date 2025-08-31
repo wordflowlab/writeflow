@@ -295,7 +295,12 @@ export class WU2ContextCompressor {
    * 估算token数量
    */
   private estimateTokens(content: any): number {
+    // 添加安全检查
+    if (!content) return 0
+    
     const text = typeof content === 'string' ? content : JSON.stringify(content)
+    if (!text) return 0
+    
     // 粗略估算：中文1字=1token，英文1词=0.75token
     const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length
     const englishWords = (text.match(/[a-zA-Z]+/g) || []).length
@@ -318,8 +323,11 @@ export class WU2ContextCompressor {
     }
     
     if (context.dialogueHistory) {
-      total += context.dialogueHistory.reduce((sum, msg) => 
-        sum + this.estimateTokens(msg.payload), 0)
+      total += context.dialogueHistory.reduce((sum, msg) => {
+        // 兼容两种格式：payload 或 content
+        const content = msg.payload || (msg as any).content
+        return sum + this.estimateTokens(content)
+      }, 0)
     }
     
     if (context.referenceArticles) {

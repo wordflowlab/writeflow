@@ -35,6 +35,7 @@ import { WeChatConverterTool } from '../tools/publish/index.js'
 import { AIWritingConfig } from '../types/writing.js'
 import { AgentContext, PlanMode } from '../types/agent.js'
 import { SecurityConfig } from '../types/security.js'
+import { Message, MessageType, MessagePriority } from '../types/message.js'
 
 /**
  * WriteFlow 主应用类
@@ -426,16 +427,20 @@ export class WriteFlowApp {
         const userMessage = conversationHistory[conversationHistory.length - 1]
         await this.contextManager.updateContext({
           id: `msg-${Date.now()}`,
-          content: userMessage.content,
-          role: 'user',
-          timestamp: Date.now()
-        } as any, {
+          type: MessageType.UserInput,
+          priority: MessagePriority.Normal,
+          payload: userMessage.content,
+          timestamp: Date.now(),
+          source: 'cli'
+        } as Message, {
           dialogueHistory: conversationHistory.map(msg => ({
             id: `msg-${Date.now()}-${Math.random()}`,
-            content: msg.content,
-            role: msg.role as any,
-            timestamp: Date.now()
-          }) as any)
+            type: msg.role === 'user' ? MessageType.UserInput : MessageType.AgentResponse,
+            priority: MessagePriority.Normal,
+            payload: msg.content,
+            timestamp: Date.now(),
+            source: 'cli'
+          } as Message))
         })
       }
       
