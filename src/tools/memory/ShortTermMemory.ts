@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs'
+import { promises as fs, mkdirSync } from 'fs'
 import path from 'path'
 import os from 'os'
 import { z } from 'zod'
@@ -59,7 +59,7 @@ export class ShortTermMemory {
 
   private ensureDirectoryExistsSync(): void {
     try {
-      require('fs').mkdirSync(this.messagesDir, { recursive: true })
+      mkdirSync(this.messagesDir, { recursive: true })
     } catch (error) {
       console.error('创建短期记忆目录失败:', error)
     }

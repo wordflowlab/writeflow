@@ -30,9 +30,34 @@ npm install -g .
 
 ### 配置 API 密钥
 
+根据您使用的 AI 服务提供商，配置相应的环境变量：
+
+#### 方法一：使用 DeepSeek（推荐）
+```bash
+echo 'export API_PROVIDER="deepseek"' >> ~/.zshrc
+echo 'export DEEPSEEK_API_KEY="sk-2201131e0b2d4783ac35650e0000000000"' >> ~/.zshrc
+echo 'export API_BASE_URL="https://api.deepseek.com"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+#### 方法二：使用 Claude/Anthropic
 ```bash
 export ANTHROPIC_API_KEY="your-api-key-here"
 ```
+
+#### 方法三：使用其他 AI 服务
+```bash
+# OpenAI
+export OPENAI_API_KEY="your-openai-key"
+
+# 通义千问
+export QWEN_API_KEY="your-qwen-key"
+
+# 智谱 GLM
+export GLM_API_KEY="your-glm-key"
+```
+
+**注意**: 请将示例中的 API 密钥替换为您自己的密钥。
 
 ### 基本使用
 

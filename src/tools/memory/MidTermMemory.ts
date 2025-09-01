@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs'
+import { promises as fs, mkdirSync } from 'fs'
 import path from 'path'
 import os from 'os'
 import { z } from 'zod'
@@ -205,7 +205,7 @@ export class MidTermMemory {
 
   private ensureDirectoryExistsSync(): void {
     try {
-      require('fs').mkdirSync(this.summariesDir, { recursive: true })
+      mkdirSync(this.summariesDir, { recursive: true })
     } catch (error) {
       console.error('创建中期记忆目录失败:', error)
     }

@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from 'fs'
 import { dirname, join } from 'path'
 
 // 硬编码版本号作为最终后备
-const FALLBACK_VERSION = '2.5.0'
+const FALLBACK_VERSION = '2.5.3'
 
 // 获取WriteFlow包的根目录
 function getWriteFlowRoot(): string {

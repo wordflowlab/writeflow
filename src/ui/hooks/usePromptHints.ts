@@ -40,15 +40,15 @@ export function usePromptHints({ mode, isLoading, messageCount, hasInput }: UseP
       priority: 8
     },
     
-    // 模式相关提示
+    // 模式相关提示 - 参考 Claude Code 风格
     {
-      text: "📋 plan mode on (shift+tab to cycle)",
+      text: "⏸ plan mode on (shift+tab to cycle)",
       condition: () => !isLoading && mode === UIMode.Plan,
       color: "yellow",
       priority: 7
     },
     {
-      text: "✅ accept edits on (shift+tab to cycle)",
+      text: "⏵⏵ auto-accept edits on (shift+tab to cycle)",
       condition: () => !isLoading && mode === UIMode.AcceptEdits,
       color: "green",
       priority: 7

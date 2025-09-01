@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
 import { UIMode, InputMode } from '../types/index.js'
-import { usePromptHints } from '../hooks/usePromptHints.js'
 
 interface InputAreaProps {
   mode: UIMode
@@ -21,14 +20,6 @@ export function InputArea({
   messageCount = 0
 }: InputAreaProps) {
   const [input, setInput] = useState('')
-  
-  // 使用动态提示Hook
-  const { currentHint, hasHint } = usePromptHints({
-    mode,
-    isLoading,
-    messageCount,
-    hasInput: input.length > 0
-  })
 
   useInput((inputChar, key) => {
     // ESC 键处理 - 优先级最高
@@ -139,12 +130,6 @@ export function InputArea({
           <Text>
             {input}
           </Text>
-          {/* 动态提示文案 - 只在没有输入时显示 */}
-          {!input && hasHint && currentHint && (
-            <Text color={currentHint.color} dimColor>
-              {currentHint.text}
-            </Text>
-          )}
           {/* 光标 */}
           {!isLoading && <Text color={getPromptColor()}>▋</Text>}
           {isLoading && <Text color="yellow">⏳</Text>}

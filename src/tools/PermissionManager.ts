@@ -24,15 +24,21 @@ export const TOOL_PERMISSIONS: Record<string, ToolPermissionLevel> = {
   'qwen_client': ToolPermissionLevel.READ_ONLY,
   'glm_client': ToolPermissionLevel.READ_ONLY,
   'web_search': ToolPermissionLevel.READ_ONLY,
+  'citation_manager': ToolPermissionLevel.READ_ONLY,
+  'grammar_checker': ToolPermissionLevel.READ_ONLY,
   'exit_plan_mode': ToolPermissionLevel.READ_ONLY, // 特殊：允许在Plan模式使用
   
   // 安全写入工具（Plan模式禁止）
   'write_log': ToolPermissionLevel.SAFE_WRITE,
   'save_memory_note': ToolPermissionLevel.SAFE_WRITE,
+  'outline_generator': ToolPermissionLevel.SAFE_WRITE,
   
   // 系统修改工具（Plan模式严格禁止）
   'edit_article': ToolPermissionLevel.SYSTEM_MODIFY,
   'write_article': ToolPermissionLevel.SYSTEM_MODIFY,
+  'content_rewriter': ToolPermissionLevel.SYSTEM_MODIFY,
+  'style_adapter': ToolPermissionLevel.SYSTEM_MODIFY,
+  'wechat_converter': ToolPermissionLevel.SYSTEM_MODIFY,
   'execute_command': ToolPermissionLevel.SYSTEM_MODIFY,
   'install_package': ToolPermissionLevel.SYSTEM_MODIFY,
   'git_commit': ToolPermissionLevel.SYSTEM_MODIFY,

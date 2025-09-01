@@ -5,6 +5,7 @@ import ora from 'ora'
 import { WriteFlowApp } from './writeflow-app.js'
 import { AIWritingConfig } from '../types/writing.js'
 import { displayCLILogo, displayMiniLogo } from '../utils/cli-logo.js'
+import { getVersion } from '../utils/version.js'
 
 /**
  * WriteFlow CLI 主入口
@@ -27,7 +28,7 @@ export class WriteFlowCLI {
     this.program
       .name('writeflow')
       .description('WriteFlow AI 写作助手')
-      .version('1.0.0')
+      .version(getVersion())
 
     // 交互式模式（默认）
     this.program

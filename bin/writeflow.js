@@ -1,26 +1,18 @@
 #!/usr/bin/env node
 
-import { spawn } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-// TypeScript 源文件路径
-const tsFile = join(__dirname, '..', 'src', 'cli', 'index.ts')
+// 编译后的 JavaScript 文件路径
+const jsFile = join(__dirname, '..', 'dist', 'cli', 'index.js')
 
-// 使用 tsx 执行 TypeScript 文件
-const child = spawn('npx', ['tsx', tsFile, ...process.argv.slice(2)], {
-  stdio: 'inherit',
-  shell: true
-})
-
-child.on('exit', (code) => {
-  process.exit(code || 0)
-})
-
-child.on('error', (error) => {
+// 直接导入并执行编译后的模块
+try {
+  await import(jsFile)
+} catch (error) {
   console.error('启动 WriteFlow 失败:', error.message)
   process.exit(1)
-})
+}

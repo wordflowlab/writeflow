@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs'
+import { promises as fs, mkdirSync } from 'fs'
 import path from 'path'
 import os from 'os'
 import { z } from 'zod'
@@ -124,7 +124,7 @@ export class LongTermMemory {
 
   private ensureDirectoryExistsSync(): void {
     try {
-      require('fs').mkdirSync(this.knowledgeDir, { recursive: true })
+      mkdirSync(this.knowledgeDir, { recursive: true })
     } catch (error) {
       console.error('创建长期记忆目录失败:', error)
     }

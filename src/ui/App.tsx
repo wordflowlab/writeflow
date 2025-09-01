@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Box, Text } from 'ink'
+import { Box, Text, Static } from 'ink'
 // import { Header } from './components/Header.js'
 import { ModeIndicator } from './components/ModeIndicator.js'
 import { MessageList } from './components/MessageList.js'
 import { InputArea } from './components/InputArea.js'
+import { PromptHintArea } from './components/PromptHintArea.js'
 import { StatusBar } from './components/StatusBar.js'
 import { ToolDisplay } from './components/ToolDisplay.js'
+import { PlanModeAlert } from './components/PlanModeAlert.js'
+import { PlanModeConfirmation, ConfirmationOption } from './components/PlanModeConfirmation.js'
+import { SystemReminder } from './components/SystemReminder.js'
 // import { PlanMode } from './modes/PlanMode.js'
 // import { AcceptEditsMode } from './modes/AcceptEditsMode.js'
 import { useUIState } from './hooks/useUIState.js'
@@ -13,10 +17,14 @@ import { useMode } from './hooks/useMode.js'
 import { useAgent } from './hooks/useAgent.js'
 import { useKeyboard } from './hooks/useKeyboard.js'
 import { useInputProcessor } from './components/InputProcessor.js'
+import { usePromptHints } from './hooks/usePromptHints.js'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { UIMode, InputMode } from './types/index.js'
 import { getVersionString } from '../utils/version.js'
 import { Logo } from './components/Logo.js'
+import { PlanModeManager } from '../modes/PlanModeManager.js'
+import { PlanMode } from '../types/agent.js'
+import { SystemReminder as SystemReminderType } from '../tools/SystemReminderInjector.js'
 
 interface AppProps {
   writeFlowApp: WriteFlowApp
@@ -27,6 +35,13 @@ export function App({ writeFlowApp }: AppProps) {
   const [showWelcomeLogo, setShowWelcomeLogo] = useState(true)
   const isProcessingRef = useRef(false)
   const [abortController, setAbortController] = useState<AbortController | null>(null)
+  
+  // Plan 模式管理器状态
+  const [planModeManager] = useState(() => new PlanModeManager())
+  const [planModeStartTime, setPlanModeStartTime] = useState<number>(0)
+  const [showPlanConfirmation, setShowPlanConfirmation] = useState(false)
+  const [currentPlan, setCurrentPlan] = useState<string>('')
+  const [systemReminders, setSystemReminders] = useState<SystemReminderType[]>([])
   
   const {
     state: uiState,
@@ -53,6 +68,14 @@ export function App({ writeFlowApp }: AppProps) {
 
   // 输入处理逻辑
   const { detectInputMode } = useInputProcessor(() => {})
+  
+  // 动态提示功能
+  const { currentHint, hasHint } = usePromptHints({
+    mode: currentMode,
+    isLoading: isProcessing,
+    messageCount: uiState.messages.length,
+    hasInput: input.length > 0
+  })
 
   // 检查是否为只读命令（Plan模式限制）
   const isReadOnlyCommand = (input: string): boolean => {
@@ -77,9 +100,78 @@ export function App({ writeFlowApp }: AppProps) {
     }
   }
 
+  // Plan 模式处理函数
+  const handleEnterPlanMode = async () => {
+    setPlanModeStartTime(Date.now())
+    const reminders = await planModeManager.enterPlanMode()
+    setSystemReminders(reminders)
+    
+    addMessage({
+      type: 'system',
+      content: '📋 已进入 Plan 模式 - 只读分析模式激活'
+    })
+  }
+
+  const handleExitPlanMode = async (plan: string) => {
+    setCurrentPlan(plan)
+    setShowPlanConfirmation(true)
+  }
+
+  const handlePlanConfirmation = async (option: ConfirmationOption) => {
+    setShowPlanConfirmation(false)
+    
+    try {
+      const result = await planModeManager.exitPlanMode(currentPlan)
+      
+      if (result.success && result.approved) {
+        // 计划被批准，执行用户选择的确认选项
+        await planModeManager.handleUserConfirmation(option)
+        
+        addMessage({
+          type: 'system',
+          content: '✅ 计划已确认，退出 Plan 模式'
+        })
+        
+        setPlanModeStartTime(0)
+        setSystemReminders([])
+      } else {
+        // 计划需要改进
+        if (result.reminders) {
+          setSystemReminders(result.reminders)
+        }
+        
+        addMessage({
+          type: 'system',
+          content: result.result?.message || '❌ 计划需要改进，请根据反馈调整'
+        })
+      }
+    } catch (error) {
+      addMessage({
+        type: 'system',
+        content: `❌ 退出 Plan 模式失败: ${(error as Error).message}`
+      })
+    }
+  }
+
+  const handleModeCycle = () => {
+    if (planModeManager.isInPlanMode()) {
+      // 从 Plan 模式切换到默认模式
+      planModeManager.reset()
+      setPlanModeStartTime(0)
+      setSystemReminders([])
+      addMessage({
+        type: 'system', 
+        content: '🔄 已退出 Plan 模式'
+      })
+    } else {
+      // 进入 Plan 模式
+      handleEnterPlanMode()
+    }
+  }
+
   // 键盘事件处理
   const keyboardHandlers = {
-    onModeSwitch: switchToNextMode,
+    onModeSwitch: handleModeCycle, // 使用新的模式切换处理器
     onClearInput: () => setInput(''),
     onClearScreen: () => {
       clearExecutions()
@@ -124,13 +216,27 @@ export function App({ writeFlowApp }: AppProps) {
 
       setLoading(true)
       
-      // 检查模式限制
-      if (currentMode === UIMode.Plan && !isReadOnlyCommand(inputText)) {
-        addMessage({
-          type: 'system',
-          content: '❌ 计划模式下只能使用只读命令'
-        })
-        return
+      // 检查 Plan 模式限制
+      if (planModeManager.isInPlanMode()) {
+        const toolName = inputText.startsWith('/') ? inputText.split(' ')[0].slice(1) : 'free_text'
+        const permissionCheck = await planModeManager.checkToolPermission(toolName, {})
+        
+        if (!permissionCheck.allowed) {
+          if (permissionCheck.reminder) {
+            setSystemReminders(prev => [...prev, permissionCheck.reminder!])
+          }
+          
+          addMessage({
+            type: 'system',
+            content: `❌ ${permissionCheck.reason || 'Plan 模式下禁止此操作'}`
+          })
+          return
+        }
+        
+        // 添加工具使用提醒
+        if (permissionCheck.reminder) {
+          setSystemReminders(prev => [...prev, permissionCheck.reminder!])
+        }
       }
 
       let response: string
@@ -170,6 +276,32 @@ export function App({ writeFlowApp }: AppProps) {
   }
 
 
+  // 监听 Plan 模式退出事件
+  useEffect(() => {
+    const handleExitPlan = (plan: string) => {
+      handleExitPlanMode(plan)
+    }
+
+    // 如果 writeFlowApp 有退出 plan 模式的事件，可以在这里监听
+    // writeFlowApp.on('exit-plan-mode', handleExitPlan)
+
+    return () => {
+      // writeFlowApp.off('exit-plan-mode', handleExitPlan)
+    }
+  }, [])
+
+  // 清理系统提醒的定时器
+  useEffect(() => {
+    if (systemReminders.length > 0) {
+      const timer = setTimeout(() => {
+        // 清理非持续的提醒
+        setSystemReminders(prev => prev.filter(reminder => reminder.persistent))
+      }, 10000) // 10秒后清理非持续提醒
+
+      return () => clearTimeout(timer)
+    }
+  }, [systemReminders])
+
   // 欢迎消息 - 注释掉以保持极简
   /*
   useEffect(() => {
@@ -183,10 +315,34 @@ export function App({ writeFlowApp }: AppProps) {
   return (
     <Box flexDirection="column" height="100%" padding={1}>
       {/* 启动欢迎Logo */}
-      {showWelcomeLogo && uiState.messages.length <= 1 && (
-        <Box marginBottom={2}>
-          <Logo variant="full" />
-        </Box>
+      <Static items={showWelcomeLogo && uiState.messages.length === 0 ? [1] : []}>
+        {(item, index) => (
+          <Box key={index} marginBottom={2}>
+            <Logo variant="full" />
+          </Box>
+        )}
+      </Static>
+
+      {/* Plan 模式警告框 */}
+      {planModeManager.isInPlanMode() && planModeStartTime > 0 && (
+        <PlanModeAlert 
+          elapsedTime={Date.now() - planModeStartTime}
+          onModeCycle={handleModeCycle}
+        />
+      )}
+
+      {/* 系统提醒显示 */}
+      {systemReminders.length > 0 && (
+        <SystemReminder reminders={systemReminders} />
+      )}
+
+      {/* Plan 模式确认对话框 */}
+      {showPlanConfirmation && (
+        <PlanModeConfirmation
+          plan={currentPlan}
+          onConfirm={handlePlanConfirmation}
+          onCancel={() => setShowPlanConfirmation(false)}
+        />
       )}
 
       {/* 顶部标题栏 - 移除以保持极简 */}
@@ -220,6 +376,14 @@ export function App({ writeFlowApp }: AppProps) {
 
       {/* 消息历史 */}
       <MessageList messages={uiState.messages} />
+
+      {/* 提示区域 */}
+      <PromptHintArea
+        mode={currentMode}
+        currentHint={currentHint}
+        hasHint={hasHint}
+        isLoading={isProcessing}
+      />
 
       {/* 输入区域 */}
       <InputArea

@@ -3,6 +3,7 @@ import { PermissionManager } from '../tools/PermissionManager.js'
 import { SystemReminderInjector, SystemReminder } from '../tools/SystemReminderInjector.js'
 import { ToolInterceptor, InterceptorConfig } from '../tools/ToolInterceptor.js'
 import { ExitPlanModeTool, ExitPlanModeResult } from '../tools/ExitPlanMode.js'
+import { WritingTool } from '../types/WritingTool.js'
 
 /**
  * Plan 模式状态
@@ -14,6 +15,8 @@ export interface PlanModeState {
   entryTime: number
   planHistory: string[]
   systemReminders: SystemReminder[]
+  // 新增：用户确认选项
+  confirmationOption?: 'auto_approve' | 'manual_approve' | 'keep_planning'
 }
 
 /**
@@ -51,6 +54,31 @@ export class PlanModeManager {
   private state: PlanModeState
   private config: PlanModeConfig
   private events: PlanModeEvents
+
+  // 工具权限配置
+  private toolPermissions = {
+    // Plan 模式下允许的只读工具
+    readOnly: [
+      'read_article',
+      'search_files', 
+      'list_directory',
+      'grep',
+      'glob',
+      'get_status',
+      'help',
+      'exit_plan_mode'
+    ],
+    // Plan 模式下禁止的修改工具
+    restricted: [
+      'write_article',
+      'edit_article', 
+      'bash',
+      'git',
+      'npm',
+      'install',
+      'execute'
+    ]
+  }
 
   constructor(
     config: Partial<PlanModeConfig> = {},
@@ -402,6 +430,109 @@ export class PlanModeManager {
     }
 
     return report.join('\n')
+  }
+
+  /**
+   * 检查工具是否可以在 Plan 模式下使用
+   */
+  canUseTool(toolName: string): boolean {
+    if (!this.state.isActive) {
+      return true // 非 Plan 模式下允许所有工具
+    }
+    
+    return this.toolPermissions.readOnly.includes(toolName)
+  }
+
+  /**
+   * 检查工具是否被限制
+   */
+  isToolRestricted(toolName: string): boolean {
+    if (!this.state.isActive) {
+      return false
+    }
+    
+    return this.toolPermissions.restricted.includes(toolName)
+  }
+
+  /**
+   * 获取允许的工具列表
+   */
+  getAllowedTools(): string[] {
+    if (!this.state.isActive) {
+      return [] // 非 Plan 模式返回空数组，表示不限制
+    }
+    
+    return [...this.toolPermissions.readOnly]
+  }
+
+  /**
+   * 获取禁止的工具列表
+   */
+  getForbiddenTools(): string[] {
+    if (!this.state.isActive) {
+      return []
+    }
+    
+    return [...this.toolPermissions.restricted]
+  }
+
+  /**
+   * 处理用户确认选项
+   */
+  async handleUserConfirmation(option: 'auto_approve' | 'manual_approve' | 'keep_planning'): Promise<void> {
+    this.state.confirmationOption = option
+    
+    switch (option) {
+      case 'auto_approve':
+        // 退出 Plan 模式并启用自动批准
+        await this.exitPlanMode(this.state.currentPlan || '', PlanMode.AcceptEdits)
+        break
+        
+      case 'manual_approve':
+        // 退出 Plan 模式但保持手动确认
+        await this.exitPlanMode(this.state.currentPlan || '', PlanMode.Default)
+        break
+        
+      case 'keep_planning':
+        // 保持 Plan 模式，不做任何操作
+        console.log('用户选择继续计划模式')
+        break
+    }
+  }
+
+  /**
+   * 生成系统提醒
+   */
+  generateSystemReminder(): SystemReminder {
+    return {
+      type: 'mode_notification',
+      content: `<system-reminder>
+Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits, run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supercedes any other instructions you have received (for example, to make edits). Instead, you should:
+
+1. Answer the user's query comprehensively
+2. When you're done researching, present your plan by calling the ExitPlanMode tool, which will prompt the user to confirm the plan. Do NOT make any file changes or run any tools that modify the system state in any way until the user has confirmed the plan.
+</system-reminder>`,
+      priority: 'high',
+      persistent: true
+    }
+  }
+
+  /**
+   * 注入系统提醒到消息流
+   */
+  injectSystemReminder(): SystemReminder | null {
+    if (!this.state.isActive) {
+      return null
+    }
+    
+    const reminder = this.generateSystemReminder()
+    this.state.systemReminders.push(reminder)
+    
+    if (this.events.onSystemReminder) {
+      this.events.onSystemReminder(reminder)
+    }
+    
+    return reminder
   }
 
   /**
