@@ -19,13 +19,15 @@ export class AnthropicClientTool implements WritingTool {
         systemPrompt,
         temperature,
         maxTokens,
-        model
+        model,
+        tools
       } = input as {
         messages: Array<{ role: 'user' | 'assistant'; content: string }>
         systemPrompt?: string
         temperature?: number
         maxTokens?: number
         model?: string
+        tools?: any[]
       }
 
       if (!messages || messages.length === 0) {
@@ -44,7 +46,7 @@ export class AnthropicClientTool implements WritingTool {
       }
 
       // 构建请求参数
-      const requestParams = {
+      const requestParams: any = {
         model: model || this.config.model,
         temperature: temperature ?? this.config.temperature,
         max_tokens: maxTokens || this.config.maxTokens,
@@ -53,6 +55,11 @@ export class AnthropicClientTool implements WritingTool {
           role: msg.role,
           content: msg.content
         }))
+      }
+
+      // 如果有工具定义，添加到请求参数
+      if (tools && tools.length > 0) {
+        requestParams.tools = tools
       }
 
       // 调用 API
@@ -66,7 +73,10 @@ export class AnthropicClientTool implements WritingTool {
           usage: response.usage,
           requestParams,
           responseTime: response.responseTime,
-          requestId: response.id
+          requestId: response.id,
+          rawResponse: response.rawResponse,
+          hasToolCalls: response.hasToolCalls,
+          thinkingContent: response.thinkingContent
         }
       }
 
@@ -82,11 +92,14 @@ export class AnthropicClientTool implements WritingTool {
    * 调用 Anthropic API
    */
   private async callAnthropicAPI(params: any): Promise<{
-    content: string
+    content: any
     model: string
     usage: any
     responseTime: number
     id: string
+    rawResponse: any
+    hasToolCalls: boolean
+    thinkingContent?: string
   }> {
     const startTime = Date.now()
 
@@ -98,24 +111,45 @@ export class AnthropicClientTool implements WritingTool {
         baseURL: this.config.apiBaseUrl || 'https://api.anthropic.com'
       })
       
-      const completion = await anthropic.messages.create({
+      const requestOptions: any = {
         model: params.model,
         max_tokens: params.max_tokens,
         temperature: params.temperature,
         system: params.system,
         messages: params.messages
-      })
+      }
 
-      // 提取响应内容
-      const textContent = completion.content.find(block => block.type === 'text')
-      const content = textContent ? textContent.text : '抱歉，无法获取响应内容'
+      // 如果有工具定义，添加到请求
+      if (params.tools) {
+        requestOptions.tools = params.tools
+      }
 
+      const completion = await anthropic.messages.create(requestOptions)
+
+      // 处理完整响应内容
+      const hasToolCalls = completion.content.some((block: any) => block.type === 'tool_use')
+      
+      // 提取 thinking 内容（如果存在）
+      const textContent = completion.content.find((block: any) => block.type === 'text')
+      let thinkingContent: string | undefined
+      
+      if (textContent && (textContent as any).text) {
+        const thinkingMatch = (textContent as any).text.match(/<thinking>([\s\S]*?)<\/thinking>/)
+        if (thinkingMatch) {
+          thinkingContent = thinkingMatch[1].trim()
+        }
+      }
+
+      // 返回完整响应
       return {
-        content,
+        content: completion.content, // 返回完整内容数组
         model: completion.model,
         usage: completion.usage,
         responseTime: Date.now() - startTime,
-        id: completion.id
+        id: completion.id,
+        rawResponse: completion,
+        hasToolCalls,
+        thinkingContent
       }
 
     } catch (error) {
@@ -124,17 +158,7 @@ export class AnthropicClientTool implements WritingTool {
         console.warn('Anthropic API 调用失败，使用模拟响应:', error instanceof Error ? error.message : String(error))
       }
       
-      const mockResponse = {
-        content: this.generateMockResponse(params),
-        model: params.model,
-        usage: {
-          input_tokens: 150,
-          output_tokens: 300,
-          total_tokens: 450
-        },
-        responseTime: Date.now() - startTime,
-        id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      }
+      const mockResponse = this.generateMockResponse(params, Date.now() - startTime)
 
       return mockResponse
     }
@@ -143,39 +167,102 @@ export class AnthropicClientTool implements WritingTool {
   /**
    * 生成模拟响应
    */
-  private generateMockResponse(params: any): string {
+  private generateMockResponse(params: any, responseTime: number): {
+    content: any
+    model: string
+    usage: any
+    responseTime: number
+    id: string
+    rawResponse: any
+    hasToolCalls: boolean
+    thinkingContent?: string
+  } {
     const lastMessage = params.messages[params.messages.length - 1]
     const userContent = lastMessage?.content || ''
+    const hasTools = params.tools && params.tools.length > 0
+    
+    // 检查是否是 Plan 模式（通过系统提示或工具定义判断）
+    const isPlanMode = params.system?.includes('Plan 模式') || 
+                       params.messages.some((msg: any) => msg.content?.includes('Plan 模式')) ||
+                       (hasTools && params.tools.some((tool: any) => tool.name === 'ExitPlanMode'))
 
-    // 基于用户输入生成简单的模拟响应
-    if (userContent.includes('大纲')) {
-      return `基于您的请求，我为您生成了详细的文章大纲。
+    let content: any[]
+    let hasToolCalls = false
+    let thinkingContent: string | undefined
 
-这个大纲结构清晰，涵盖了主题的核心要点，每个章节都有明确的论述重点和支撑材料建议。
+    if (isPlanMode && hasTools) {
+      // Plan 模式下生成包含 thinking 和工具调用的响应
+      const planContent = `基于您的请求，我制定了以下详细计划：
 
-您可以根据这个大纲开始撰写文章，或者对特定部分进行进一步的细化和调整。
+## 实施计划
 
-如果需要修改大纲的某个部分，请告诉我具体的修改要求。`
+### 1. 需求分析
+- 理解用户具体需求
+- 分析当前系统状态
+- 确定修改范围
+
+### 2. 技术实现
+- 修改文件：[target-file.ts]
+- 添加新功能模块
+- 更新配置文件
+
+### 3. 测试验证
+- 单元测试
+- 集成测试
+- 手动验证
+
+### 4. 部署上线
+- 构建项目
+- 发布更新`
+      
+      thinkingContent = `用户要求实现新功能，我需要先分析当前代码结构和需求，然后制定详细的实施计划。计划应该包括具体的步骤、文件修改和测试验证。`
+      
+      content = [
+        {
+          type: 'text',
+          text: `<thinking>\n${thinkingContent}\n</thinking>\n\n${planContent}`
+        },
+        {
+          type: 'tool_use',
+          id: 'toolu_' + Math.random().toString(36).substr(2, 9),
+          name: 'ExitPlanMode',
+          input: {
+            plan: planContent
+          }
+        }
+      ]
+      hasToolCalls = true
+    } else {
+      // 普通模式响应
+      let textResponse = ''
+      if (userContent.includes('大纲')) {
+        textResponse = `基于您的请求，我为您生成了详细的文章大纲。\n\n这个大纲结构清晰，涵盖了主题的核心要点。`
+      } else if (userContent.includes('改写')) {
+        textResponse = `我已经按照您指定的风格对内容进行了改写。`
+      } else {
+        textResponse = `我理解您的请求，并已按照您的要求进行处理。`
+      }
+      
+      content = [{
+        type: 'text',
+        text: textResponse
+      }]
     }
 
-    if (userContent.includes('改写')) {
-      return `我已经按照您指定的风格对内容进行了改写。
-
-改写后的内容保持了原文的核心观点和信息，同时调整了表达方式和语言风格，使其更适合目标读者群体。
-
-主要调整包括：
-1. 词汇选择更符合目标风格
-2. 句式结构更加流畅
-3. 语调和措辞更加适合
-
-如果您对改写结果有任何意见或需要进一步调整，请随时告诉我。`
+    return {
+      content,
+      model: params.model,
+      usage: {
+        input_tokens: 150,
+        output_tokens: 300,
+        total_tokens: 450
+      },
+      responseTime,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      rawResponse: { content },
+      hasToolCalls,
+      thinkingContent
     }
-
-    return `我理解您的请求，并已按照您的要求进行处理。
-
-基于您提供的内容和参数，我已经完成了相应的分析和生成工作。
-
-如果您需要进一步的调整或有其他问题，请随时告诉我。`
   }
 
   /**

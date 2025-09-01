@@ -7,7 +7,6 @@ import { InputArea } from './components/InputArea.js'
 import { PromptHintArea } from './components/PromptHintArea.js'
 import { StatusBar } from './components/StatusBar.js'
 import { ToolDisplay } from './components/ToolDisplay.js'
-import { PlanModeAlert } from './components/PlanModeAlert.js'
 import { PlanModeConfirmation, ConfirmationOption } from './components/PlanModeConfirmation.js'
 import { SystemReminder } from './components/SystemReminder.js'
 // import { PlanMode } from './modes/PlanMode.js'
@@ -20,10 +19,8 @@ import { useInputProcessor } from './components/InputProcessor.js'
 import { usePromptHints } from './hooks/usePromptHints.js'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { UIMode, InputMode } from './types/index.js'
-import { getVersionString } from '../utils/version.js'
 import { Logo } from './components/Logo.js'
 import { PlanModeManager } from '../modes/PlanModeManager.js'
-import { PlanMode } from '../types/agent.js'
 import { SystemReminder as SystemReminderType } from '../tools/SystemReminderInjector.js'
 
 interface AppProps {
@@ -38,7 +35,6 @@ export function App({ writeFlowApp }: AppProps) {
   
   // Plan 模式管理器状态
   const [planModeManager] = useState(() => new PlanModeManager())
-  const [planModeStartTime, setPlanModeStartTime] = useState<number>(0)
   const [showPlanConfirmation, setShowPlanConfirmation] = useState(false)
   const [currentPlan, setCurrentPlan] = useState<string>('')
   const [systemReminders, setSystemReminders] = useState<SystemReminderType[]>([])
@@ -54,12 +50,8 @@ export function App({ writeFlowApp }: AppProps) {
   } = useUIState()
 
   const {
-    modeState,
     currentMode,
-    switchToNextMode,
-    setPlanText,
-    toggleAutoAccept,
-    isToolAllowed
+    switchToNextMode
   } = useMode()
 
   const {
@@ -80,12 +72,6 @@ export function App({ writeFlowApp }: AppProps) {
     hasInput: input.length > 0
   })
 
-  // 检查是否为只读命令（Plan模式限制）
-  const isReadOnlyCommand = (input: string): boolean => {
-    const readOnlyCommands = ['/help', '/status', '/list', '/read']
-    const cmd = input.split(' ')[0]
-    return readOnlyCommands.includes(cmd) || !input.startsWith('/')
-  }
 
   // 处理中断操作
   const handleInterrupt = () => {
@@ -110,19 +96,27 @@ export function App({ writeFlowApp }: AppProps) {
     // 清理旧的提醒
     setSystemReminders([])
     
-    setPlanModeStartTime(Date.now())
-    const reminders = await planModeManager.enterPlanMode()
-    setSystemReminders(reminders)
+    // 进入 Plan 模式，不显示任何系统提醒以保持界面简洁
+    await planModeManager.enterPlanMode()
     
-    // 只添加一次消息
-    addMessage({
-      type: 'system',
-      content: '📋 已进入 Plan 模式 - 只读分析模式激活'
-    })
-  }, [planModeManager, addMessage])
+    // 不添加系统消息，保持界面简洁
+  }, [planModeManager])
 
   const handleExitPlanMode = useCallback(async (plan: string) => {
+    console.log('🎯 收到 exit-plan-mode 事件，计划内容长度:', plan?.length || 0)
+    
+    if (!plan || plan.trim().length === 0) {
+      addMessage({
+        type: 'system',
+        content: '❌ 计划内容为空，无法显示确认对话框'
+      })
+      return
+    }
+    
     setCurrentPlan(plan)
+    
+    // 不添加计划内容到消息历史，保持界面简洁
+    // 计划内容将只在 PlanModeConfirmation 组件中显示
     
     // 通知 PlanModeManager 处理工具调用
     await planModeManager.handleExitPlanModeTool(plan)
@@ -133,7 +127,7 @@ export function App({ writeFlowApp }: AppProps) {
     
     // 显示确认对话框
     setShowPlanConfirmation(true)
-  }, [planModeManager])
+  }, [planModeManager, addMessage])
 
   const handlePlanConfirmation = async (option: ConfirmationOption) => {
     setShowPlanConfirmation(false)
@@ -150,7 +144,6 @@ export function App({ writeFlowApp }: AppProps) {
           content: '✅ 计划已确认，退出 Plan 模式'
         })
         
-        setPlanModeStartTime(0)
         setSystemReminders([])
       } else {
         // 计划需要改进
@@ -180,11 +173,7 @@ export function App({ writeFlowApp }: AppProps) {
         // 从 Plan 模式切换到默认模式
         setSystemReminders([]) // 清理前先清理提醒
         planModeManager.reset()
-        setPlanModeStartTime(0)
-        addMessage({
-          type: 'system', 
-          content: '🔄 已退出 Plan 模式'
-        })
+        // 不添加系统消息，保持界面简洁
       } else {
         // 进入 Plan 模式
         await handleEnterPlanMode()
@@ -192,7 +181,7 @@ export function App({ writeFlowApp }: AppProps) {
     } finally {
       setIsSwitchingMode(false)
     }
-  }, [isSwitchingMode, planModeManager, addMessage, handleEnterPlanMode])
+  }, [isSwitchingMode, planModeManager, handleEnterPlanMode])
 
   // 输入处理函数
   const handleInput = useCallback(async (inputText: string) => {
@@ -224,9 +213,9 @@ export function App({ writeFlowApp }: AppProps) {
 
       setLoading(true)
       
-      // 检查 Plan 模式限制
-      if (planModeManager.isInPlanMode()) {
-        const toolName = inputText.startsWith('/') ? inputText.split(' ')[0].slice(1) : 'free_text'
+      // 检查 Plan 模式限制（仅对斜杠命令进行检查）
+      if (planModeManager.isInPlanMode() && inputText.startsWith('/')) {
+        const toolName = inputText.split(' ')[0].slice(1)
         const permissionCheck = await planModeManager.checkToolPermission(toolName, {})
         
         if (!permissionCheck.allowed) {
@@ -257,28 +246,68 @@ export function App({ writeFlowApp }: AppProps) {
         // 特殊模式输入，通过processInput处理
         response = await processInput(inputText, inputMode)
       } else {
-        // 自由对话，直接调用AI - 传递完整对话历史
+        // 自由对话，直接调用AI - 传递完整对话历史和模式信息
         response = await writeFlowApp.handleFreeTextInput(inputText, { 
           signal: controller.signal,
-          messages: uiState.messages
+          messages: uiState.messages,
+          planMode: planModeManager.isInPlanMode()
         })
       }
       
       // 拦截并处理工具调用
       const toolInterception = await writeFlowApp.interceptToolCalls(response)
       
+      // 如果有 thinking 内容，先显示它
+      if (toolInterception.thinkingContent) {
+        addMessage({
+          type: 'thinking',
+          content: toolInterception.thinkingContent
+        })
+      }
+      
       if (toolInterception.shouldIntercept) {
-        // 使用处理后的响应
-        addMessage({
-          type: 'assistant',
-          content: toolInterception.processedResponse || response
-        })
+        // 使用处理后的响应，但不添加空内容消息
+        const processedContent = toolInterception.processedResponse
+        if (processedContent && processedContent.trim().length > 0) {
+          addMessage({
+            type: 'assistant',
+            content: processedContent
+          })
+        }
       } else {
-        // 直接添加响应，不添加AI提供商标识
-        addMessage({
-          type: 'assistant',
-          content: response
-        })
+        // 处理非工具调用的响应
+        let content = ''
+        
+        // 统一提取文本内容
+        if (typeof response === 'object' && response !== null) {
+          const responseContent = (response as any).content || response
+          
+          if (Array.isArray(responseContent)) {
+            // 从 content 数组提取文本
+            content = responseContent
+              .filter((block: any) => block.type === 'text')
+              .map((block: any) => block.text || '')
+              .join('\n')
+          } else if (typeof responseContent === 'string') {
+            content = responseContent
+          } else {
+            // 只有在无法解析时才显示 JSON（这种情况应该很少见）
+            console.warn('无法解析的响应格式:', responseContent)
+            content = JSON.stringify(responseContent)
+          }
+        } else if (typeof response === 'string') {
+          content = response
+        }
+        
+        // 清理 thinking 标签（如果存在，应该已被 interceptToolCalls 处理）
+        content = content.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim()
+        
+        if (content) {
+          addMessage({
+            type: 'assistant',
+            content
+          })
+        }
       }
 
     } catch (error) {
@@ -353,25 +382,17 @@ export function App({ writeFlowApp }: AppProps) {
     <Box flexDirection="column" height="100%" padding={1}>
       {/* 启动欢迎Logo */}
       <Static items={showWelcomeLogo && uiState.messages.length === 0 ? [1] : []}>
-        {(item, index) => (
+        {(_, index) => (
           <Box key={index} marginBottom={2}>
             <Logo variant="full" />
           </Box>
         )}
       </Static>
 
-      {/* Plan 模式警告框 */}
-      {planModeManager.isInPlanMode() && planModeStartTime > 0 && (
-        <Box key="plan-mode-alert">
-          <PlanModeAlert 
-            elapsedTime={Date.now() - planModeStartTime}
-            onModeCycle={handleModeCycle}
-          />
-        </Box>
-      )}
+      {/* Plan 模式警告框 - 移除以保持界面简洁 */}
 
-      {/* 系统提醒显示 */}
-      {systemReminders.length > 0 && (
+      {/* 系统提醒显示 - 在 Plan 模式下隐藏以保持界面简洁 */}
+      {systemReminders.length > 0 && !planModeManager.isInPlanMode() && (
         <Box key="system-reminders">
           <SystemReminder reminders={systemReminders} />
         </Box>

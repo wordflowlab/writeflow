@@ -15,7 +15,7 @@ export async function startWriteFlowUI(writeFlowApp: WriteFlowApp) {
     process.stdin.resume()
     
     console.clear()
-    console.log('🚀 启动WriteFlow React+Ink UI...\n')
+    console.log('🚀 启动WriteFlow\n')
     
     const { waitUntilExit } = render(
       <App writeFlowApp={writeFlowApp} />,

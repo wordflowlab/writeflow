@@ -18,7 +18,7 @@ export enum InputMode {
 // 消息类型
 export interface UIMessage {
   id: string
-  type: 'user' | 'assistant' | 'system' | 'jsx'
+  type: 'user' | 'assistant' | 'system' | 'jsx' | 'thinking'
   content: string
   timestamp: Date
   mode?: InputMode

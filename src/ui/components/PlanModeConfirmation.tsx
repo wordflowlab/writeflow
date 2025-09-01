@@ -51,9 +51,10 @@ export function PlanModeConfirmation({ plan, onConfirm, onCancel }: PlanModeConf
     }
   })
 
-  // 显示计划摘要（前5行）
-  const planPreview = plan.split('\n').slice(0, 5).join('\n')
-  const hasMoreLines = plan.split('\n').length > 5
+  // 显示计划摘要（前10行）
+  const planLines = plan.split('\n').filter(line => line.trim().length > 0)
+  const planPreview = planLines.slice(0, 10).join('\n')
+  const hasMoreLines = planLines.length > 10
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="blue" padding={2}>
@@ -70,7 +71,7 @@ export function PlanModeConfirmation({ plan, onConfirm, onCancel }: PlanModeConf
         <Text color="white">{planPreview}</Text>
         {hasMoreLines && (
           <Text color="gray" dimColor>
-            ... 还有 {plan.split('\n').length - 5} 行
+            ... 还有 {planLines.length - 10} 行
           </Text>
         )}
       </Box>

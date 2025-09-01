@@ -50,6 +50,8 @@ export const MessageRenderer = React.memo(function MessageRenderer({ message }: 
         return <Text color="gray">• </Text>
       case 'jsx':
         return <Text color="magenta">▶ </Text>
+      case 'thinking':
+        return <Text color="blue">🧠 </Text>
       default:
         return null
     }
@@ -65,6 +67,8 @@ export const MessageRenderer = React.memo(function MessageRenderer({ message }: 
         return 'gray'
       case 'jsx':
         return 'magenta'
+      case 'thinking':
+        return 'blue'
       default:
         return 'white'
     }

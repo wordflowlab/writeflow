@@ -367,8 +367,9 @@ export class WriteFlowApp extends EventEmitter {
   private async processAIQuery(
     messages: Array<{ role: string; content: string }>,
     allowedTools?: string[],
-    signal?: AbortSignal
-  ): Promise<string> {
+    signal?: AbortSignal,
+    includeTools?: boolean
+  ): Promise<string | any> {
     
     // 检查是否已经被中断
     if (signal?.aborted) {
@@ -383,17 +384,44 @@ export class WriteFlowApp extends EventEmitter {
       throw new Error(`AI客户端(${clientName})未初始化`)
     }
 
-    const result = await this.toolManager.executeTool(clientName, {
+    // 构建请求参数
+    const requestParams: any = {
       messages,
       systemPrompt: this.config.systemPrompt,
       temperature: this.config.temperature,
       maxTokens: this.config.maxTokens
-    })
+    }
+
+    // 如果需要包含工具，添加 ExitPlanMode 工具定义
+    if (includeTools) {
+      requestParams.tools = [
+        {
+          name: 'ExitPlanMode',
+          description: 'Use this tool when you are in plan mode and have finished presenting your plan and are ready to code. This will prompt the user to exit plan mode.',
+          input_schema: {
+            type: 'object',
+            properties: {
+              plan: {
+                type: 'string',
+                description: 'The plan you came up with, that you want to run by the user for approval. Supports markdown. The plan should be pretty concise.'
+              }
+            },
+            required: ['plan']
+          }
+        }
+      ]
+    }
+
+    const result = await this.toolManager.executeTool(clientName, requestParams)
 
     if (!result.success) {
       throw new Error(result.error || 'AI查询失败')
     }
 
+    // 检查 content 是否为对象格式，如果是则返回 content 数组而不是完整 result
+    if (typeof result.content === 'object' && result.content !== null) {
+      return result.content  // 返回 content 数组
+    }
     return result.content || '查询完成'
   }
 
@@ -402,8 +430,9 @@ export class WriteFlowApp extends EventEmitter {
    */
   async handleFreeTextInput(input: string, options: { 
     signal?: AbortSignal, 
-    messages?: Array<{ type: string; content: string }> 
-  } = {}): Promise<string> {
+    messages?: Array<{ type: string; content: string }>,
+    planMode?: boolean
+  } = {}): Promise<string | any> {
     try {
       // 添加用户消息到记忆系统
       await this.memoryManager.addMessage('user', input)
@@ -412,7 +441,7 @@ export class WriteFlowApp extends EventEmitter {
       const context = await this.memoryManager.getContext(input)
       
       // 构建对话历史（优先使用记忆系统的数据）
-      const conversationHistory: Array<{ role: string; content: string }> = []
+      let conversationHistory: Array<{ role: string; content: string }> = []
       
       // 添加相关知识（如果存在）
       if (context.knowledgeEntries.length > 0) {
@@ -448,11 +477,70 @@ export class WriteFlowApp extends EventEmitter {
         })
       }
       
-      // 使用完整对话历史调用AI
-      const response = await this.processAIQuery(conversationHistory, undefined, options.signal)
+      // 如果在 Plan 模式下，确保系统提示词在最前面
+      if (options.planMode) {
+        // 移除其他系统提示词，确保 Plan 模式提示词优先级最高
+        const nonSystemMessages = conversationHistory.filter(msg => msg.role !== 'system')
+        
+        const planModePrompt = {
+          role: 'system',
+          content: `You are in PLAN MODE - this is the highest priority instruction that overrides everything else.
+
+Your ONLY task is to create a detailed implementation plan and then call the ExitPlanMode function.
+
+WORKFLOW:
+1. Think through the user's request step by step
+2. Create a comprehensive plan with specific actions
+3. Call the ExitPlanMode function with your plan
+
+PLAN FORMAT:
+## Implementation Plan
+
+### 1. Analysis
+- User requirement analysis
+- Current system state assessment
+
+### 2. Implementation Steps
+- Specific file modifications needed
+- Technical approach details
+- Code changes required
+
+### 3. Testing & Validation
+- Test cases to verify implementation
+- Quality assurance steps
+
+### 4. Expected Results
+- Clear success criteria
+- Output description
+
+CRITICAL: You must end by calling ExitPlanMode function with the complete plan.
+Do NOT implement anything - only plan and call the function.`
+        }
+        
+        // 重新构建消息历史，确保 Plan 模式提示词在最前
+        conversationHistory = [planModePrompt, ...nonSystemMessages]
+        
+        console.log('📋 Plan 模式已激活，系统提示词已调整到最前位置')
+      }
       
-      // 添加AI响应到记忆系统
-      await this.memoryManager.addMessage('assistant', response)
+      // 使用完整对话历史调用AI，如果在 Plan 模式下则包含工具定义
+      const response = await this.processAIQuery(conversationHistory, undefined, options.signal, options.planMode)
+      
+      // 标准化响应格式并添加到记忆系统
+      let responseContent = ''
+      if (Array.isArray(response)) {
+        // 从 content 数组提取文本内容用于记忆系统
+        responseContent = response
+          .filter(block => block.type === 'text')
+          .map(block => block.text || '')
+          .join('\n')
+      } else if (typeof response === 'string') {
+        responseContent = response
+      } else {
+        responseContent = String(response)
+      }
+      
+      await this.memoryManager.addMessage('assistant', responseContent)
       
       // 检查是否需要压缩
       const compressionCheck = await this.memoryManager.checkCompressionNeeded()
@@ -460,7 +548,17 @@ export class WriteFlowApp extends EventEmitter {
         console.log(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
       }
       
-      return response
+      // 确保返回一致的格式给 UI
+      if (Array.isArray(response)) {
+        console.log('🔄 返回包装的 content 对象，数组长度:', response.length)
+        return { content: response }  // 包装成对象
+      } else if (typeof response === 'string') {
+        console.log('🔄 返回字符串响应，长度:', response.length)
+        return response  // 直接返回字符串
+      } else {
+        console.log('🔄 返回其他格式响应:', typeof response)
+        return response  // 其他格式保持不变
+      }
       
     } catch (error) {
       // 如果AI调用失败，回退到意图检测
@@ -630,15 +728,31 @@ export class WriteFlowApp extends EventEmitter {
   async executeToolWithEvents(toolName: string, input: any): Promise<any> {
     // 特殊处理 exit_plan_mode 工具
     if (toolName === 'exit_plan_mode') {
-      // 发射事件给 UI
+      console.log('🔄 执行 exit_plan_mode 工具，计划内容长度:', input.plan?.length || 0)
+      
+      // 确保计划内容存在
+      if (!input.plan || input.plan.trim().length === 0) {
+        return {
+          success: false,
+          content: '❌ 计划内容为空，请提供详细计划',
+          error: '计划内容不能为空'
+        }
+      }
+      
+      // 发射事件给 UI，传递完整的计划内容
       this.emit('exit-plan-mode', input.plan)
+      
       return {
         success: true,
-        content: '等待用户确认计划...',
+        content: `📋 计划已生成，等待用户确认...
+
+计划预览:
+${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
         metadata: {
           plan: input.plan,
           approved: false,
-          message: '等待用户确认计划...'
+          message: '等待用户确认计划...',
+          timestamp: Date.now()
         }
       }
     }
@@ -646,49 +760,104 @@ export class WriteFlowApp extends EventEmitter {
     // 执行其他工具
     return await this.toolManager.executeTool(toolName, input)
   }
-
   /**
    * 拦截并处理 AI 响应中的工具调用
    */
-  async interceptToolCalls(aiResponse: string): Promise<{
+  async interceptToolCalls(aiResponse: any): Promise<{
     shouldIntercept: boolean
     processedResponse?: string
     toolCalls?: Array<{ toolName: string; input: any }>
+    thinkingContent?: string
   }> {
-    // 检测 AI 响应中的工具调用模式
-    const toolCallPattern = /<function_calls>[\s\S]*?<invoke name="([^"]+)">[\s\S]*?<parameter name="([^"]+)">([^<]*)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/g
+    console.log('🔍 开始拦截工具调用，响应类型:', typeof aiResponse)
     
-    const matches = [...aiResponse.matchAll(toolCallPattern)]
-    
-    if (matches.length === 0) {
-      return { shouldIntercept: false }
-    }
-
+    let shouldIntercept = false
+    let processedResponse = ''
     const toolCalls = []
-    let processedResponse = aiResponse
+    let thinkingContent: string | undefined
 
-    for (const match of matches) {
-      const toolName = match[1]
-      const paramName = match[2] 
-      const paramValue = match[3]
-      
-      if (toolName === 'ExitPlanMode') {
-        // 提取计划内容
-        const input = { plan: paramValue }
-        toolCalls.push({ toolName: 'exit_plan_mode', input })
-        
-        // 发射事件
-        this.emit('exit-plan-mode', paramValue)
-        
-        // 移除工具调用，替换为等待消息
-        processedResponse = processedResponse.replace(match[0], '等待用户确认计划...')
+    // 处理不同格式的响应
+    let responseToProcess = aiResponse
+    
+    // 如果是包装的对象，提取 content
+    if (typeof aiResponse === 'object' && aiResponse !== null && !Array.isArray(aiResponse)) {
+      if ((aiResponse as any).content) {
+        responseToProcess = (aiResponse as any).content
+        console.log('📦 从包装对象中提取 content')
       }
     }
+    
+    // 处理结构化响应（content 数组）
+    if (Array.isArray(responseToProcess)) {
+      console.log('📦 处理结构化响应，内容块数量:', responseToProcess.length)
+      
+      for (const block of responseToProcess) {
+        if (block.type === 'text') {
+          let textContent = block.text || ''
+          
+          // 提取 thinking 内容
+          const thinkingMatch = textContent.match(/<thinking>([\s\S]*?)<\/thinking>/i)
+          if (thinkingMatch) {
+            thinkingContent = thinkingMatch[1].trim()
+            console.log('🧠 提取到 thinking 内容，长度:', thinkingContent?.length || 0)
+            textContent = textContent.replace(thinkingMatch[0], '').trim()
+          }
+          
+          processedResponse += textContent
+        } else if (block.type === 'tool_use') {
+          shouldIntercept = true
+          const toolName = block.name
+          const input = block.input
+          
+          console.log('🎯 检测到工具调用:', toolName)
+          
+          if (toolName === 'ExitPlanMode' && input?.plan) {
+            toolCalls.push({ toolName: 'exit_plan_mode', input })
+            console.log('📋 ExitPlanMode 计划内容长度:', input.plan.length)
+            this.emit('exit-plan-mode', input.plan)
+          }
+        }
+      }
+    } else if (typeof aiResponse === 'string') {
+      // 处理传统的文本响应（向后兼容）
+      console.log('📝 处理传统文本响应，长度:', aiResponse.length)
+      
+      const thinkingMatch = aiResponse.match(/<thinking>([\s\S]*?)<\/thinking>/i)
+      if (thinkingMatch) {
+        thinkingContent = thinkingMatch[1].trim()
+      }
+      
+      // 检测传统工具调用格式
+      const patterns = [
+        /<function_calls>[\s\S]*?<invoke name="ExitPlanMode">[\s\S]*?<parameter name="plan">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi
+      ]
+
+      for (const pattern of patterns) {
+        const matches = [...aiResponse.matchAll(pattern)]
+        
+        for (const match of matches) {
+          shouldIntercept = true
+          const planContent = match[1].trim()
+          
+          toolCalls.push({ toolName: 'exit_plan_mode', input: { plan: planContent } })
+          console.log('🎯 检测到传统 ExitPlanMode 工具调用')
+          this.emit('exit-plan-mode', planContent)
+          processedResponse = aiResponse.replace(match[0], '')
+        }
+      }
+      
+      if (!shouldIntercept) {
+        processedResponse = aiResponse
+      }
+    }
+    
+    console.log('✅ 拦截结果:', { shouldIntercept, hasThinking: !!thinkingContent, toolCallsCount: toolCalls.length })
 
     return {
-      shouldIntercept: true,
+      shouldIntercept,
       processedResponse,
-      toolCalls
+      toolCalls,
+      thinkingContent
     }
   }
 }

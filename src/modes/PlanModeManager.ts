@@ -142,28 +142,14 @@ export class PlanModeManager {
       systemReminders: []
     }
 
-    // 生成进入 Plan 模式的系统提醒
-    const reminders: SystemReminder[] = []
-    
-    if (this.config.autoInjectReminders) {
-      // 主要的 Plan 模式提醒
-      const entryReminder = this.reminderInjector.generatePlanModeEntryReminder()
-      reminders.push(entryReminder)
-      this.state.systemReminders.push(entryReminder)
-
-      // 模式切换提醒
-      const modeChangeReminder = this.reminderInjector.generateModeChangeReminder(previousMode, PlanMode.Plan)
-      reminders.push(modeChangeReminder)
-      this.state.systemReminders.push(modeChangeReminder)
-    }
-
     // 触发事件
     if (this.events.onModeEnter) {
       this.events.onModeEnter(previousMode)
     }
 
     console.log('✅ 已成功进入 Plan 模式')
-    return reminders
+    // 返回空数组，不生成任何系统提醒以保持界面简洁
+    return []
   }
 
   /**

@@ -96,12 +96,27 @@ Examples:
       }
     }
 
-    // 成功确认的响应
+    // 成功确认的响应 - 包含格式化的计划内容
+    const formattedPlan = this.formatPlanForDisplay(plan)
+    const planSummary = this.generatePlanSummary(plan)
+    
     return {
       success: true,
-      content: 'User has approved your plan. You can now start coding. Start with updating your todo list if applicable',
+      content: `📋 **实施计划**
+
+${formattedPlan}
+
+---
+📊 **计划概览**
+• 总步骤: ${planSummary.totalSteps} 个
+• 预估时间: ${planSummary.estimatedTime}  
+• 复杂度: ${planSummary.complexity === 'high' ? '🔴 高' : planSummary.complexity === 'medium' ? '🟡 中' : '🟢 低'}
+
+等待用户确认以开始执行...`,
       metadata: {
         plan,
+        formattedPlan,
+        planSummary,
         approved: true,
         message: 'User has approved your plan. You can now start coding. Start with updating your todo list if applicable',
         nextSteps: [
