@@ -126,13 +126,18 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
     try {
       updateExecution(execution.id, { status: 'running' })
       
-      // 实际保存笔记逻辑
-      // 这里可以集成到实际的笔记系统
-      console.log(`📝 保存笔记: ${note}`)
+      // 使用集成的记忆系统保存笔记
+      const memoryManager = writeFlowApp.getMemoryManager()
+      if (memoryManager) {
+        await memoryManager.addMessage('system', `📝 用户笔记: ${note}`, { type: 'user_note' })
+        console.log(`📝 笔记已保存到记忆系统: ${note}`)
+      } else {
+        console.log(`📝 保存笔记: ${note}`)
+      }
       
       updateExecution(execution.id, {
         status: 'completed',
-        result: '笔记已保存',
+        result: '笔记已保存到记忆系统',
         endTime: new Date()
       })
       
@@ -143,7 +148,7 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
         endTime: new Date()
       })
     }
-  }, [createExecution, updateExecution])
+  }, [createExecution, updateExecution, writeFlowApp])
 
   const processInput = useCallback(async (input: string, inputMode: InputMode): Promise<string> => {
     switch (inputMode) {

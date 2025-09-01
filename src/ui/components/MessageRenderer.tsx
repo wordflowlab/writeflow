@@ -1,12 +1,39 @@
 import React from 'react'
 import { Box, Text } from 'ink'
 import { UIMessage, InputMode } from '../types/index.js'
+import { TodoListRenderer } from '../renderers/TodoListRenderer.js'
 
 interface MessageRendererProps {
   message: UIMessage
 }
 
 export const MessageRenderer = React.memo(function MessageRenderer({ message }: MessageRendererProps) {
+  // 处理 JSX 类型消息
+  if (message.type === 'jsx' && message.jsx) {
+    return (
+      <Box flexDirection="column" marginBottom={1}>
+        {message.jsx}
+      </Box>
+    )
+  }
+
+  // 处理结构化数据（如 todo-list）
+  if (message.type === 'jsx' && message.data) {
+    const { type, data } = JSON.parse(message.content)
+    
+    switch (type) {
+      case 'todo-list':
+        return (
+          <Box flexDirection="column" marginBottom={1}>
+            <TodoListRenderer data={data} />
+          </Box>
+        )
+      default:
+        // 未知类型，回退到普通文本渲染
+        break
+    }
+  }
+
   const getMessagePrefix = () => {
     switch (message.type) {
       case 'user':
@@ -21,6 +48,8 @@ export const MessageRenderer = React.memo(function MessageRenderer({ message }: 
         return <Text color="green">✓ </Text>
       case 'system':
         return <Text color="gray">• </Text>
+      case 'jsx':
+        return <Text color="magenta">▶ </Text>
       default:
         return null
     }
@@ -34,6 +63,8 @@ export const MessageRenderer = React.memo(function MessageRenderer({ message }: 
         return 'green'
       case 'system':
         return 'gray'
+      case 'jsx':
+        return 'magenta'
       default:
         return 'white'
     }

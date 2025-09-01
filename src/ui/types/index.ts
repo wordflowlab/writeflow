@@ -1,3 +1,5 @@
+import React from 'react'
+
 // UI模式枚举
 export enum UIMode {
   Default = 'default',
@@ -16,10 +18,12 @@ export enum InputMode {
 // 消息类型
 export interface UIMessage {
   id: string
-  type: 'user' | 'assistant' | 'system'
+  type: 'user' | 'assistant' | 'system' | 'jsx'
   content: string
   timestamp: Date
   mode?: InputMode
+  jsx?: React.ReactElement  // 支持 JSX 内容
+  data?: any               // 支持结构化数据
 }
 
 // UI状态

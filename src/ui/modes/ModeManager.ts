@@ -1,4 +1,7 @@
 import { UIMode } from '../types/index.js'
+import { PlanModeManager, PlanModeState, PlanModeEvents } from '../../modes/PlanModeManager.js'
+import { SystemReminder } from '../../tools/SystemReminderInjector.js'
+import { PlanMode } from '../../types/agent.js'
 
 export interface ModeState {
   currentMode: UIMode
@@ -6,6 +9,8 @@ export interface ModeState {
   autoAcceptEnabled: boolean
   bypassPermissions: boolean
   modeHistory: UIMode[]
+  planModeState?: PlanModeState
+  systemReminders: SystemReminder[]
 }
 
 export class ModeManager {
@@ -13,8 +18,11 @@ export class ModeManager {
     currentMode: UIMode.Default,
     autoAcceptEnabled: false,
     bypassPermissions: false,
-    modeHistory: [UIMode.Default]
+    modeHistory: [UIMode.Default],
+    systemReminders: []
   }
+
+  private planModeManager: PlanModeManager
 
   private modeOrder: UIMode[] = [
     UIMode.Default,
@@ -24,6 +32,39 @@ export class ModeManager {
   ]
 
   private listeners: Array<(state: ModeState) => void> = []
+
+  constructor() {
+    // 初始化 Plan 模式管理器
+    const planModeEvents: PlanModeEvents = {
+      onModeEnter: (previousMode) => {
+        console.log(`📋 Plan 模式激活，从 ${previousMode} 模式切换`)
+        this.syncPlanModeState()
+      },
+      onModeExit: (nextMode, approved) => {
+        console.log(`📋 Plan 模式退出，切换到 ${nextMode} 模式，计划${approved ? '已批准' : '被拒绝'}`)
+        this.syncPlanModeState()
+      },
+      onPlanUpdate: (plan) => {
+        this.state.planText = plan
+        this.notify()
+      },
+      onPlanApproval: (approved, reason) => {
+        console.log(`📋 计划${approved ? '批准' : '拒绝'}${reason ? `: ${reason}` : ''}`)
+        this.syncPlanModeState()
+      },
+      onSystemReminder: (reminder) => {
+        this.addSystemReminder(reminder)
+      }
+    }
+
+    this.planModeManager = new PlanModeManager({
+      autoInjectReminders: true,
+      strictPermissionCheck: true,
+      planQualityCheck: true,
+      maxPlanHistory: 10,
+      reminderDisplayDuration: 300000 // 5分钟
+    }, planModeEvents)
+  }
 
   /**
    * 订阅模式状态变化
@@ -59,13 +100,13 @@ export class ModeManager {
   /**
    * 设置特定模式
    */
-  setMode(mode: UIMode): void {
+  async setMode(mode: UIMode): Promise<void> {
     if (mode !== this.state.currentMode) {
       this.state.modeHistory.push(this.state.currentMode)
       this.state.currentMode = mode
       
       // 模式特定的初始化
-      this.initializeModeSpecific(mode)
+      await this.initializeModeSpecific(mode)
       
       this.notify()
     }
@@ -81,10 +122,16 @@ export class ModeManager {
   /**
    * 模式特定的初始化
    */
-  private initializeModeSpecific(mode: UIMode): void {
+  private async initializeModeSpecific(mode: UIMode): Promise<void> {
+    const previousMode = this.state.modeHistory[this.state.modeHistory.length - 1] || UIMode.Default
+    
     switch (mode) {
       case UIMode.Plan:
         // 进入计划模式时的设置
+        const planModeToAgentMode = this.mapUIModeToPlanMode(previousMode)
+        const reminders = await this.planModeManager.enterPlanMode(planModeToAgentMode)
+        this.state.systemReminders.push(...reminders)
+        this.syncPlanModeState()
         console.log('🚀 进入计划模式 - 只读分析')
         break
         
@@ -104,7 +151,12 @@ export class ModeManager {
         // 回到默认模式时重置状态
         this.state.autoAcceptEnabled = false
         this.state.bypassPermissions = false
-        this.state.planText = undefined
+        
+        // 如果从 Plan 模式退出但计划未批准，保持计划文本
+        if (previousMode !== UIMode.Plan || this.planModeManager.getState().planApproved) {
+          this.state.planText = undefined
+        }
+        
         console.log('🎯 回到默认模式')
         break
     }
@@ -183,5 +235,127 @@ export class ModeManager {
       default:
         return 'cyan'
     }
+  }
+
+  /**
+   * 同步 Plan 模式状态
+   */
+  private syncPlanModeState(): void {
+    this.state.planModeState = this.planModeManager.getState()
+    this.state.systemReminders = this.planModeManager.getActiveReminders()
+  }
+
+  /**
+   * 映射 UI 模式到 Agent Plan 模式
+   */
+  private mapUIModeToPlanMode(uiMode: UIMode): PlanMode {
+    switch (uiMode) {
+      case UIMode.Plan:
+        return PlanMode.Plan
+      case UIMode.AcceptEdits:
+        return PlanMode.AcceptEdits
+      case UIMode.BypassPermissions:
+        return PlanMode.BypassPermissions
+      default:
+        return PlanMode.Default
+    }
+  }
+
+  /**
+   * 添加系统提醒
+   */
+  private addSystemReminder(reminder: SystemReminder): void {
+    this.state.systemReminders.push(reminder)
+    this.notify()
+  }
+
+  /**
+   * 清除系统提醒
+   */
+  clearSystemReminders(): void {
+    this.state.systemReminders = []
+    this.planModeManager.clearReminders()
+    this.notify()
+  }
+
+  /**
+   * 获取 Plan 模式管理器
+   */
+  getPlanModeManager(): PlanModeManager {
+    return this.planModeManager
+  }
+
+  /**
+   * 尝试退出 Plan 模式
+   */
+  async exitPlanMode(plan: string, nextMode: UIMode = UIMode.Default): Promise<{
+    success: boolean
+    approved: boolean
+    message?: string
+  }> {
+    if (this.state.currentMode !== UIMode.Plan) {
+      return { success: false, approved: false, message: '当前不在 Plan 模式' }
+    }
+
+    const nextPlanMode = this.mapUIModeToPlanMode(nextMode)
+    const result = await this.planModeManager.exitPlanMode(plan, nextPlanMode)
+
+    if (result.approved) {
+      // 计划被批准，切换模式
+      await this.setMode(nextMode)
+    } else {
+      // 计划被拒绝，保持在 Plan 模式
+      this.state.systemReminders.push(...result.reminders)
+      this.syncPlanModeState()
+      this.notify()
+    }
+
+    return {
+      success: result.success,
+      approved: result.approved,
+      message: result.result?.message
+    }
+  }
+
+  /**
+   * 检查工具权限（集成 Plan 模式）
+   */
+  async checkToolPermission(toolName: string, parameters: any = {}): Promise<{
+    allowed: boolean
+    reminder?: SystemReminder
+    reason?: string
+  }> {
+    if (this.state.currentMode === UIMode.Plan) {
+      return await this.planModeManager.checkToolPermission(toolName, parameters)
+    }
+
+    // 其他模式的权限检查
+    return { allowed: this.isToolAllowed(toolName) }
+  }
+
+  /**
+   * 生成模式状态报告
+   */
+  generateStatusReport(): string {
+    const reports = [
+      `📊 模式管理器状态报告`,
+      ``,
+      `🔹 当前模式：${this.getModeDisplayName()} (${this.state.currentMode})`,
+      `🔹 自动接受：${this.state.autoAcceptEnabled ? '启用' : '禁用'}`,
+      `🔹 绕过权限：${this.state.bypassPermissions ? '启用' : '禁用'}`,
+      `🔹 系统提醒：${this.state.systemReminders.length} 个`,
+    ]
+
+    if (this.state.planText) {
+      reports.push(`🔹 当前计划：已制定`)
+    }
+
+    if (this.state.currentMode === UIMode.Plan) {
+      reports.push(``)
+      reports.push(`📋 Plan 模式详情：`)
+      reports.push(this.planModeManager.generateStatusReport())
+    }
+
+    return reports.join('\n')
   }
 }

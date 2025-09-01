@@ -6,6 +6,7 @@ import { systemCommands } from '../commands/system-commands.js'
 import { fileCommands } from '../commands/file-commands.js'
 import { publishCommands } from '../commands/publish-commands.js'
 import { styleCommands } from '../commands/style-commands.js'
+import { todoCommands } from '../commands/todo-commands.js'
 
 /**
  * 命令执行器
@@ -22,7 +23,8 @@ export class CommandExecutor {
       ...systemCommands, 
       ...fileCommands,
       ...publishCommands,
-      ...styleCommands
+      ...styleCommands,
+      ...todoCommands
     ]
   }
 
@@ -173,13 +175,43 @@ export class CommandExecutor {
     args: string,
     context: AgentContext
   ): Promise<CommandResult> {
-    // JSX 命令的具体实现取决于 React 组件系统
-    // 这里提供基础框架
-    
-    return {
-      success: true,
-      jsx: undefined, // 需要实际的 JSX 组件
-      skipHistory: true
+    if (!command.call) {
+      throw new Error(`JSX命令 ${command.name} 缺少 call 方法`)
+    }
+
+    try {
+      // 调用命令获取 JSON 格式的结果
+      const result = await command.call(args, context)
+      
+      // 解析 JSON 结果
+      let data
+      try {
+        data = JSON.parse(result)
+      } catch {
+        // 如果不是有效的 JSON，作为普通消息处理
+        return {
+          success: true,
+          messages: [{
+            role: 'assistant',
+            content: result
+          }],
+          skipHistory: false
+        }
+      }
+
+      // 返回 JSX 类型的结果
+      return {
+        success: true,
+        messages: [{
+          role: 'assistant',
+          content: result,
+          jsx: true,  // 标记为 JSX 消息
+          data: data  // 包含结构化数据
+        }],
+        skipHistory: false
+      }
+    } catch (error) {
+      throw new Error(`JSX命令执行失败: ${(error as Error).message}`)
     }
   }
 

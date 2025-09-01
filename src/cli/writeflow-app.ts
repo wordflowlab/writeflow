@@ -31,6 +31,9 @@ import {
 import { WebSearchTool, CitationManagerTool } from '../tools/research/index.js'
 import { WeChatConverterTool } from '../tools/publish/index.js'
 
+// 记忆系统
+import { MemoryManager } from '../tools/memory/MemoryManager.js'
+
 // 类型定义
 import { AIWritingConfig } from '../types/writing.js'
 import { AgentContext, PlanMode } from '../types/agent.js'
@@ -52,6 +55,9 @@ export class WriteFlowApp {
   // CLI 组件
   private commandExecutor!: CommandExecutor
   private toolManager!: ToolManager
+
+  // 记忆系统
+  private memoryManager!: MemoryManager
 
   // 配置
   private config: AIWritingConfig & SecurityConfig
@@ -146,10 +152,13 @@ export class WriteFlowApp {
       // 初始化CLI组件
       await this.initializeCLIComponents()
 
+      // 初始化记忆系统
+      await this.initializeMemorySystem()
+
       // 设置Agent上下文
       this.agentContext = {
         userId: 'cli-user',
-        sessionId: `session-${Date.now()}`,
+        sessionId: this.memoryManager.getSessionId(),
         workingDirectory: process.cwd(),
         currentProject: 'writeflow-cli',
         preferences: {
@@ -253,6 +262,18 @@ export class WriteFlowApp {
 
     // 注册核心命令
     this.commandExecutor.registerCommands(coreCommands)
+  }
+
+  /**
+   * 初始化记忆系统
+   */
+  private async initializeMemorySystem(): Promise<void> {
+    this.memoryManager = new MemoryManager({
+      autoCompress: true,
+      compressionThreshold: 90,
+      maxShortTermMessages: 50,
+      enableKnowledgeExtraction: true
+    })
   }
 
   /**
@@ -375,73 +396,66 @@ export class WriteFlowApp {
   }
 
   /**
-   * 处理自由文本输入
+   * 处理自由文本输入 - 集成记忆系统
    */
   async handleFreeTextInput(input: string, options: { 
     signal?: AbortSignal, 
     messages?: Array<{ type: string; content: string }> 
   } = {}): Promise<string> {
     try {
-      // 构建完整的对话历史
+      // 添加用户消息到记忆系统
+      await this.memoryManager.addMessage('user', input)
+      
+      // 获取上下文（包含三层记忆）
+      const context = await this.memoryManager.getContext(input)
+      
+      // 构建对话历史（优先使用记忆系统的数据）
       const conversationHistory: Array<{ role: string; content: string }> = []
       
-      // 如果有历史消息，先转换格式
-      if (options.messages && options.messages.length > 0) {
-        // 只保留最近20轮对话，避免token过多
-        const recentMessages = options.messages.slice(-20)
+      // 添加相关知识（如果存在）
+      if (context.knowledgeEntries.length > 0) {
+        const knowledgeContext = context.knowledgeEntries
+          .slice(0, 3)
+          .map(entry => `知识: ${entry.topic}\n${entry.content}`)
+          .join('\n\n')
         
-        for (const msg of recentMessages) {
-          let role: string
-          switch (msg.type) {
-            case 'user':
-              role = 'user'
-              break
-            case 'assistant':
-              role = 'assistant'
-              break
-            case 'system':
-              role = 'system'
-              break
-            default:
-              continue // 跳过未知类型
-          }
-          
-          conversationHistory.push({
-            role,
-            content: msg.content
-          })
-        }
+        conversationHistory.push({
+          role: 'system',
+          content: `相关知识背景:\n${knowledgeContext}`
+        })
       }
       
-      // 添加当前输入
-      conversationHistory.push({
-        role: 'user',
-        content: input
-      })
+      // 添加相关会话总结（如果存在）
+      if (context.relevantSummaries.length > 0) {
+        const summaryContext = context.relevantSummaries
+          .slice(0, 2)
+          .map(summary => summary.summary)
+          .join('\n\n')
+        
+        conversationHistory.push({
+          role: 'system',
+          content: `相关历史会话总结:\n${summaryContext}`
+        })
+      }
+      
+      // 添加短期记忆中的消息
+      for (const msg of context.recentMessages) {
+        conversationHistory.push({
+          role: msg.role,
+          content: msg.content
+        })
+      }
       
       // 使用完整对话历史调用AI
       const response = await this.processAIQuery(conversationHistory, undefined, options.signal)
       
-      // 更新上下文管理器中的对话历史
-      if (conversationHistory.length > 0) {
-        const userMessage = conversationHistory[conversationHistory.length - 1]
-        await this.contextManager.updateContext({
-          id: `msg-${Date.now()}`,
-          type: MessageType.UserInput,
-          priority: MessagePriority.Normal,
-          payload: userMessage.content,
-          timestamp: Date.now(),
-          source: 'cli'
-        } as Message, {
-          dialogueHistory: conversationHistory.map(msg => ({
-            id: `msg-${Date.now()}-${Math.random()}`,
-            type: msg.role === 'user' ? MessageType.UserInput : MessageType.AgentResponse,
-            priority: MessagePriority.Normal,
-            payload: msg.content,
-            timestamp: Date.now(),
-            source: 'cli'
-          } as Message))
-        })
+      // 添加AI响应到记忆系统
+      await this.memoryManager.addMessage('assistant', response)
+      
+      // 检查是否需要压缩
+      const compressionCheck = await this.memoryManager.checkCompressionNeeded()
+      if (compressionCheck.needed) {
+        console.log(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
       }
       
       return response
@@ -539,9 +553,11 @@ export class WriteFlowApp {
   }
 
   /**
-   * 获取系统状态
+   * 获取系统状态 - 包含记忆系统状态
    */
   async getSystemStatus(): Promise<Record<string, any>> {
+    const memoryStats = this.memoryManager ? await this.memoryManager.getStats() : null
+    
     return {
       version: getVersion(),
       initialized: this.isInitialized,
@@ -549,8 +565,49 @@ export class WriteFlowApp {
       activeTools: this.toolManager?.getAvailableTools().length || 0,
       availableCommands: this.commandExecutor?.getAvailableCommands().length || 0,
       currentModel: this.config.model,
-      securityEnabled: this.config.enabled
+      securityEnabled: this.config.enabled,
+      memory: memoryStats ? {
+        shortTerm: {
+          messages: memoryStats.shortTerm.messageCount,
+          tokens: memoryStats.shortTerm.totalTokens
+        },
+        midTerm: {
+          summaries: memoryStats.midTerm.summaryCount,
+          sessions: memoryStats.midTerm.totalSessions
+        },
+        longTerm: {
+          knowledge: memoryStats.longTerm.knowledgeCount,
+          topics: memoryStats.longTerm.topicCount
+        }
+      } : null
     }
+  }
+
+  /**
+   * 获取记忆管理器实例
+   */
+  getMemoryManager(): MemoryManager | null {
+    return this.memoryManager || null
+  }
+
+  /**
+   * 手动触发记忆压缩
+   */
+  async compressMemory(): Promise<any> {
+    if (!this.memoryManager) {
+      throw new Error('记忆系统未初始化')
+    }
+    return await this.memoryManager.forceCompression()
+  }
+
+  /**
+   * 搜索记忆
+   */
+  async searchMemory(query: string): Promise<any> {
+    if (!this.memoryManager) {
+      throw new Error('记忆系统未初始化')
+    }
+    return await this.memoryManager.search(query)
   }
 
   /**

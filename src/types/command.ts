@@ -41,6 +41,8 @@ export interface CommandMessage {
   role: 'assistant' | 'user'
   content: string
   isMeta?: boolean
+  jsx?: boolean    // 标记为 JSX 消息
+  data?: any       // 结构化数据
 }
 
 export interface CommandCallbacks {

@@ -1,6 +1,6 @@
 {
   "name": "writeflow",
-  "version": "2.3.2",
+  "version": "2.5.0",
   "description": "AI 写作助手",
   "main": "src/cli/index.ts",
   "type": "module",
@@ -48,7 +48,8 @@
     "react": "^18.2.0",
     "tsx": "^4.0.0",
     "undici": "^6.0.0",
-    "yaml": "^2.3.0"
+    "yaml": "^2.3.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@jest/globals": "^29.0.0",
