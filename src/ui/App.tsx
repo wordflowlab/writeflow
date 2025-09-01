@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Box, Text, Static } from 'ink'
 // import { Header } from './components/Header.js'
 import { ModeIndicator } from './components/ModeIndicator.js'
@@ -42,6 +42,9 @@ export function App({ writeFlowApp }: AppProps) {
   const [showPlanConfirmation, setShowPlanConfirmation] = useState(false)
   const [currentPlan, setCurrentPlan] = useState<string>('')
   const [systemReminders, setSystemReminders] = useState<SystemReminderType[]>([])
+  
+  // 状态锁防止重复切换
+  const [isSwitchingMode, setIsSwitchingMode] = useState(false)
   
   const {
     state: uiState,
@@ -101,21 +104,36 @@ export function App({ writeFlowApp }: AppProps) {
   }
 
   // Plan 模式处理函数
-  const handleEnterPlanMode = async () => {
+  const handleEnterPlanMode = useCallback(async () => {
+    if (planModeManager.isInPlanMode()) return // 已在 Plan 模式
+    
+    // 清理旧的提醒
+    setSystemReminders([])
+    
     setPlanModeStartTime(Date.now())
     const reminders = await planModeManager.enterPlanMode()
     setSystemReminders(reminders)
     
+    // 只添加一次消息
     addMessage({
       type: 'system',
       content: '📋 已进入 Plan 模式 - 只读分析模式激活'
     })
-  }
+  }, [planModeManager, addMessage])
 
-  const handleExitPlanMode = async (plan: string) => {
+  const handleExitPlanMode = useCallback(async (plan: string) => {
     setCurrentPlan(plan)
+    
+    // 通知 PlanModeManager 处理工具调用
+    await planModeManager.handleExitPlanModeTool(plan)
+    
+    // 获取并显示新的系统提醒
+    const newReminders = planModeManager.getActiveReminders()
+    setSystemReminders(prev => [...prev, ...newReminders])
+    
+    // 显示确认对话框
     setShowPlanConfirmation(true)
-  }
+  }, [planModeManager])
 
   const handlePlanConfirmation = async (option: ConfirmationOption) => {
     setShowPlanConfirmation(false)
@@ -153,41 +171,31 @@ export function App({ writeFlowApp }: AppProps) {
     }
   }
 
-  const handleModeCycle = () => {
-    if (planModeManager.isInPlanMode()) {
-      // 从 Plan 模式切换到默认模式
-      planModeManager.reset()
-      setPlanModeStartTime(0)
-      setSystemReminders([])
-      addMessage({
-        type: 'system', 
-        content: '🔄 已退出 Plan 模式'
-      })
-    } else {
-      // 进入 Plan 模式
-      handleEnterPlanMode()
+  const handleModeCycle = useCallback(async () => {
+    if (isSwitchingMode) return // 防止重复切换
+    
+    setIsSwitchingMode(true)
+    try {
+      if (planModeManager.isInPlanMode()) {
+        // 从 Plan 模式切换到默认模式
+        setSystemReminders([]) // 清理前先清理提醒
+        planModeManager.reset()
+        setPlanModeStartTime(0)
+        addMessage({
+          type: 'system', 
+          content: '🔄 已退出 Plan 模式'
+        })
+      } else {
+        // 进入 Plan 模式
+        await handleEnterPlanMode()
+      }
+    } finally {
+      setIsSwitchingMode(false)
     }
-  }
+  }, [isSwitchingMode, planModeManager, addMessage, handleEnterPlanMode])
 
-  // 键盘事件处理
-  const keyboardHandlers = {
-    onModeSwitch: handleModeCycle, // 使用新的模式切换处理器
-    onClearInput: () => setInput(''),
-    onClearScreen: () => {
-      clearExecutions()
-      // 清空消息历史的逻辑
-    },
-    onSubmitInput: async (input: string) => {
-      await handleInput(input)
-    },
-    onUpdateInput: (updater: (prev: string) => string) => {
-      setInput(updater)
-    }
-  }
-
-  useKeyboard(input, keyboardHandlers, isProcessing)
-
-  const handleInput = async (inputText: string) => {
+  // 输入处理函数
+  const handleInput = useCallback(async (inputText: string) => {
     // 防止重复处理
     if (isProcessingRef.current) {
       console.warn('正在处理中，忽略重复请求')
@@ -256,11 +264,22 @@ export function App({ writeFlowApp }: AppProps) {
         })
       }
       
-      // 直接添加响应，不添加AI提供商标识
-      addMessage({
-        type: 'assistant',
-        content: response
-      })
+      // 拦截并处理工具调用
+      const toolInterception = await writeFlowApp.interceptToolCalls(response)
+      
+      if (toolInterception.shouldIntercept) {
+        // 使用处理后的响应
+        addMessage({
+          type: 'assistant',
+          content: toolInterception.processedResponse || response
+        })
+      } else {
+        // 直接添加响应，不添加AI提供商标识
+        addMessage({
+          type: 'assistant',
+          content: response
+        })
+      }
 
     } catch (error) {
       addMessage({
@@ -273,7 +292,25 @@ export function App({ writeFlowApp }: AppProps) {
       isProcessingRef.current = false
       setAbortController(null) // 清理 AbortController
     }
-  }
+  }, [planModeManager, addMessage, setLoading, setStatus, processInput, writeFlowApp, showWelcomeLogo, uiState.messages, detectInputMode])
+
+  // 键盘事件处理
+  const keyboardHandlers = useMemo(() => ({
+    onModeSwitch: handleModeCycle, // 使用新的模式切换处理器
+    onClearInput: () => setInput(''),
+    onClearScreen: () => {
+      clearExecutions()
+      // 清空消息历史的逻辑
+    },
+    onSubmitInput: async (input: string) => {
+      await handleInput(input)
+    },
+    onUpdateInput: (updater: (prev: string) => string) => {
+      setInput(updater)
+    }
+  }), [handleModeCycle, clearExecutions, handleInput])
+
+  useKeyboard(input, keyboardHandlers, isProcessing)
 
 
   // 监听 Plan 模式退出事件
@@ -282,13 +319,13 @@ export function App({ writeFlowApp }: AppProps) {
       handleExitPlanMode(plan)
     }
 
-    // 如果 writeFlowApp 有退出 plan 模式的事件，可以在这里监听
-    // writeFlowApp.on('exit-plan-mode', handleExitPlan)
+    // 监听 exit-plan-mode 事件
+    writeFlowApp.on('exit-plan-mode', handleExitPlan)
 
     return () => {
-      // writeFlowApp.off('exit-plan-mode', handleExitPlan)
+      writeFlowApp.off('exit-plan-mode', handleExitPlan)
     }
-  }, [])
+  }, [writeFlowApp, handleExitPlanMode])
 
   // 清理系统提醒的定时器
   useEffect(() => {
@@ -325,24 +362,30 @@ export function App({ writeFlowApp }: AppProps) {
 
       {/* Plan 模式警告框 */}
       {planModeManager.isInPlanMode() && planModeStartTime > 0 && (
-        <PlanModeAlert 
-          elapsedTime={Date.now() - planModeStartTime}
-          onModeCycle={handleModeCycle}
-        />
+        <Box key="plan-mode-alert">
+          <PlanModeAlert 
+            elapsedTime={Date.now() - planModeStartTime}
+            onModeCycle={handleModeCycle}
+          />
+        </Box>
       )}
 
       {/* 系统提醒显示 */}
       {systemReminders.length > 0 && (
-        <SystemReminder reminders={systemReminders} />
+        <Box key="system-reminders">
+          <SystemReminder reminders={systemReminders} />
+        </Box>
       )}
 
       {/* Plan 模式确认对话框 */}
       {showPlanConfirmation && (
-        <PlanModeConfirmation
-          plan={currentPlan}
-          onConfirm={handlePlanConfirmation}
-          onCancel={() => setShowPlanConfirmation(false)}
-        />
+        <Box key="plan-confirmation">
+          <PlanModeConfirmation
+            plan={currentPlan}
+            onConfirm={handlePlanConfirmation}
+            onCancel={() => setShowPlanConfirmation(false)}
+          />
+        </Box>
       )}
 
       {/* 顶部标题栏 - 移除以保持极简 */}

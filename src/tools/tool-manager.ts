@@ -1,5 +1,6 @@
 import { WritingTool, ToolInput, ToolResult } from '../types/tool.js'
 import { ReadArticleTool, WriteArticleTool, EditArticleTool } from './base/index.js'
+import { ExitPlanModeTool } from './ExitPlanMode.js'
 
 /**
  * 工具管理器
@@ -25,7 +26,8 @@ export class ToolManager {
     const baseTools = [
       new ReadArticleTool(),
       new WriteArticleTool(),
-      new EditArticleTool()
+      new EditArticleTool(),
+      new ExitPlanModeTool()
     ]
 
     baseTools.forEach(tool => {

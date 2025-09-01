@@ -3,6 +3,7 @@ import path from 'path'
 import readline from 'readline'
 import chalk from 'chalk'
 import enquirer from 'enquirer'
+import { EventEmitter } from 'events'
 import { getVersion } from '../utils/version.js'
 
 // 核心组件
@@ -44,7 +45,7 @@ import { Message, MessageType, MessagePriority } from '../types/message.js'
  * WriteFlow 主应用类
  * 整合所有核心组件
  */
-export class WriteFlowApp {
+export class WriteFlowApp extends EventEmitter {
   // 核心组件
   private messageQueue!: H2AAsyncMessageQueue
   private agentEngine!: NOMainAgentEngine
@@ -65,6 +66,7 @@ export class WriteFlowApp {
   private isInitialized = false
 
   constructor() {
+    super()
     this.config = this.getDefaultConfig()
   }
 
@@ -619,6 +621,74 @@ export class WriteFlowApp {
       return true
     } catch {
       return false
+    }
+  }
+
+  /**
+   * 执行工具并处理事件发射
+   */
+  async executeToolWithEvents(toolName: string, input: any): Promise<any> {
+    // 特殊处理 exit_plan_mode 工具
+    if (toolName === 'exit_plan_mode') {
+      // 发射事件给 UI
+      this.emit('exit-plan-mode', input.plan)
+      return {
+        success: true,
+        content: '等待用户确认计划...',
+        metadata: {
+          plan: input.plan,
+          approved: false,
+          message: '等待用户确认计划...'
+        }
+      }
+    }
+    
+    // 执行其他工具
+    return await this.toolManager.executeTool(toolName, input)
+  }
+
+  /**
+   * 拦截并处理 AI 响应中的工具调用
+   */
+  async interceptToolCalls(aiResponse: string): Promise<{
+    shouldIntercept: boolean
+    processedResponse?: string
+    toolCalls?: Array<{ toolName: string; input: any }>
+  }> {
+    // 检测 AI 响应中的工具调用模式
+    const toolCallPattern = /<function_calls>[\s\S]*?<invoke name="([^"]+)">[\s\S]*?<parameter name="([^"]+)">([^<]*)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/g
+    
+    const matches = [...aiResponse.matchAll(toolCallPattern)]
+    
+    if (matches.length === 0) {
+      return { shouldIntercept: false }
+    }
+
+    const toolCalls = []
+    let processedResponse = aiResponse
+
+    for (const match of matches) {
+      const toolName = match[1]
+      const paramName = match[2] 
+      const paramValue = match[3]
+      
+      if (toolName === 'ExitPlanMode') {
+        // 提取计划内容
+        const input = { plan: paramValue }
+        toolCalls.push({ toolName: 'exit_plan_mode', input })
+        
+        // 发射事件
+        this.emit('exit-plan-mode', paramValue)
+        
+        // 移除工具调用，替换为等待消息
+        processedResponse = processedResponse.replace(match[0], '等待用户确认计划...')
+      }
+    }
+
+    return {
+      shouldIntercept: true,
+      processedResponse,
+      toolCalls
     }
   }
 }

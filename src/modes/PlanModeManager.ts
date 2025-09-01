@@ -536,6 +536,36 @@ Plan mode is active. The user indicated that they do not want you to execute yet
   }
 
   /**
+   * 处理 ExitPlanModeTool 调用结果
+   */
+  async handleExitPlanModeTool(plan: string): Promise<void> {
+    // 更新当前计划
+    this.state.currentPlan = plan
+    
+    // 触发计划更新事件
+    if (this.events.onPlanUpdate) {
+      this.events.onPlanUpdate(plan)
+    }
+    
+    // 生成系统提醒
+    const reminder: SystemReminder = {
+      type: 'mode_notification',
+      content: [
+        '📋 Plan 模式计划已制定',
+        '',
+        '计划内容已准备就绪，请选择执行方式：',
+        '• 自动批准编辑 - 退出计划模式并自动执行所有修改',
+        '• 手动确认编辑 - 退出计划模式但需手动确认每个修改', 
+        '• 继续计划 - 保持计划模式继续完善计划'
+      ].join('\n'),
+      priority: 'high',
+      persistent: true
+    }
+    
+    this.state.systemReminders.push(reminder)
+  }
+
+  /**
    * 重置 Plan 模式管理器
    */
   reset(): void {

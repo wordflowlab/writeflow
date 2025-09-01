@@ -11,8 +11,17 @@ export function SystemReminder({ reminders }: SystemReminderProps) {
     return null
   }
 
+  // 添加提醒去重逻辑
+  const uniqueReminders = reminders.reduce((acc, reminder) => {
+    const key = `${reminder.type}-${reminder.priority}-${reminder.content.substring(0, 50)}`
+    if (!acc.some(r => `${r.type}-${r.priority}-${r.content.substring(0, 50)}` === key)) {
+      acc.push(reminder)
+    }
+    return acc
+  }, [] as SystemReminderType[])
+
   // 按优先级排序提醒
-  const sortedReminders = reminders.sort((a, b) => {
+  const sortedReminders = uniqueReminders.sort((a, b) => {
     const priorityOrder = { high: 3, medium: 2, low: 1 }
     return priorityOrder[b.priority] - priorityOrder[a.priority]
   })
@@ -20,7 +29,7 @@ export function SystemReminder({ reminders }: SystemReminderProps) {
   return (
     <Box flexDirection="column" marginBottom={1}>
       {sortedReminders.map((reminder, index) => (
-        <ReminderItem key={index} reminder={reminder} />
+        <ReminderItem key={`reminder-${reminder.type}-${index}`} reminder={reminder} />
       ))}
     </Box>
   )
