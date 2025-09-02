@@ -1,0 +1,200 @@
+import { z } from 'zod'
+import { WritingTool, ToolUseContext, ToolResult, ValidationResult } from '../../types/WritingTool.js'
+import { TodoManager } from '../TodoManager.js'
+import { Todo, TodoStatus, TodoPriority } from '../../types/Todo.js'
+import { emitReminderEvent, TodoChangeEvent } from '../../services/SystemReminderService.js'
+import { getTodoWriteDescription, getTodoWritePrompt } from '../../prompts/TodoPrompts.js'
+
+// 定义输入 Schema - 完全复刻 Claude Code 的结构
+const TodoItemSchema = z.object({
+  id: z.string().min(1, 'ID 不能为空'),
+  content: z.string().min(1, '任务内容不能为空'),
+  activeForm: z.string().min(1, '进行时描述不能为空'),
+  status: z.enum(['pending', 'in_progress', 'completed']),
+  priority: z.enum(['high', 'medium', 'low']).optional().default('medium'),
+  createdAt: z.string().transform(str => new Date(str)).optional(),
+  updatedAt: z.string().transform(str => new Date(str)).optional()
+})
+
+const InputSchema = z.object({
+  todos: z.array(TodoItemSchema).describe('更新后的任务列表')
+})
+
+/**
+ * TodoWrite 工具 - AI 任务管理核心工具
+ * 完全复刻 Claude Code v1.0.33 的 TodoWrite 工具功能
+ */
+export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
+  name = 'todo_write'
+  description = getTodoWriteDescription()
+  inputSchema = InputSchema
+  securityLevel = 'safe' as const
+
+  private todoManager: TodoManager
+
+  constructor(todoManager?: TodoManager) {
+    this.todoManager = todoManager || new TodoManager()
+  }
+
+  // 权限控制方法
+  isReadOnly(): boolean {
+    return false
+  }
+
+  needsPermissions(): boolean {
+    return false
+  }
+
+  isConcurrencySafe(): boolean {
+    return false // 不支持并发，参考 Claude Code 设计
+  }
+
+  async isEnabled(): Promise<boolean> {
+    return true
+  }
+
+  // 验证输入
+  async validateInput(
+    input: z.infer<typeof InputSchema>,
+    context?: ToolUseContext
+  ): Promise<ValidationResult> {
+    try {
+      const { todos } = input
+
+      // 验证 todos 数组
+      const validation = this.todoManager.validateTodos(todos as Todo[])
+      if (!validation.isValid) {
+        return {
+          result: false,
+          message: validation.error,
+          errorCode: 1
+        }
+      }
+
+      return { result: true }
+    } catch (error) {
+      return {
+        result: false,
+        message: error instanceof Error ? error.message : '验证失败',
+        errorCode: 500
+      }
+    }
+  }
+
+  // 执行工具
+  async execute(
+    input: z.infer<typeof InputSchema>,
+    context: ToolUseContext
+  ): Promise<ToolResult<string>> {
+    try {
+      const { todos } = input
+
+      // 获取旧的任务列表
+      const oldTodos = await this.todoManager.getAllTodos()
+
+      // 转换输入数据为 Todo 类型
+      const todoList: Todo[] = todos.map(todo => ({
+        id: todo.id,
+        content: todo.content,
+        activeForm: todo.activeForm,
+        status: todo.status as TodoStatus,
+        priority: (todo.priority as TodoPriority) || TodoPriority.MEDIUM,
+        createdAt: todo.createdAt || new Date(),
+        updatedAt: todo.updatedAt || new Date()
+      }))
+
+      // 保存新的任务列表
+      await this.todoManager.saveTodos(todoList)
+
+      // 生成成功消息 - 复刻 Claude Code 的标准响应
+      const successMessage = 'Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable'
+
+      // 触发系统提醒事件
+      this.emitTodoChangedEvent(oldTodos, todoList, context)
+
+      return {
+        success: true,
+        content: successMessage,
+        data: successMessage,
+        metadata: {
+          oldTodosCount: oldTodos.length,
+          newTodosCount: todoList.length,
+          timestamp: new Date().toISOString(),
+          agentId: context.agentId || 'default'
+        }
+      }
+
+    } catch (error) {
+      const errorMessage = `更新任务列表失败: ${error instanceof Error ? error.message : '未知错误'}`
+      
+      return {
+        success: false,
+        content: errorMessage,
+        data: errorMessage,
+        metadata: {
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+          agentId: context.agentId || 'default'
+        }
+      }
+    }
+  }
+
+  // 渲染工具使用消息
+  renderToolUseMessage(
+    input: z.infer<typeof InputSchema>,
+    options: { verbose: boolean }
+  ): string {
+    const { todos } = input
+    
+    if (options.verbose) {
+      const stats = this.calculateStats(todos)
+      return `正在更新任务列表 (${stats.total} 个任务: ${stats.pending} 待处理, ${stats.inProgress} 进行中, ${stats.completed} 已完成)`
+    }
+    
+    return `正在更新任务列表 (${todos.length} 个任务)`
+  }
+
+  // 私有辅助方法
+  private calculateStats(todos: any[]) {
+    return {
+      total: todos.length,
+      pending: todos.filter(t => t.status === 'pending').length,
+      inProgress: todos.filter(t => t.status === 'in_progress').length,
+      completed: todos.filter(t => t.status === 'completed').length
+    }
+  }
+
+  // 触发 Todo 变化事件
+  private emitTodoChangedEvent(
+    oldTodos: Todo[],
+    newTodos: Todo[],
+    context: ToolUseContext
+  ): void {
+    // 判断变化类型
+    let changeType: 'added' | 'removed' | 'modified' = 'modified'
+    if (newTodos.length > oldTodos.length) {
+      changeType = 'added'
+    } else if (newTodos.length < oldTodos.length) {
+      changeType = 'removed'
+    }
+
+    const eventData: TodoChangeEvent = {
+      oldTodos,
+      newTodos,
+      timestamp: Date.now(),
+      agentId: context.agentId || 'default',
+      changeType
+    }
+
+    // 触发 todo:changed 事件
+    emitReminderEvent('todo:changed', eventData)
+  }
+}
+
+/**
+ * 工厂函数 - 创建 TodoWriteTool 实例
+ */
+export function createTodoWriteTool(todoManager?: TodoManager): TodoWriteTool {
+  return new TodoWriteTool(todoManager)
+}

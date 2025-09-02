@@ -9,8 +9,11 @@ import { TodoListRenderer } from '../../ui/renderers/TodoListRenderer.js'
 let globalTodoManager: TodoManager | null = null
 
 function getTodoManager(sessionId?: string): TodoManager {
-  if (!globalTodoManager || (sessionId && globalTodoManager.getStorageInfo().sessionId !== sessionId)) {
-    globalTodoManager = new TodoManager(sessionId)
+  // 如果没有提供 sessionId，使用默认的固定 sessionId
+  const effectiveSessionId = sessionId || 'default-session'
+  
+  if (!globalTodoManager || globalTodoManager.getStorageInfo().sessionId !== effectiveSessionId) {
+    globalTodoManager = new TodoManager(effectiveSessionId)
   }
   return globalTodoManager
 }

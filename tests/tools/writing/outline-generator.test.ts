@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from '@jest/globals'
 import { OutlineGeneratorTool } from '@/tools/writing/outline-generator.js'
-import { AIWritingConfig } from '@/types/writing.js'
+import { AIWritingConfig, OutlineSection } from '@/types/writing.js'
 
 describe('OutlineGeneratorTool', () => {
   let outlineTool: OutlineGeneratorTool
@@ -81,7 +81,7 @@ describe('OutlineGeneratorTool', () => {
     
     const outline = result.metadata?.outline
     const totalSectionWords = outline.sections.reduce(
-      (sum, section) => sum + section.wordCount, 
+      (sum: number, section: OutlineSection) => sum + section.wordCount, 
       0
     )
     
@@ -104,7 +104,7 @@ describe('OutlineGeneratorTool', () => {
     expect(outline.writingTips.length).toBeGreaterThan(3)
     
     // 检查建议是否具体和实用
-    const hasConcreteTips = outline.writingTips.some(tip => 
+    const hasConcreteTips = outline.writingTips.some((tip: string) => 
       tip.includes('例子') || 
       tip.includes('数据') || 
       tip.includes('图表') ||

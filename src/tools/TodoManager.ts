@@ -9,6 +9,52 @@ export class TodoManager {
     this.storage = new TodoStorage(sessionId)
   }
 
+  // 验证只能有一个 in_progress 任务 - 复刻 Claude Code 验证逻辑
+  private validateSingleInProgress(todos: Todo[]): void {
+    const inProgressTodos = todos.filter(todo => todo.status === TodoStatus.IN_PROGRESS)
+    if (inProgressTodos.length > 1) {
+      throw new Error('只能有一个任务处于进行中状态。请先完成当前任务再开始新任务。')
+    }
+  }
+
+  // 自动生成 activeForm - 将命令式描述转换为进行时
+  public generateActiveForm(content: string): string {
+    // 简单的规则：如果不以"正在"开头，则添加
+    if (content.startsWith('正在')) {
+      return content
+    }
+    
+    // 常见的动词转换规则
+    const verbMappings: Record<string, string> = {
+      '实现': '正在实现',
+      '创建': '正在创建', 
+      '添加': '正在添加',
+      '修改': '正在修改',
+      '删除': '正在删除',
+      '编写': '正在编写',
+      '设计': '正在设计',
+      '测试': '正在测试',
+      '部署': '正在部署',
+      '优化': '正在优化',
+      '调试': '正在调试',
+      '分析': '正在分析',
+      '研究': '正在研究',
+      '学习': '正在学习',
+      '配置': '正在配置',
+      '安装': '正在安装'
+    }
+
+    // 查找匹配的动词
+    for (const [verb, activeVerb] of Object.entries(verbMappings)) {
+      if (content.startsWith(verb)) {
+        return content.replace(verb, activeVerb)
+      }
+    }
+
+    // 如果没有匹配的动词，则简单添加"正在"前缀
+    return `正在${content}`
+  }
+
   // 双重排序算法 - 完全复刻 Claude Code 的 YJ1 函数
   private sortTodos(todoA: Todo, todoB: Todo): number {
     // 先按状态排序
@@ -21,10 +67,10 @@ export class TodoManager {
     return TASK_PRIORITIES[todoA.priority] - TASK_PRIORITIES[todoB.priority]
   }
 
-  async addTodo(content: string, activeForm: string, priority?: TodoPriority): Promise<Todo> {
+  async addTodo(content: string, activeForm?: string, priority?: TodoPriority): Promise<Todo> {
     const params: CreateTodoParams = {
       content,
-      activeForm,
+      activeForm: activeForm || this.generateActiveForm(content),
       priority: priority || TodoPriority.MEDIUM
     }
     
@@ -163,6 +209,47 @@ export class TodoManager {
     } catch (error) {
       console.error('导入 Todo 数据失败:', error)
       return false
+    }
+  }
+
+  // 批量保存 Todos（用于 AI 工具）
+  async saveTodos(todos: Todo[]): Promise<void> {
+    // 验证只能有一个 in_progress
+    this.validateSingleInProgress(todos)
+    
+    // 保存到存储
+    await this.storage.saveTodos(todos)
+  }
+
+  // 验证 Todo 数组的完整性
+  validateTodos(todos: Todo[]): { isValid: boolean; error?: string } {
+    try {
+      // 检查重复 ID
+      const ids = todos.map(todo => todo.id)
+      const uniqueIds = new Set(ids)
+      if (ids.length !== uniqueIds.size) {
+        return { isValid: false, error: '发现重复的任务 ID' }
+      }
+
+      // 检查单一 in_progress
+      this.validateSingleInProgress(todos)
+
+      // 检查必需字段
+      for (const todo of todos) {
+        if (!todo.content?.trim()) {
+          return { isValid: false, error: `任务 "${todo.id}" 缺少内容` }
+        }
+        if (!todo.activeForm?.trim()) {
+          return { isValid: false, error: `任务 "${todo.id}" 缺少 activeForm` }
+        }
+      }
+
+      return { isValid: true }
+    } catch (error) {
+      return { 
+        isValid: false, 
+        error: error instanceof Error ? error.message : '验证失败' 
+      }
     }
   }
 

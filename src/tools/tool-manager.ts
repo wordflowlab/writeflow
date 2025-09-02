@@ -1,6 +1,7 @@
 import { WritingTool, ToolInput, ToolResult } from '../types/tool.js'
 import { ReadArticleTool, WriteArticleTool, EditArticleTool } from './base/index.js'
 import { ExitPlanModeTool } from './ExitPlanMode.js'
+import { createTodoToolAdapters } from './writing/index.js'
 
 /**
  * 工具管理器
@@ -23,12 +24,16 @@ export class ToolManager {
    * 注册基础工具
    */
   private registerBaseTools(): void {
-    const baseTools = [
+    const baseTools: WritingTool[] = [
       new ReadArticleTool(),
       new WriteArticleTool(),
       new EditArticleTool(),
       new ExitPlanModeTool()
     ]
+
+    // 添加 Todo 工具（适配器返回的是兼容的 WritingTool）
+    const todoTools = createTodoToolAdapters()
+    baseTools.push(...todoTools)
 
     baseTools.forEach(tool => {
       this.registerTool(tool)

@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from '@jest/globals'
 import { GrammarCheckerTool } from '@/tools/writing/grammar-checker.js'
-import { AIWritingConfig } from '@/types/writing.js'
+import { AIWritingConfig, GrammarCheck } from '@/types/writing.js'
 
 describe('GrammarCheckerTool', () => {
   let grammarTool: GrammarCheckerTool
@@ -28,7 +28,7 @@ describe('GrammarCheckerTool', () => {
     expect(result.success).toBe(true)
     expect(result.metadata?.issues).toBeDefined()
     
-    const grammarIssues = result.metadata?.issues.filter(issue => issue.type === 'grammar')
+    const grammarIssues = result.metadata?.issues.filter((issue: GrammarCheck) => issue.type === 'grammar')
     expect(grammarIssues.length).toBeGreaterThan(0)
   })
 
@@ -42,11 +42,11 @@ describe('GrammarCheckerTool', () => {
     
     expect(result.success).toBe(true)
     
-    const spellingIssues = result.metadata?.issues.filter(issue => issue.type === 'spelling')
+    const spellingIssues = result.metadata?.issues.filter((issue: GrammarCheck) => issue.type === 'spelling')
     expect(spellingIssues.length).toBeGreaterThan(0)
     
     // 检查是否提供了正确建议
-    const suggestions = spellingIssues.flatMap(issue => issue.suggestions)
+    const suggestions = spellingIssues.flatMap((issue: GrammarCheck) => issue.suggestions)
     expect(suggestions).toContain('作为')
     expect(suggestions).toContain('既然')
   })
@@ -61,7 +61,7 @@ describe('GrammarCheckerTool', () => {
     
     expect(result.success).toBe(true)
     
-    const punctuationIssues = result.metadata?.issues.filter(issue => issue.type === 'punctuation')
+    const punctuationIssues = result.metadata?.issues.filter((issue: GrammarCheck) => issue.type === 'punctuation')
     expect(punctuationIssues.length).toBeGreaterThan(0)
   })
 
@@ -75,7 +75,7 @@ describe('GrammarCheckerTool', () => {
     
     expect(result.success).toBe(true)
     
-    const styleIssues = result.metadata?.issues.filter(issue => issue.type === 'style')
+    const styleIssues = result.metadata?.issues.filter((issue: GrammarCheck) => issue.type === 'style')
     expect(styleIssues.length).toBeGreaterThan(0)
   })
 
@@ -123,8 +123,8 @@ describe('GrammarCheckerTool', () => {
     expect(result.success).toBe(true)
     
     const issues = result.metadata?.issues
-    const hasErrors = issues.some(issue => issue.severity === 'error')
-    const hasWarnings = issues.some(issue => issue.severity === 'warning')
+    const hasErrors = issues.some((issue: GrammarCheck) => issue.severity === 'error')
+    const hasWarnings = issues.some((issue: GrammarCheck) => issue.severity === 'warning')
     
     expect(hasErrors).toBe(true) // 应该有语法错误
     expect(hasWarnings).toBe(true) // 应该有拼写警告
@@ -156,7 +156,7 @@ describe('GrammarCheckerTool', () => {
     
     expect(result.success).toBe(true)
     
-    const spellingIssues = result.metadata?.issues.filter(issue => issue.type === 'spelling')
+    const spellingIssues = result.metadata?.issues.filter((issue: GrammarCheck) => issue.type === 'spelling')
     expect(spellingIssues.length).toBeGreaterThan(0)
     
     const firstIssue = spellingIssues[0]
@@ -202,6 +202,6 @@ describe('GrammarCheckerTool', () => {
     
     expect(spellingOnlyResult.success).toBe(true)
     const issues = spellingOnlyResult.metadata?.issues || []
-    expect(issues.every(issue => issue.type === 'spelling')).toBe(true)
+    expect(issues.every((issue: GrammarCheck) => issue.type === 'spelling')).toBe(true)
   })
 })

@@ -60,8 +60,8 @@ describe('WriteFlowApp 记忆系统集成测试', () => {
           longTerm: { knowledge: 0, topics: 0 }
         }
       }),
-      compressMemory: function() { return this.memoryManager?.forceCompression() },
-      searchMemory: function(query: string) { return this.memoryManager?.search(query) }
+      compressMemory: function() { return this.memoryManager?.forceCompression() || Promise.resolve(undefined) },
+      searchMemory: function(query: string) { return this.memoryManager?.search(query) || Promise.resolve(undefined) }
     }
   })
 
@@ -113,15 +113,15 @@ describe('WriteFlowApp 记忆系统集成测试', () => {
       expect(Array.isArray(searchResults?.knowledge)).toBe(true)
     })
 
-    test('应该正确处理记忆系统未初始化的情况', () => {
+    test('应该正确处理记忆系统未初始化的情况', async () => {
       const appWithoutMemory = {
         getMemoryManager: () => null,
         compressMemory: () => Promise.reject(new Error('记忆系统未初始化')),
-        searchMemory: () => Promise.reject(new Error('记忆系统未初始化'))
+        searchMemory: (query: string) => Promise.reject(new Error('记忆系统未初始化'))
       }
       
-      expect(appWithoutMemory.compressMemory()).rejects.toThrow('记忆系统未初始化')
-      expect(appWithoutMemory.searchMemory('test')).rejects.toThrow('记忆系统未初始化')
+      await expect(appWithoutMemory.compressMemory()).rejects.toThrow('记忆系统未初始化')
+      await expect(appWithoutMemory.searchMemory('test')).rejects.toThrow('记忆系统未初始化')
     })
   })
 
@@ -169,7 +169,7 @@ describe('WriteFlowApp 记忆系统集成测试', () => {
       // 模拟记忆系统故障
       const faultyApp = {
         getMemoryManager: () => ({
-          search: () => Promise.reject(new Error('Memory system fault')),
+          search: (query: string) => Promise.reject(new Error('Memory system fault')),
           forceCompression: () => Promise.reject(new Error('Memory system fault'))
         }),
         searchMemory: function(query: string) {

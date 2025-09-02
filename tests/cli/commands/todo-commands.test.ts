@@ -12,7 +12,7 @@ import {
   todoStartCommand,
   todoDoneCommand
 } from '@/cli/commands/todo-commands.js'
-import { AgentContext } from '@/types/agent.js'
+import { AgentContext, AgentState, PlanMode } from '@/types/agent.js'
 import { TodoPriority, TodoStatus } from '@/types/Todo.js'
 
 describe('TodoList 命令系统测试', () => {
@@ -25,12 +25,15 @@ describe('TodoList 命令系统测试', () => {
     mockContext = {
       sessionId: testSessionId,
       userId: 'test-user',
-      agentId: 'test-agent',
-      isInteractive: true,
-      currentDirectory: process.cwd(),
-      environmentVariables: {},
-      capabilities: [],
-      requestId: 'test-request'
+      workingDirectory: process.cwd(),
+      preferences: {
+        language: 'zh-CN',
+        outputStyle: 'detailed'
+      },
+      tools: ['todo_write', 'todo_read'],
+      conversationHistory: [],
+      currentState: AgentState.Idle,
+      planMode: PlanMode.Default
     }
 
     // 设置测试环境变量

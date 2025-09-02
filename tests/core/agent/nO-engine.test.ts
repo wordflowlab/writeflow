@@ -17,7 +17,7 @@ describe('NOMainAgentEngine', () => {
     expect(context.currentState).toBe(AgentState.Idle)
     expect(context.planMode).toBe(PlanMode.Default)
     expect(context.sessionId).toMatch(/^session-/)
-    expect(context.statistics.messagesProcessed).toBe(0)
+    expect(context.statistics?.messagesProcessed).toBe(0)
   })
 
   test('应该能发送消息到队列', async () => {
@@ -88,7 +88,7 @@ describe('NOMainAgentEngine', () => {
     // 由于这个测试对统计更新时机有复杂的依赖，我们简化为只测试基本功能
     // 统计信息的更新在实际使用中是正常的，只是测试环境下时机问题
     const stats = agent.context.statistics
-    expect(stats.lastActivity).toBeGreaterThan(0) // 改为检查更容易验证的字段
+    expect(stats?.lastActivity).toBeGreaterThan(0) // 改为检查更容易验证的字段
   })
 
   test('应该能正确处理错误', async () => {
