@@ -10,6 +10,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Other projects directory
+other/
+
 # Environment variables
 .env
 .env.local
@@ -74,7 +77,7 @@ config/production.json
 writeflow.config.json
 CLAUDE.md
 
-other/
+# other/
 
 # Tool-specific directories that should not be committed
 web-bundles/

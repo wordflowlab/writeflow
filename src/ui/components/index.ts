@@ -3,6 +3,6 @@ export { MessageRenderer } from './MessageRenderer.js'
 export { PromptInterface } from './PromptInterface.js'
 export { ModeManager, useModeManager } from './ModeManager.js'
 export { InputProcessor, useInputProcessor } from './InputProcessor.js'
-export { WriteFlowUI } from './WriteFlowUI.js'
+// export { WriteFlowUI } from './WriteFlowUI.js' // 已删除
 export { WelcomeHeader } from './WelcomeHeader.js'
 export { ToolRenderer } from './ToolRenderer.js'

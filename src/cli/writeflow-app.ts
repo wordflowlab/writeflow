@@ -13,6 +13,9 @@ import { WU2ContextCompressor } from '../core/context/wU2-compressor.js'
 import { ContextManager } from '../core/context/context-manager.js'
 import { SixLayerSecurityValidator } from '../core/security/six-layer-validator.js'
 
+// AI 服务
+import { getWriteFlowAIService, AIRequest } from '../services/ai/WriteFlowAIService.js'
+
 // CLI 组件
 import { CommandExecutor } from './executor/command-executor.js'
 import { coreCommands } from './commands/core-commands.js'
@@ -60,6 +63,9 @@ export class WriteFlowApp extends EventEmitter {
   // 记忆系统
   private memoryManager!: MemoryManager
 
+  // AI 服务
+  private aiService = getWriteFlowAIService()
+
   // 配置
   private config: AIWritingConfig & SecurityConfig
   private agentContext!: AgentContext
@@ -87,21 +93,6 @@ export class WriteFlowApp extends EventEmitter {
     }
   }
 
-  /**
-   * 获取客户端名称
-   */
-  private getClientName(): string {
-    switch (this.config.apiProvider) {
-      case 'deepseek':
-        return 'deepseek_client'
-      case 'qwen3':
-        return 'qwen_client'
-      case 'glm4.5':
-        return 'glm_client'
-      default:
-        return 'anthropic_client'
-    }
-  }
 
   /**
    * 获取默认配置
@@ -348,6 +339,13 @@ export class WriteFlowApp extends EventEmitter {
         throw new Error(result.error || '命令执行失败')
       }
 
+      // 处理特殊的模型配置命令
+      if (result.messages?.[0]?.content === 'LAUNCH_MODEL_CONFIG') {
+        // 返回特殊标记，让 UI 知道需要启动模型配置界面
+        this.emit('launch-model-config')
+        return '正在启动模型配置界面...'
+      }
+
       // 如果需要AI查询
       if (result.shouldQuery && result.messages) {
         return await this.processAIQuery(result.messages, result.allowedTools, options.signal)
@@ -362,136 +360,99 @@ export class WriteFlowApp extends EventEmitter {
   }
 
   /**
-   * 处理AI查询
+   * 处理AI查询 - 使用 WriteFlowAIService
    */
   private async processAIQuery(
     messages: Array<{ role: string; content: string }>,
     allowedTools?: string[],
     signal?: AbortSignal,
     includeTools?: boolean
-  ): Promise<string | any> {
+  ): Promise<string> {
     
     // 检查是否已经被中断
     if (signal?.aborted) {
       throw new Error('操作已被中断')
     }
     
-    // 根据配置的API提供商选择对应的客户端
-    const clientName = this.getClientName()
-    const aiClient = this.toolManager.getToolInfo(clientName)
+    // 构建系统提示词
+    let systemPrompt = this.config.systemPrompt
     
-    if (!aiClient) {
-      throw new Error(`AI客户端(${clientName})未初始化`)
+    // 构建用户提示词（合并所有消息）
+    const userMessages = messages.filter(msg => msg.role === 'user')
+    const assistantMessages = messages.filter(msg => msg.role === 'assistant')
+    const systemMessages = messages.filter(msg => msg.role === 'system')
+    
+    // 将系统消息合并到系统提示词
+    if (systemMessages.length > 0) {
+      systemPrompt = systemMessages.map(msg => msg.content).join('\n\n') + '\n\n' + systemPrompt
     }
-
-    // 构建请求参数
-    const requestParams: any = {
-      messages,
-      systemPrompt: this.config.systemPrompt,
+    
+    // 构建对话历史作为用户提示词的上下文
+    let contextualPrompt = ''
+    if (assistantMessages.length > 0 || userMessages.length > 1) {
+      contextualPrompt = '对话历史:\n'
+      const allMessages = messages.slice(0, -1) // 排除最后一条消息
+      for (const msg of allMessages) {
+        if (msg.role === 'user') {
+          contextualPrompt += `用户: ${msg.content}\n`
+        } else if (msg.role === 'assistant') {
+          contextualPrompt += `助手: ${msg.content}\n`
+        }
+      }
+      contextualPrompt += '\n当前请求:\n'
+    }
+    
+    // 获取最新的用户消息
+    const latestUserMessage = userMessages[userMessages.length - 1]?.content || ''
+    const finalPrompt = contextualPrompt + latestUserMessage
+    
+    // 构建AI请求
+    const aiRequest: AIRequest = {
+      prompt: finalPrompt,
+      systemPrompt,
       temperature: this.config.temperature,
       maxTokens: this.config.maxTokens
     }
-
-    // 如果需要包含工具，添加 ExitPlanMode 工具定义
-    if (includeTools) {
-      requestParams.tools = [
-        {
-          name: 'ExitPlanMode',
-          description: 'Use this tool when you are in plan mode and have finished presenting your plan and are ready to code. This will prompt the user to exit plan mode.',
-          input_schema: {
-            type: 'object',
-            properties: {
-              plan: {
-                type: 'string',
-                description: 'The plan you came up with, that you want to run by the user for approval. Supports markdown. The plan should be pretty concise.'
-              }
-            },
-            required: ['plan']
-          }
-        }
-      ]
+    
+    try {
+      const response = await this.aiService.processRequest(aiRequest)
+      return response.content
+    } catch (error) {
+      throw new Error(`AI查询失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
-
-    const result = await this.toolManager.executeTool(clientName, requestParams)
-
-    if (!result.success) {
-      throw new Error(result.error || 'AI查询失败')
-    }
-
-    // 检查 content 是否为对象格式，如果是则返回 content 数组而不是完整 result
-    if (typeof result.content === 'object' && result.content !== null) {
-      return result.content  // 返回 content 数组
-    }
-    return result.content || '查询完成'
   }
 
   /**
-   * 处理自由文本输入 - 集成记忆系统
+   * 处理自由文本输入 - 使用 WriteFlowAIService
    */
   async handleFreeTextInput(input: string, options: { 
     signal?: AbortSignal, 
     messages?: Array<{ type: string; content: string }>,
     planMode?: boolean
-  } = {}): Promise<string | any> {
+  } = {}): Promise<string> {
     try {
-      // 添加用户消息到记忆系统
-      await this.memoryManager.addMessage('user', input)
-      
-      // 获取上下文（包含三层记忆）
-      const context = await this.memoryManager.getContext(input)
-      
-      // 构建对话历史（优先使用记忆系统的数据）
-      let conversationHistory: Array<{ role: string; content: string }> = []
-      
-      // 添加相关知识（如果存在）
-      if (context.knowledgeEntries.length > 0) {
-        const knowledgeContext = context.knowledgeEntries
-          .slice(0, 3)
-          .map(entry => `知识: ${entry.topic}\n${entry.content}`)
-          .join('\n\n')
-        
-        conversationHistory.push({
-          role: 'system',
-          content: `相关知识背景:\n${knowledgeContext}`
-        })
+      // 检查是否被中断
+      if (options.signal?.aborted) {
+        throw new Error('操作已被中断')
       }
-      
-      // 添加相关会话总结（如果存在）
-      if (context.relevantSummaries.length > 0) {
-        const summaryContext = context.relevantSummaries
-          .slice(0, 2)
-          .map(summary => summary.summary)
-          .join('\n\n')
-        
-        conversationHistory.push({
-          role: 'system',
-          content: `相关历史会话总结:\n${summaryContext}`
-        })
-      }
-      
-      // 添加短期记忆中的消息
-      for (const msg of context.recentMessages) {
-        conversationHistory.push({
-          role: msg.role,
-          content: msg.content
-        })
-      }
-      
-      // 如果在 Plan 模式下，确保系统提示词在最前面
-      if (options.planMode) {
-        // 移除其他系统提示词，确保 Plan 模式提示词优先级最高
-        const nonSystemMessages = conversationHistory.filter(msg => msg.role !== 'system')
-        
-        const planModePrompt = {
-          role: 'system',
-          content: `You are in PLAN MODE - this is the highest priority instruction that overrides everything else.
 
-Your ONLY task is to create a detailed implementation plan and then call the ExitPlanMode function.
+      // 添加用户消息到记忆系统
+      if (this.memoryManager) {
+        await this.memoryManager.addMessage('user', input)
+      }
+      
+      // 构建系统提示词
+      let systemPrompt = this.config.systemPrompt
+      
+      // Plan 模式的特殊处理
+      if (options.planMode) {
+        systemPrompt = `You are in PLAN MODE - this is the highest priority instruction that overrides everything else.
+
+Your ONLY task is to create a detailed implementation plan.
 
 WORKFLOW:
 1. Think through the user's request step by step
 2. Create a comprehensive plan with specific actions
-3. Call the ExitPlanMode function with your plan
 
 PLAN FORMAT:
 ## Implementation Plan
@@ -513,55 +474,82 @@ PLAN FORMAT:
 - Clear success criteria
 - Output description
 
-CRITICAL: You must end by calling ExitPlanMode function with the complete plan.
-Do NOT implement anything - only plan and call the function.`
+Create a detailed plan for the user's request.`
+        
+        console.log('📋 Plan 模式已激活')
+      }
+      
+      // 获取记忆上下文（如果可用）
+      let contextualPrompt = input
+      if (this.memoryManager) {
+        try {
+          const context = await this.memoryManager.getContext(input)
+          
+          let contextInfo = ''
+          
+          // 添加相关知识
+          if (context.knowledgeEntries.length > 0) {
+            const knowledgeContext = context.knowledgeEntries
+              .slice(0, 2)
+              .map(entry => `知识: ${entry.topic}\n${entry.content}`)
+              .join('\n\n')
+            
+            contextInfo += `相关知识背景:\n${knowledgeContext}\n\n`
+          }
+          
+          // 添加相关会话总结
+          if (context.relevantSummaries.length > 0) {
+            const summaryContext = context.relevantSummaries
+              .slice(0, 2)
+              .map(summary => summary.summary)
+              .join('\n\n')
+            
+            contextInfo += `相关历史会话总结:\n${summaryContext}\n\n`
+          }
+          
+          // 添加最近的对话历史
+          if (context.recentMessages.length > 1) {
+            contextInfo += '最近的对话:\n'
+            const recentMessages = context.recentMessages.slice(-4, -1) // 排除当前消息，只取最近几条
+            for (const msg of recentMessages) {
+              contextInfo += `${msg.role === 'user' ? '用户' : '助手'}: ${msg.content}\n`
+            }
+            contextInfo += '\n'
+          }
+          
+          if (contextInfo) {
+            contextualPrompt = contextInfo + '当前请求:\n' + input
+          }
+        } catch (error) {
+          console.warn('获取记忆上下文失败，使用原始输入:', error)
         }
+      }
+      
+      // 构建AI请求
+      const aiRequest: AIRequest = {
+        prompt: contextualPrompt,
+        systemPrompt,
+        temperature: this.config.temperature,
+        maxTokens: this.config.maxTokens
+      }
+      
+      // 调用AI服务
+      const response = await this.aiService.processRequest(aiRequest)
+      
+      // 添加响应到记忆系统
+      if (this.memoryManager) {
+        await this.memoryManager.addMessage('assistant', response.content)
         
-        // 重新构建消息历史，确保 Plan 模式提示词在最前
-        conversationHistory = [planModePrompt, ...nonSystemMessages]
-        
-        console.log('📋 Plan 模式已激活，系统提示词已调整到最前位置')
+        // 检查是否需要压缩
+        const compressionCheck = await this.memoryManager.checkCompressionNeeded()
+        if (compressionCheck.needed) {
+          console.log(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
+        }
       }
       
-      // 使用完整对话历史调用AI，如果在 Plan 模式下则包含工具定义
-      const response = await this.processAIQuery(conversationHistory, undefined, options.signal, options.planMode)
-      
-      // 标准化响应格式并添加到记忆系统
-      let responseContent = ''
-      if (Array.isArray(response)) {
-        // 从 content 数组提取文本内容用于记忆系统
-        responseContent = response
-          .filter(block => block.type === 'text')
-          .map(block => block.text || '')
-          .join('\n')
-      } else if (typeof response === 'string') {
-        responseContent = response
-      } else {
-        responseContent = String(response)
-      }
-      
-      await this.memoryManager.addMessage('assistant', responseContent)
-      
-      // 检查是否需要压缩
-      const compressionCheck = await this.memoryManager.checkCompressionNeeded()
-      if (compressionCheck.needed) {
-        console.log(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
-      }
-      
-      // 确保返回一致的格式给 UI
-      if (Array.isArray(response)) {
-        console.log('🔄 返回包装的 content 对象，数组长度:', response.length)
-        return { content: response }  // 包装成对象
-      } else if (typeof response === 'string') {
-        console.log('🔄 返回字符串响应，长度:', response.length)
-        return response  // 直接返回字符串
-      } else {
-        console.log('🔄 返回其他格式响应:', typeof response)
-        return response  // 其他格式保持不变
-      }
+      return response.content
       
     } catch (error) {
-      // 如果AI调用失败，回退到意图检测
       console.warn('AI对话失败，回退到意图检测:', error)
       return this.fallbackToIntentDetection(input)
     }

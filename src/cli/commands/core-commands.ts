@@ -731,6 +731,20 @@ ${content}
 
   {
     type: 'local',
+    name: 'model',
+    description: '配置和管理 AI 模型设置',
+    aliases: ['模型'],
+    
+    async call(args: string, context: AgentContext): Promise<string> {
+      // 启动模型配置界面
+      return 'LAUNCH_MODEL_CONFIG'
+    },
+    
+    userFacingName: () => 'model'
+  },
+
+  {
+    type: 'local', 
     name: 'help',
     description: '显示命令帮助信息',
     aliases: ['帮助', 'h', '?'],

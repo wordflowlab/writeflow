@@ -69,7 +69,7 @@ export function displayCLILogo(): void {
   
   // 副标题
   console.log()
-  console.log(chalk.gray.dim('        ✍️ AI Writing Assistant · Powered by Claude'))
+  console.log(chalk.gray.dim('        ✍️ AI Writing Assistant'))
   console.log()
 }
 

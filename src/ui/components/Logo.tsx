@@ -129,7 +129,7 @@ export const Logo = React.memo(function Logo({ variant = 'full' }: LogoProps) {
       {/* 副标题 */}
       <Box marginTop={1}>
         <Text color="gray" dimColor>
-          ✍️ AI Writing Assistant · Powered by Claude
+          ✍️ AI Writing Assistant 
         </Text>
       </Box>
     </Box>
