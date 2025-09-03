@@ -21,7 +21,8 @@ export async function startWriteFlowUI(writeFlowApp: WriteFlowApp) {
       <App writeFlowApp={writeFlowApp} />,
       {
         exitOnCtrlC: true,
-        patchConsole: false
+        // 参考 other/Kode 的做法，开启 Ink 对 console 的补丁，避免日志直接写入 stdout 造成界面跳到顶部
+        patchConsole: true
       }
     )
     

@@ -1,9 +1,13 @@
 import { Box, Text } from 'ink'
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { getTheme } from '../../utils/theme'
 import { useTerminalSize } from '../../hooks/useTerminalSize'
+import { useUnifiedCompletion } from '../../hooks/useUnifiedCompletion'
+import { CompletionSuggestions } from './CompletionSuggestions'
+import { SlashCommand } from '../../types/command'
 
 interface Message {
+  id?: string
   type: 'user' | 'assistant'
   content: string
 }
@@ -20,6 +24,8 @@ interface PromptInputProps {
   onModeChange: (mode: WriteMode) => void
   messages: Message[]
   placeholder?: string
+  commands?: SlashCommand[]
+  enableCompletion?: boolean
 }
 
 // Mode indicator icons
@@ -45,12 +51,30 @@ export function PromptInput({
   mode,
   onModeChange,
   messages,
-  placeholder = "开始写作..."
+  placeholder = "开始写作...",
+  commands = [],
+  enableCompletion = true
 }: PromptInputProps) {
   const theme = getTheme()
   const { columns } = useTerminalSize()
   const [exitMessage, setExitMessage] = useState<{ show: boolean; key?: string }>({ show: false })
   const [cursorOffset, setCursorOffset] = useState<number>(input.length)
+  
+  // 保持 cursorOffset 与 input.length 同步
+  useEffect(() => {
+    setCursorOffset(input.length)
+  }, [input])
+  
+  // 使用命令补全 Hook
+  const { suggestions, selectedIndex, isActive: completionActive } = useUnifiedCompletion({
+    input,
+    cursorOffset,
+    onInputChange,
+    setCursorOffset,
+    commands,
+    onSubmit,
+    enabled: enableCompletion && !isLoading && !isDisabled
+  })
   
   // Simple input handling (will be enhanced with TextInput later)
   const handleInput = useCallback((inputChar: string, key: any) => {
@@ -62,7 +86,16 @@ export function PromptInput({
       return
     }
     
+    // Tab 键由补全系统处理
+    if (key.tab) {
+      return
+    }
+    
     if (key.return) {
+      // 如果补全菜单激活，让补全系统处理
+      if (completionActive && suggestions.length > 0) {
+        return
+      }
       if (input.trim()) {
         onSubmit(input.trim())
       }
@@ -71,6 +104,7 @@ export function PromptInput({
     
     if (key.backspace || key.delete) {
       onInputChange(input.slice(0, -1))
+      setCursorOffset(Math.max(0, input.length - 1))
       return
     }
     
@@ -86,8 +120,9 @@ export function PromptInput({
     // Regular character input
     if (inputChar && inputChar >= ' ') {
       onInputChange(input + inputChar)
+      setCursorOffset(input.length + 1)
     }
-  }, [input, onInputChange, onSubmit, mode, onModeChange])
+  }, [input, onInputChange, onSubmit, mode, onModeChange, completionActive, suggestions])
   
   // Set up input handling
   React.useEffect(() => {
@@ -154,7 +189,7 @@ export function PromptInput({
           width={3}
         >
           <Text color={isLoading ? theme.secondaryText : modeColor}>
-            &nbsp;{'>'}nbsp;
+            {' > '}
           </Text>
         </Box>
         
@@ -169,6 +204,14 @@ export function PromptInput({
           </Text>
         </Box>
       </Box>
+      
+      {/* 命令补全建议 */}
+      {completionActive && suggestions.length > 0 && (
+        <CompletionSuggestions 
+          suggestions={suggestions}
+          selectedIndex={selectedIndex}
+        />
+      )}
       
       {/* Help text */}
       <Box

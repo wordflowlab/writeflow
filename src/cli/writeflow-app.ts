@@ -21,6 +21,7 @@ import { getWriteFlowAIService, AIRequest } from '../services/ai/WriteFlowAIServ
 import { CommandExecutor } from './executor/command-executor.js'
 import { coreCommands } from './commands/core-commands.js'
 import { slideCommands } from './commands/slide-commands.js'
+import { SlashCommand } from '../types/command.js'
 
 // 工具系统
 import { ToolManager } from '../tools/tool-manager.js'
@@ -36,6 +37,8 @@ import {
 } from '../tools/writing/index.js'
 import { WebSearchTool, CitationManagerTool } from '../tools/research/index.js'
 import { WeChatConverterTool } from '../tools/publish/index.js'
+import { SlideProjectInitTool } from '../tools/slidev/SlideProjectInitTool.js'
+import { SlideExporterTool } from '../tools/slidev/SlideExporterTool.js'
 
 // 记忆系统
 import { MemoryManager } from '../tools/memory/MemoryManager.js'
@@ -287,6 +290,13 @@ export class WriteFlowApp extends EventEmitter {
       new WeChatConverterTool()
     ]
     this.toolManager.registerTools(publishTools)
+
+    // 注册 Slidev 工具（Agent 可调用）
+    const slidevTools = [
+      new SlideProjectInitTool(),
+      new SlideExporterTool()
+    ]
+    this.toolManager.registerTools(slidevTools)
 
     // 命令执行器
     this.commandExecutor = new CommandExecutor({
@@ -768,6 +778,16 @@ Create a detailed plan for the user's request.`
    */
   getMemoryManager(): MemoryManager | null {
     return this.memoryManager || null
+  }
+
+  /**
+   * 获取所有可用的命令（用于命令补全）
+   */
+  getAllCommands(): SlashCommand[] {
+    if (!this.commandExecutor) {
+      return []
+    }
+    return this.commandExecutor.getAllCommands()
   }
 
   /**

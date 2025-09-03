@@ -6,6 +6,7 @@ export interface Theme {
   text: string
   secondaryText: string
   dimText: string
+  muted: string  // 添加 muted 颜色
   
   // Brand colors
   claude: string
@@ -40,6 +41,7 @@ const writeFlowTheme: Theme = {
   text: '#ffffff',
   secondaryText: '#a0a0a0',
   dimText: '#666666',
+  muted: '#808080',
   
   // Brand colors - WriteFlow specific
   claude: '#00ff87',        // Bright green for WriteFlow branding
@@ -73,6 +75,7 @@ const lightTheme: Theme = {
   text: '#1a1a1a',
   secondaryText: '#666666',
   dimText: '#999999',
+  muted: '#888888',
   claude: '#007acc',
   success: '#007acc',
   error: '#cc0000',

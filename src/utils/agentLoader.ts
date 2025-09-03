@@ -5,9 +5,10 @@
  */
 
 import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { homedir } from 'os'
 import matter from 'gray-matter'
+import { fileURLToPath } from 'url'
 
 export interface AgentConfig {
   name: string                    // Agent 标识符
@@ -102,7 +103,7 @@ export class AgentLoader {
       // 用户级配置
       join(homedir(), '.writeflow/agents', `${this.agentName}.md`),
       // 内置配置（如果有的话）
-      join(__dirname, '../../agents', `${this.agentName}.md`)
+      (() => { const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename); return join(__dirname, '../../agents', `${this.agentName}.md`) })()
     ]
 
     for (const path of paths) {

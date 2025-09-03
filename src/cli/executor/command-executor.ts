@@ -43,6 +43,36 @@ export class CommandExecutor {
   }
 
   /**
+   * 获取所有可用命令
+   */
+  getAllCommands(): SlashCommand[] {
+    return this.availableCommands
+  }
+
+  /**
+   * 根据名称获取命令
+   */
+  getCommandByName(name: string): SlashCommand | null {
+    return this.availableCommands.find(cmd => 
+      cmd.userFacingName() === name || 
+      cmd.aliases?.includes(name)
+    ) || null
+  }
+
+  /**
+   * 搜索命令
+   */
+  searchCommands(query: string): SlashCommand[] {
+    const lowerQuery = query.toLowerCase()
+    return this.availableCommands.filter(cmd => {
+      const name = cmd.userFacingName().toLowerCase()
+      const aliases = cmd.aliases?.map(a => a.toLowerCase()) || []
+      return name.includes(lowerQuery) || 
+             aliases.some(a => a.includes(lowerQuery))
+    })
+  }
+
+  /**
    * 执行命令
    */
   async executeCommand(input: string, context: AgentContext): Promise<CommandResult> {
