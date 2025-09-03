@@ -8,7 +8,7 @@ import { WriteFlowApp } from './writeflow-app.js'
 import { AIWritingConfig } from '../types/writing.js'
 import { displayCLILogo, displayMiniLogo } from '../utils/cli-logo.js'
 import { getVersion } from '../utils/version.js'
-import { getGlobalConfig } from '../utils/config.js'
+import { getGlobalConfig, shouldShowOnboarding } from '../utils/config.js'
 import { WriteFlowOnboarding } from '../ui/components/onboarding/WriteFlowOnboarding.js'
 import { WriteFlowREPL } from '../ui/WriteFlowREPL.js'
 
@@ -87,10 +87,7 @@ export class WriteFlowCLI {
   private async startInteractiveMode(options: any): Promise<void> {
     try {
       // 检查是否需要显示引导
-      const config = getGlobalConfig()
-      const needsOnboarding = !config.hasCompletedOnboarding
-
-      if (needsOnboarding) {
+      if (shouldShowOnboarding()) {
         // 显示引导流程
         await this.showOnboarding()
       }
@@ -111,12 +108,20 @@ export class WriteFlowCLI {
    * 显示引导流程
    */
   private async showOnboarding(): Promise<void> {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       const onboardingComponent = React.createElement(WriteFlowOnboarding, {
         onComplete: () => {
-          // 引导完成，清理并继续
-          unmount()
-          resolve()
+          try {
+            // 引导完成，清理并继续
+            unmount()
+            // 给一点时间让组件完全卸载
+            setTimeout(() => {
+              resolve()
+            }, 100)
+          } catch (error) {
+            console.error(chalk.red('引导完成时出错:'), error)
+            reject(error)
+          }
         },
         onExit: () => {
           console.log(chalk.yellow('\n👋 引导已取消，您可以随时运行 writeflow start 重新开始'))
@@ -132,11 +137,22 @@ export class WriteFlowCLI {
    * 启动 React UI
    */
   private startReactUI(): void {
-    const replComponent = React.createElement(WriteFlowREPL, {
-      writeFlowApp: this.app
-    })
+    try {
+      // 确保应用已正确初始化
+      if (!this.app) {
+        throw new Error('WriteFlowApp 未初始化')
+      }
 
-    render(replComponent)
+      const replComponent = React.createElement(WriteFlowREPL, {
+        writeFlowApp: this.app
+      })
+
+      render(replComponent)
+    } catch (error) {
+      console.error(chalk.red('启动主界面失败:'), error)
+      console.log(chalk.yellow('请尝试重新运行 writeflow 或联系支持'))
+      process.exit(1)
+    }
   }
 
   /**

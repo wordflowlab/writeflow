@@ -11,7 +11,7 @@ build/
 *.tsbuildinfo
 
 # Other projects directory
-# other/
+other/
 
 # Environment variables
 .env

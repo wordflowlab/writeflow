@@ -45,9 +45,11 @@ const ONBOARDING_STEPS: OnboardingStepConfig[] = [
 export function useOnboardingStep() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   
-  const currentStep = ONBOARDING_STEPS[currentStepIndex]
-  const isFirstStep = currentStepIndex === 0
-  const isLastStep = currentStepIndex === ONBOARDING_STEPS.length - 1
+  // 确保 currentStepIndex 在有效范围内
+  const safeCurrentStepIndex = Math.max(0, Math.min(currentStepIndex, ONBOARDING_STEPS.length - 1))
+  const currentStep = ONBOARDING_STEPS[safeCurrentStepIndex]
+  const isFirstStep = safeCurrentStepIndex === 0
+  const isLastStep = safeCurrentStepIndex === ONBOARDING_STEPS.length - 1
   
   const goToNextStep = useCallback(() => {
     if (!isLastStep) {
@@ -74,7 +76,7 @@ export function useOnboardingStep() {
 
   return {
     currentStep,
-    currentStepIndex,
+    currentStepIndex: safeCurrentStepIndex,
     totalSteps: ONBOARDING_STEPS.length,
     isFirstStep,
     isLastStep,

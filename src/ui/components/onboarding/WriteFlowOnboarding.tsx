@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react'
-import { Box, useInput } from 'ink'
+import { Box, Text, useInput } from 'ink'
 import { useOnboardingStep } from './hooks/useOnboardingStep.js'
 import { useExitHandler } from './hooks/useExitHandler.js'
 import { StepContainer } from './components/StepContainer.js'
 import { WelcomeStep } from './WelcomeStep.js'
 import { ThemeSelectionStep } from './ThemeSelectionStep.js'
 import { WritingModeStep } from './WritingModeStep.js'
+import { ModelConfigStep } from './ModelConfigStep.js'
 import { PreferencesStep } from './PreferencesStep.js'
 import { getGlobalConfig, saveGlobalConfig, WritingPreferences } from '../../../utils/config.js'
 import { ThemeNames } from '../../../utils/theme.js'
@@ -62,15 +63,31 @@ export function WriteFlowOnboarding({
   }, [])
 
   const handlePreferencesComplete = useCallback((preferences: WritingPreferences) => {
-    // 保存写作偏好设置
-    const config = getGlobalConfig()
-    saveGlobalConfig({
-      ...config,
-      writingPreferences: preferences,
-      hasCompletedOnboarding: true,
-    })
-    setWritingPreferences(preferences)
-    onComplete()
+    try {
+      // 保存写作偏好设置
+      const config = getGlobalConfig()
+      
+      // 检查是否真正完成了所有必要的配置
+      const hasModels = config.modelProfiles && config.modelProfiles.length > 0
+      const hasMainModel = config.modelPointers && config.modelPointers.main && config.modelPointers.main.trim() !== ''
+      const isFullyConfigured = hasModels && hasMainModel
+      
+      if (!isFullyConfigured) {
+        console.error('配置不完整：缺少模型配置或主模型指针')
+        return
+      }
+      
+      saveGlobalConfig({
+        ...config,
+        writingPreferences: preferences,
+        hasCompletedOnboarding: true,
+      })
+      
+      setWritingPreferences(preferences)
+      onComplete()
+    } catch (error) {
+      console.error('保存配置时出错:', error)
+    }
   }, [onComplete])
 
   // 处理通用的 Enter 键导航
@@ -78,18 +95,33 @@ export function WriteFlowOnboarding({
     if (key.return) {
       if (currentStep.id === 'welcome' || currentStep.id === 'writing-mode') {
         if (isLastStep) {
-          // 标记引导完成并退出
-          const config = getGlobalConfig()
-          saveGlobalConfig({
-            ...config,
-            hasCompletedOnboarding: true,
-          })
-          onComplete()
+          // 检查是否真正完成了所有必要的配置才标记引导完成
+          try {
+            const config = getGlobalConfig()
+            const hasModels = config.modelProfiles && config.modelProfiles.length > 0
+            const hasMainModel = config.modelPointers && config.modelPointers.main && config.modelPointers.main.trim() !== ''
+            const isFullyConfigured = hasModels && hasMainModel
+            
+            if (!isFullyConfigured) {
+              console.error('配置不完整：请先完成模型配置步骤')
+              return
+            }
+            
+            saveGlobalConfig({
+              ...config,
+              hasCompletedOnboarding: true,
+            })
+            onComplete()
+          } catch (error) {
+            console.error('保存引导完成状态时出错:', error)
+          }
         } else {
           goToNextStep()
         }
       }
       // theme 步骤由 ThemeSelectionStep 内部处理
+      // model-config 步骤由 ModelConfigStep 内部处理
+      // preferences 步骤由 PreferencesStep 内部处理
     }
   })
 
@@ -111,12 +143,11 @@ export function WriteFlowOnboarding({
         return <WritingModeStep />
       
       case 'model-config':
-        // TODO: 实现模型配置步骤
         return (
-          <Box flexDirection="column" gap={1}>
-            <Box>TODO: 模型配置步骤</Box>
-            <Box>按 Enter 继续...</Box>
-          </Box>
+          <ModelConfigStep 
+            onComplete={goToNextStep}
+            onSkip={goToNextStep}
+          />
         )
       
       case 'preferences':
@@ -130,6 +161,15 @@ export function WriteFlowOnboarding({
       default:
         return <WelcomeStep />
     }
+  }
+
+  // 防御性检查
+  if (!currentStep) {
+    return (
+      <Box flexDirection="column" gap={1}>
+        <Text color="red">错误：无效的步骤索引 {currentStepIndex}</Text>
+      </Box>
+    )
   }
 
   return (

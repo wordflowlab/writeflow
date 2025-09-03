@@ -162,8 +162,9 @@ export class ModelManager {
       this.modelProfiles.push(profile)
     }
     
-    // 更新配置
+    // 更新配置并保存到磁盘
     this.config.modelProfiles = this.modelProfiles
+    this.saveToConfig()
   }
 
   /**

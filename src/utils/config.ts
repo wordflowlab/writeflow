@@ -445,11 +445,23 @@ export function updateConfigVersion(version: string): void {
 }
 
 /**
- * 检查是否为新用户
+ * 检查是否为新用户或需要重新配置
  */
 export function isNewUser(): boolean {
   const config = getGlobalConfig()
+  const hasModels = config.modelProfiles && config.modelProfiles.length > 0
+  const hasMainModel = config.modelPointers && config.modelPointers.main
   return config.numStartups === 0 && !config.hasCompletedOnboarding
+}
+
+/**
+ * 检查是否需要显示引导流程
+ */
+export function shouldShowOnboarding(): boolean {
+  const config = getGlobalConfig()
+  const hasModels = config.modelProfiles && config.modelProfiles.length > 0
+  const hasMainModel = config.modelPointers && config.modelPointers.main && config.modelPointers.main.trim() !== ''
+  return !config.hasCompletedOnboarding || !hasModels || !hasMainModel
 }
 
 /**
