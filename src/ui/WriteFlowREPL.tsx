@@ -1,5 +1,6 @@
-import { Box, Text } from 'ink'
+import { Box, Text, Static } from 'ink'
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { randomUUID } from 'crypto'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
@@ -7,6 +8,65 @@ import { ModelConfig } from './components/ModelConfig.js'
 import { getSessionState } from '../../dist/utils/sessionState.js'
 
 const PRODUCT_NAME = 'WriteFlow'
+
+// 消息渲染类型 - 学习 Kode 的分层渲染系统
+type MessageRenderType = 'static' | 'transient' | 'message'
+
+// 消息JSX结构 - 参考 Kode 的 messagesJSX 模式
+interface MessageJSX {
+  type: MessageRenderType
+  jsx: React.ReactNode
+}
+
+// 消息类型定义 - 参考 Kode 的消息结构
+interface WriteFlowMessage {
+  uuid: string
+  id: string
+  type: 'user' | 'assistant' | 'system'
+  message: string
+  timestamp: Date
+  costUSD?: number
+  durationMs?: number
+}
+
+// 消息工厂函数 - 参考 Kode 的实现
+function createUserMessage(content: string): WriteFlowMessage {
+  return {
+    uuid: randomUUID(),
+    id: randomUUID(),
+    type: 'user',
+    message: content,
+    timestamp: new Date(),
+  }
+}
+
+function createAssistantMessage(content: string, extra?: Partial<WriteFlowMessage>): WriteFlowMessage {
+  return {
+    uuid: randomUUID(),
+    id: randomUUID(),
+    type: 'assistant',
+    message: content,
+    timestamp: new Date(),
+    costUSD: 0,
+    durationMs: 0,
+    ...extra,
+  }
+}
+
+function createSystemMessage(content: string): WriteFlowMessage {
+  return {
+    uuid: randomUUID(),
+    id: randomUUID(),
+    type: 'system',
+    message: content,
+    timestamp: new Date(),
+  }
+}
+
+// 消息过滤函数 - 参考 Kode 的 isNotEmptyMessage
+function isNotEmptyMessage(message: WriteFlowMessage): boolean {
+  return Boolean(message.message && message.message.trim().length > 0)
+}
 
 // 动态状态消息数组 - 基于 Kode 翻译为中文
 const DYNAMIC_MESSAGES = [
@@ -223,7 +283,7 @@ function WriterMessage({
   type 
 }: { 
   message: string
-  type: 'user' | 'assistant' 
+  type: 'user' | 'assistant' | 'system'
 }) {
   const theme = getTheme()
   const { columns } = useTerminalSize()
@@ -231,13 +291,19 @@ function WriterMessage({
   return (
     <Box flexDirection="row" marginBottom={1} width="100%">
       <Box minWidth={3}>
-        <Text color={type === 'user' ? theme.secondaryText : theme.text}>
-          {type === 'user' ? ' > ' : '   '}
+        <Text color={
+          type === 'user' ? theme.secondaryText : 
+          type === 'system' ? theme.secondaryText : theme.text
+        }>
+          {type === 'user' ? ' > ' : type === 'system' ? ' ! ' : '   '}
         </Text>
       </Box>
       <Box flexDirection="column" width={columns - 4}>
         <Text 
-          color={type === 'user' ? theme.secondaryText : theme.text}
+          color={
+            type === 'user' ? theme.secondaryText : 
+            type === 'system' ? theme.secondaryText : theme.text
+          }
           wrap="wrap"
         >
           {message}
@@ -329,10 +395,10 @@ interface WriteFlowREPLProps {
 
 export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<Array<{ message: string; type: 'user' | 'assistant' }>>([])
+  const [messages, setMessages] = useState<WriteFlowMessage[]>([])
   const [isThinking, setIsThinking] = useState(false)
-  const [showLogo, setShowLogo] = useState(true)
   const [showModelConfig, setShowModelConfig] = useState(false)
+  // 移除 showLogo 状态 - 学习 Kode 的静态消息模式
   
   // 监听模型配置启动事件
   useEffect(() => {
@@ -348,27 +414,46 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
     }
   }, [writeFlowApp])
   
-  // Message deduplication
-  const uniqueMessages = useMemo(() => {
-    const seen = new Set()
-    return messages.filter(msg => {
-      const key = `${msg.type}-${msg.message}`
-      if (seen.has(key)) {
-        return false
-      }
-      seen.add(key)
-      return true
-    })
+  // 消息过滤 - 参考 Kode 只过滤真正空的消息
+  const validMessages = useMemo(() => {
+    return messages.filter(isNotEmptyMessage)
   }, [messages])
+  
+  // 消息JSX系统 - 学习 Kode 的分层渲染架构
+  const messagesJSX = useMemo((): MessageJSX[] => {
+    return [
+      // 静态消息：Logo 和欢迎信息 - 永久显示
+      {
+        type: 'static',
+        jsx: (
+          <Box flexDirection="column" key="writeflow-welcome">
+            <WriteFlowLogo />
+          </Box>
+        ),
+      },
+      // 用户对话消息
+      ...validMessages.map((msg): MessageJSX => ({
+        type: 'message',
+        jsx: (
+          <WriterMessage 
+            key={msg.uuid} 
+            message={msg.message} 
+            type={msg.type} 
+          />
+        ),
+      }))
+    ]
+  }, [validMessages])
   
   const handleSubmit = useCallback(async (message: string) => {
     if (!message.trim()) return
     
-    // Add user message
-    setMessages(prev => [...prev, { message: message.trim(), type: 'user' }])
+    // Add user message using factory function
+    const userMessage = createUserMessage(message.trim())
+    setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsThinking(true)
-    setShowLogo(false)
+    // 移除 setShowLogo(false) - Logo将作为静态消息永久显示
     
     try {
       const trimmedMessage = message.trim()
@@ -383,8 +468,9 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
         response = await writeFlowApp.executeCommand(`/chat ${trimmedMessage}`)
       }
       
-      // Add assistant response
-      setMessages(prev => [...prev, { message: response, type: 'assistant' }])
+      // Add assistant response using factory function
+      const assistantMessage = createAssistantMessage(response)
+      setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
       // 如果命令方式失败，尝试直接调用私有方法（临时解决方案）
       try {
@@ -416,12 +502,13 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
           responseText = String(result)
         }
         
-        setMessages(prev => [...prev, { message: responseText, type: 'assistant' }])
+        const assistantMessage = createAssistantMessage(responseText)
+        setMessages(prev => [...prev, assistantMessage])
       } catch (fallbackError) {
-        setMessages(prev => [...prev, { 
-          message: `错误: ${error instanceof Error ? error.message : '处理请求时发生错误'}`, 
-          type: 'assistant' 
-        }])
+        const errorMessage = createAssistantMessage(
+          `错误: ${error instanceof Error ? error.message : '处理请求时发生错误'}`
+        )
+        setMessages(prev => [...prev, errorMessage])
       }
     } finally {
       setIsThinking(false)
@@ -435,10 +522,10 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
         onClose={() => {
           setShowModelConfig(false)
           // 添加配置完成消息
-          setMessages(prev => [...prev, { 
-            message: '模型配置已完成，可以开始使用 WriteFlow AI 写作助手了！', 
-            type: 'assistant' 
-          }])
+          const configCompleteMessage = createAssistantMessage(
+            '模型配置已完成，可以开始使用 WriteFlow AI 写作助手了！'
+          )
+          setMessages(prev => [...prev, configCompleteMessage])
         }} 
       />
     )
@@ -446,23 +533,15 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
 
   return (
     <Box flexDirection="column" width="100%">
-      {showLogo && <WriteFlowLogo />}
+      {/* 静态内容渲染 - 学习 Kode 的 Static 组件模式 */}
+      <Static items={messagesJSX.filter(_ => _.type === 'static')}>
+        {_ => _.jsx}
+      </Static>
       
-      {uniqueMessages.map((msg, index) => {
-        // 确保 message 是字符串
-        const messageText = typeof msg.message === 'string' 
-          ? msg.message 
-          : String(msg.message || '无内容')
-          
-        return (
-          <WriterMessage 
-            key={`${msg.type}-${index}`} 
-            message={messageText} 
-            type={msg.type} 
-          />
-        )
-      })}
+      {/* 消息内容渲染 */}
+      {messagesJSX.filter(_ => _.type === 'message').map(_ => _.jsx)}
       
+      {/* 动态状态和输入区域 */}
       <WriteFlowStatusIndicator isThinking={isThinking} />
       
       <WriterInput
@@ -470,7 +549,7 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
         onChange={setInput}
         onSubmit={handleSubmit}
         isDisabled={isThinking}
-        placeholder={uniqueMessages.length === 0 ? "描述您想要写作的内容..." : "继续您的写作..."}
+        placeholder={validMessages.length === 0 ? "描述您想要写作的内容..." : "继续您的写作..."}
       />
     </Box>
   )
