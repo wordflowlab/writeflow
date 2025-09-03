@@ -1,3 +1,4 @@
+
 # WriteFlow AI 写作助手
 
 基于 Claude Code 架构的专业 AI 写作助手，为技术型作家提供完整的写作解决方案。
@@ -8,7 +9,7 @@
 - **AI 驱动写作**：智能大纲生成、内容改写、风格调整、语法检查
 - **多平台发布**：支持微信公众号、知乎、Medium等平台格式转换
 - **深度研究**：网络搜索、事实核查、引用管理
-- **高性能设计**：>10,000 msg/sec消息处理，<100ms响应延迟
+- **高性能设计（设计目标）**：>10,000 msg/sec 消息处理，<100ms 响应延迟
 
 ## 🚀 快速开始
 
@@ -30,32 +31,34 @@ npm install -g .
 
 ### 配置 API 密钥
 
-根据您使用的 AI 服务提供商，配置相应的环境变量：
+根据您使用的 AI 提供商设置环境变量（可选使用 API_PROVIDER/AI_MODEL 指定默认提供商与模型）：
 
-#### 方法一：使用 DeepSeek（推荐）
-```bash
-echo 'export API_PROVIDER="deepseek"' >> ~/.zshrc
-echo 'export DEEPSEEK_API_KEY="sk-2201131e0b2d4783ac35650e0000000000"' >> ~/.zshrc
-echo 'export API_BASE_URL="https://api.deepseek.com"' >> ~/.zshrc
-source ~/.zshrc
-```
+- Anthropic Claude: 需要设置 ANTHROPIC_API_KEY（可选 API_BASE_URL 覆盖默认地址）
+- OpenAI: 需要设置 OPENAI_API_KEY
+- DeepSeek: 需要设置 DEEPSEEK_API_KEY（可选 API_BASE_URL 覆盖默认地址）
+- Kimi (Moonshot): 需要设置 KIMI_API_KEY 或 MOONSHOT_API_KEY
+- BigDream (Claude 代理): 需要设置 BIGDREAM_API_KEY
 
-#### 方法二：使用 Claude/Anthropic
-```bash
-export ANTHROPIC_API_KEY="your-api-key-here"
-```
+示例：
 
-#### 方法三：使用其他 AI 服务
 ```bash
-# OpenAI
+# 选择默认提供商与模型
+export API_PROVIDER=deepseek
+export AI_MODEL=deepseek-chat
+
+# 设置密钥（示例：DeepSeek）
+export DEEPSEEK_API_KEY="your-deepseek-api-key"
+# 如需自定义网关
+export API_BASE_URL="https://api.deepseek.com"
+
+# 其他提供商示例
+export ANTHROPIC_API_KEY="your-anthropic-key"
 export OPENAI_API_KEY="your-openai-key"
-
-# 通义千问
-export QWEN_API_KEY="your-qwen-key"
-
-# 智谱 GLM
-export GLM_API_KEY="your-glm-key"
+export KIMI_API_KEY="your-kimi-key"  # 或 MOONSHOT_API_KEY
+export BIGDREAM_API_KEY="your-bigdream-key"
 ```
+
+更多提供商的详细配置说明与进阶用法，见 docs/ai-providers-setup.md。
 
 **注意**: 请将示例中的 API 密钥替换为您自己的密钥。
 
@@ -96,16 +99,19 @@ writeflow> /帮助              # 等同于 /help
 
 ```bash
 # 生成文章大纲
-/outline <主题> --style=技术性 --length=2000 --audience=技术人员
+/outline <主题> --style=技术|正式|通俗|学术 --length=2000
 
-# 智能改写内容  
-/rewrite <风格> <文件路径> --keep-structure --tone=专业
+# 智能改写内容
+/rewrite <风格> <内容或文件路径>
 
 # 深度主题研究
-/research <主题> --depth=标准 --sources=8 --time=最近一年
+/research <主题> --depth=标准|深入 --sources=8 --time=最近一年 --lang=中文|英文
 
 # 发布到平台
-/publish <平台> <文件> --tags=AI,技术 --auto-format
+/publish <平台> <文件路径> --tags=AI,技术 --lang=zh|en
+
+# 格式转换
+/format <目标格式> <文件路径> --preserve-style=true --output=./输出路径.md
 ```
 
 ### CLI 系统命令
@@ -160,22 +166,28 @@ writeflow status
 
 ```text
 src/
-├── cli/                    # CLI 界面
-│   ├── commands/          # 斜杠命令
-│   ├── executor/          # 命令执行器
-│   ├── parser/           # 命令解析器
-│   └── writeflow-cli.ts  # CLI 主入口
-├── core/                   # 核心引擎
-│   ├── agent/            # nO Agent 系统
-│   ├── context/          # wU2 上下文管理
-│   ├── queue/            # h2A 消息队列
-│   └── security/         # 六层安全框架
-├── tools/                  # 工具系统
-│   ├── base/             # 基础文章操作
-│   ├── writing/          # 高级写作工具
-│   ├── research/         # 研究工具
-│   └── publish/          # 发布工具
-└── types/                  # TypeScript 类型定义
+├── cli/                     # CLI 界面
+│   ├── commands/            # 斜杠命令
+│   ├── executor/            # 命令执行器
+│   ├── parser/              # 命令解析器
+│   ├── interactive/         # 交互式 UI
+│   ├── index.ts             # CLI 运行入口
+│   └── writeflow-cli.ts     # CLI 主类
+├── core/                    # 核心引擎
+│   ├── agent/               # nO Agent 系统
+│   ├── context/             # wU2 上下文管理
+│   ├── queue/               # h2A 消息队列
+│   └── security/            # 安全框架
+├── services/                # 外部服务与 AI 调用
+│   ├── ai/                  # AI 服务封装
+│   └── models/              # 模型与提供商定义
+├── tools/                   # 工具系统
+│   ├── base/                # 基础文章操作
+│   ├── writing/             # 写作工具
+│   ├── research/            # 研究工具
+│   └── publish/             # 发布工具
+├── ui/                      # 终端 UI 组件（Ink）
+└── types/                   # TypeScript 类型定义
 ```
 
 ### 本地开发
@@ -252,10 +264,10 @@ npm run benchmark
 
 ```bash
 # 启用详细调试
-DEBUG=writeflow:* writeflow outline "AI技术"
+DEBUG=writeflow:* writeflow exec "/outline AI技术"
 
 # 特定组件调试
-DEBUG=writeflow:h2a,writeflow:nO writeflow research "机器学习"
+DEBUG=writeflow:h2a,writeflow:nO writeflow exec "/research 机器学习"
 
 # 性能分析
 writeflow status

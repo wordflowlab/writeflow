@@ -2,10 +2,15 @@
 import { Command } from 'commander'
 import chalk from 'chalk'
 import ora from 'ora'
+import React from 'react'
+import { render } from 'ink'
 import { WriteFlowApp } from './writeflow-app.js'
 import { AIWritingConfig } from '../types/writing.js'
 import { displayCLILogo, displayMiniLogo } from '../utils/cli-logo.js'
 import { getVersion } from '../utils/version.js'
+import { getGlobalConfig } from '../utils/config.js'
+import { WriteFlowOnboarding } from '../ui/components/onboarding/WriteFlowOnboarding.js'
+import { WriteFlowREPL } from '../ui/WriteFlowREPL.js'
 
 /**
  * WriteFlow CLI 主入口
@@ -80,17 +85,58 @@ export class WriteFlowCLI {
    * 启动交互式模式
    */
   private async startInteractiveMode(options: any): Promise<void> {
-    // 显示彩色ASCII Logo
-    displayCLILogo()
-    console.log(chalk.gray('输入斜杠命令开始使用，输入 /help 查看帮助\n'))
-
     try {
+      // 检查是否需要显示引导
+      const config = getGlobalConfig()
+      const needsOnboarding = !config.hasCompletedOnboarding
+
+      if (needsOnboarding) {
+        // 显示引导流程
+        await this.showOnboarding()
+      }
+
+      // 初始化应用
       await this.app.initialize(options)
-      await this.app.startInteractiveSession()
+      
+      // 启动 React UI
+      this.startReactUI()
+
     } catch (error) {
       console.error(chalk.red(`启动失败: ${(error as Error).message}`))
       process.exit(1)
     }
+  }
+
+  /**
+   * 显示引导流程
+   */
+  private async showOnboarding(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const onboardingComponent = React.createElement(WriteFlowOnboarding, {
+        onComplete: () => {
+          // 引导完成，清理并继续
+          unmount()
+          resolve()
+        },
+        onExit: () => {
+          console.log(chalk.yellow('\n👋 引导已取消，您可以随时运行 writeflow start 重新开始'))
+          process.exit(0)
+        }
+      })
+
+      const { unmount } = render(onboardingComponent)
+    })
+  }
+
+  /**
+   * 启动 React UI
+   */
+  private startReactUI(): void {
+    const replComponent = React.createElement(WriteFlowREPL, {
+      writeFlowApp: this.app
+    })
+
+    render(replComponent)
   }
 
   /**

@@ -368,6 +368,26 @@ export class WriteFlowApp extends EventEmitter {
     signal?: AbortSignal,
     includeTools?: boolean
   ): Promise<string> {
+    // 基于上下文管理器做最小压缩接入
+    try {
+      if (this.contextManager) {
+        // 将合并前的用户消息更新到上下文（仅最后一条）
+        const latestUserMessage = messages.filter(m => m.role === 'user').pop()?.content || ''
+        if (latestUserMessage) {
+          const msg: Message = {
+            id: `msg-${Date.now()}`,
+            type: MessageType.UserInput,
+            priority: MessagePriority.Normal,
+            payload: latestUserMessage,
+            timestamp: Date.now(),
+            source: 'cli'
+          }
+          await this.contextManager.updateContext(msg, {})
+        }
+      }
+    } catch (e) {
+      console.warn('[Context] 更新上下文失败，继续执行:', (e as Error).message)
+    }
     
     // 检查是否已经被中断
     if (signal?.aborted) {
@@ -714,6 +734,36 @@ Create a detailed plan for the user's request.`
    * 执行工具并处理事件发射
    */
   async executeToolWithEvents(toolName: string, input: any): Promise<any> {
+    // 安全校验：六层安全验证（最小接入）
+    if (this.securityValidator) {
+      try {
+        const secResp = await this.securityValidator.validate({
+          type: 'tool_execution',
+          toolName,
+          input,
+          user: this.agentContext?.userId || 'unknown',
+          source: 'cli',
+          timestamp: Date.now()
+        })
+        if (!secResp.allowed) {
+          return {
+            success: false,
+            content: '❌ 安全校验未通过',
+            error: secResp.reason || '安全策略拒绝'
+          }
+        }
+        if (secResp.warnings?.length) {
+          console.warn('[Security warnings]', secResp.warnings.join(' | '))
+        }
+      } catch (e) {
+        console.warn('[Security] 校验异常，阻断执行:', (e as Error).message)
+        return {
+          success: false,
+          content: '❌ 安全校验异常，已阻断执行',
+          error: (e as Error).message
+        }
+      }
+    }
     // 特殊处理 exit_plan_mode 工具
     if (toolName === 'exit_plan_mode') {
       console.log('🔄 执行 exit_plan_mode 工具，计划内容长度:', input.plan?.length || 0)

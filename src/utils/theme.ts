@@ -1,4 +1,6 @@
 // WriteFlow theme system inspired by Kode
+export type ThemeNames = 'dark' | 'light'
+
 export interface Theme {
   // Core colors
   text: string
@@ -66,9 +68,38 @@ const writeFlowTheme: Theme = {
   ready: '#00ff87'          // Brand color for ready state
 }
 
+// Light theme variant
+const lightTheme: Theme = {
+  text: '#1a1a1a',
+  secondaryText: '#666666',
+  dimText: '#999999',
+  claude: '#007acc',
+  success: '#007acc',
+  error: '#cc0000',
+  warning: '#ff6600',
+  border: '#cccccc',
+  secondaryBorder: '#e0e0e0',
+  background: '#ffffff',
+  writing: '#007acc',
+  editing: '#ff6600',
+  reviewing: '#00aa88',
+  suggestion: '#007acc',
+  highlight: '#ffff00',
+  selection: '#b3d9ff',
+  loading: '#666666',
+  thinking: '#007acc',
+  ready: '#007acc'
+}
+
 // Theme getter function
-export function getTheme(): Theme {
-  return writeFlowTheme
+export function getTheme(themeName?: ThemeNames): Theme {
+  switch (themeName) {
+    case 'light':
+      return lightTheme
+    case 'dark':
+    default:
+      return writeFlowTheme
+  }
 }
 
 // Utility functions for theme manipulation

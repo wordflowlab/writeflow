@@ -178,6 +178,14 @@ export type AccountInfo = {
   organizationUuid?: string
 }
 
+// 写作偏好设置
+export type WritingPreferences = {
+  defaultLanguage: 'zh-CN' | 'en-US' | 'auto'
+  writingStyle: 'formal' | 'friendly' | 'academic' | 'creative'
+  showWritingTips: boolean
+  preferredWritingMode: 'technical' | 'academic' | 'creative' | 'mixed'
+}
+
 export type GlobalConfig = {
   projects?: Record<string, ProjectConfig>
   numStartups: number
@@ -209,6 +217,9 @@ export type GlobalConfig = {
   modelProfiles?: ModelProfile[] // 模型配置列表
   modelPointers?: ModelPointers // 模型指针系统
   defaultModelName?: string // 默认模型
+  
+  // 写作偏好设置
+  writingPreferences?: WritingPreferences
 }
 
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
@@ -231,6 +242,14 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
     task: '',
     reasoning: '',
     quick: '',
+  },
+  
+  // 写作偏好默认值
+  writingPreferences: {
+    defaultLanguage: 'zh-CN',
+    writingStyle: 'friendly',
+    showWritingTips: true,
+    preferredWritingMode: 'mixed',
   },
 }
 
