@@ -5,20 +5,20 @@ import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
 import { ModelConfig } from './components/ModelConfig.js'
-import { getSessionState } from '../../dist/utils/sessionState.js'
+import { getSessionState } from '../utils/state.js'
 
 const PRODUCT_NAME = 'WriteFlow'
 
-// 消息渲染类型 - 学习 Kode 的分层渲染系统
+// 消息渲染类型 - 分层渲染系统
 type MessageRenderType = 'static' | 'transient' | 'message'
 
-// 消息JSX结构 - 参考 Kode 的 messagesJSX 模式
+// 消息JSX结构 - 统一的消息渲染模式
 interface MessageJSX {
   type: MessageRenderType
   jsx: React.ReactNode
 }
 
-// 消息类型定义 - 参考 Kode 的消息结构
+// 消息类型定义 - WriteFlow 消息结构
 interface WriteFlowMessage {
   uuid: string
   id: string
@@ -29,7 +29,7 @@ interface WriteFlowMessage {
   durationMs?: number
 }
 
-// 消息工厂函数 - 参考 Kode 的实现
+// WriteFlow 消息工厂函数
 function createUserMessage(content: string): WriteFlowMessage {
   return {
     uuid: randomUUID(),
@@ -63,12 +63,12 @@ function createSystemMessage(content: string): WriteFlowMessage {
   }
 }
 
-// 消息过滤函数 - 参考 Kode 的 isNotEmptyMessage
+// 消息过滤函数 - 过滤空消息
 function isNotEmptyMessage(message: WriteFlowMessage): boolean {
   return Boolean(message.message && message.message.trim().length > 0)
 }
 
-// 动态状态消息数组 - 基于 Kode 翻译为中文
+// 动态状态消息数组 - 中文状态提示
 const DYNAMIC_MESSAGES = [
   '思考中',
   '构思中', 
@@ -144,13 +144,13 @@ const DYNAMIC_MESSAGES = [
   '制作中'
 ]
 
-// 动画字符 - 与 Kode 保持一致
+// 动画字符 - 跨平台兼容配置
 const SPINNER_CHARACTERS = 
   process.platform === 'darwin'
     ? ['·', '✢', '✳', '∗', '✻', '✽']
     : ['·', '✢', '*', '∗', '✻', '✽']
 
-// 增强的 Spinner 组件 - 学习自 Kode 的动态实现
+// 增强的 Spinner 组件 - 动态状态指示器
 function Spinner() {
   // 双向动画帧序列 - 创造更流畅的动画效果
   const frames = [...SPINNER_CHARACTERS, ...[...SPINNER_CHARACTERS].reverse()]
@@ -165,7 +165,7 @@ function Spinner() {
   useEffect(() => {
     const timer = setInterval(() => {
       setFrame(f => (f + 1) % frames.length)
-    }, 120) // 与 Kode 保持一致的动画速度
+    }, 120) // 优化的动画速度
     
     return () => clearInterval(timer)
   }, [frames.length])
@@ -180,7 +180,7 @@ function Spinner() {
   }, [])
   
   const theme = getTheme()
-  const currentError = getSessionState('currentError')
+  const currentError = getSessionState('currentError', '')
   
   return (
     <Box flexDirection="row" marginTop={1}>
@@ -398,7 +398,7 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
   const [messages, setMessages] = useState<WriteFlowMessage[]>([])
   const [isThinking, setIsThinking] = useState(false)
   const [showModelConfig, setShowModelConfig] = useState(false)
-  // 移除 showLogo 状态 - 学习 Kode 的静态消息模式
+  // 永久显示Logo的静态消息模式
   
   // 监听模型配置启动事件
   useEffect(() => {
@@ -414,15 +414,15 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
     }
   }, [writeFlowApp])
   
-  // 消息过滤 - 参考 Kode 只过滤真正空的消息
+  // 消息过滤 - 只过滤空消息
   const validMessages = useMemo(() => {
     return messages.filter(isNotEmptyMessage)
   }, [messages])
   
-  // 消息JSX系统 - 学习 Kode 的分层渲染架构
+  // 分层渲染架构的消息JSX系统
   const messagesJSX = useMemo((): MessageJSX[] => {
     return [
-      // 静态消息：Logo 和欢迎信息 - 永久显示
+      // 永久显示的静态Logo和欢迎信息
       {
         type: 'static',
         jsx: (
@@ -453,7 +453,7 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsThinking(true)
-    // 移除 setShowLogo(false) - Logo将作为静态消息永久显示
+    // Logo永久显示
     
     try {
       const trimmedMessage = message.trim()
@@ -533,7 +533,7 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
 
   return (
     <Box flexDirection="column" width="100%">
-      {/* 静态内容渲染 - 学习 Kode 的 Static 组件模式 */}
+      {/* 静态内容渲染 - Static 组件模式 */}
       <Static items={messagesJSX.filter(_ => _.type === 'static')}>
         {_ => _.jsx}
       </Static>

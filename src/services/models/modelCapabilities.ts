@@ -1,6 +1,6 @@
 /**
  * WriteFlow 模型能力配置
- * 基于 Kode 的模型能力系统，针对写作场景优化
+ * 针对写作场景优化的模型能力系统
  */
 
 export interface ModelCapabilities {

@@ -17,7 +17,7 @@ export interface ModelDebugInfo {
 
 /**
  * WriteFlow 模型管理器
- * 基于 Kode 的 ModelManager，简化并适配写作场景
+ * 为写作场景优化的模型管理器
  */
 export class ModelManager {
   private config: GlobalConfig

@@ -36,7 +36,7 @@ export interface ToolResult<TOutput = any> {
 
 /**
  * 统一的写作工具接口
- * 基于 Claude Code 和 Kode 的设计理念
+ * WriteFlow 工具系统的设计理念
  */
 export interface WritingTool<
   TInput extends z.ZodObject<any> = z.ZodObject<any>,

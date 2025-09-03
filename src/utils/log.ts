@@ -1,6 +1,6 @@
 /**
  * WriteFlow 日志工具
- * 基于 Kode 的日志系统
+ * WriteFlow 日志系统
  */
 
 import { randomUUID } from 'crypto'

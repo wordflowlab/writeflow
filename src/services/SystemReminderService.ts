@@ -50,7 +50,7 @@ export interface TodoChangeEvent {
 
 /**
  * 系统提醒服务
- * 基于 Kode 项目的 SystemReminderService，专为 WriteFlow 简化设计
+ * WriteFlow 系统提醒服务
  */
 export class SystemReminderService {
   private sessionState: SessionReminderState = {

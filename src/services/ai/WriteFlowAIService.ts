@@ -1,6 +1,6 @@
 /**
  * WriteFlow AI 服务
- * 基于 Kode 架构的简化版本，专为写作场景优化
+ * 专为写作场景优化的 AI 服务
  */
 
 import { getGlobalConfig, ModelProfile } from '../../utils/config.js'
