@@ -20,6 +20,7 @@ import { getWriteFlowAIService, AIRequest } from '../services/ai/WriteFlowAIServ
 // CLI 组件
 import { CommandExecutor } from './executor/command-executor.js'
 import { coreCommands } from './commands/core-commands.js'
+import { slideCommands } from './commands/slide-commands.js'
 
 // 工具系统
 import { ToolManager } from '../tools/tool-manager.js'
@@ -297,6 +298,8 @@ export class WriteFlowApp extends EventEmitter {
 
     // 注册核心命令
     this.commandExecutor.registerCommands(coreCommands)
+    // 注册 Slide 命令（按需加载）
+    this.commandExecutor.registerCommands(slideCommands)
   }
 
   /**
