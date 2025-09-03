@@ -92,9 +92,18 @@ export function ModelSelector({
   // Handle keyboard input for navigation
   const handleInput = useCallback((input: string, key: any) => {
     if (key.escape) {
-      onCancel()
+      // Esc：逐步回退
+      if (currentStep === 'config') {
+        setCurrentStep('apikey')
+      } else if (currentStep === 'apikey') {
+        setCurrentStep(selectedModel ? 'model' : 'provider')
+      } else if (currentStep === 'model') {
+        setCurrentStep('provider')
+      } else {
+        onCancel()
+      }
     }
-  }, [onCancel])
+  }, [onCancel, currentStep, selectedModel])
 
   useInput(handleInput)
 

@@ -38,22 +38,34 @@ export class WriteFlowAIService {
    */
   async processRequest(request: AIRequest): Promise<AIResponse> {
     const startTime = Date.now()
-    
+
     try {
+      // 离线/降级模式（本地无网或无 Key 时可用）
+      if (process.env.WRITEFLOW_AI_OFFLINE === 'true') {
+        const content = `【离线模式】无法访问外部模型，已返回模拟回复。\n\n要点: ${request.prompt.slice(0, 120)}${request.prompt.length > 120 ? '...' : ''}`
+        return {
+          content,
+          usage: { inputTokens: 0, outputTokens: content.length },
+          cost: 0,
+          duration: Date.now() - startTime,
+          model: 'offline-mock'
+        }
+      }
+
       // 获取模型配置
       const modelName = request.model || this.modelManager.getMainAgentModel()
       if (!modelName) {
         throw new Error('没有可用的模型配置')
       }
-      
+
       const modelProfile = this.findModelProfile(modelName)
       if (!modelProfile) {
         throw new Error(`找不到模型配置: ${modelName}`)
       }
-      
+
       // 根据提供商调用相应的 AI 服务
       let response: AIResponse
-      
+
       switch (modelProfile.provider) {
         case 'anthropic':
         case 'bigdream':
@@ -71,17 +83,18 @@ export class WriteFlowAIService {
         default:
           throw new Error(`不支持的提供商: ${modelProfile.provider}`)
       }
-      
+
       // 计算持续时间
       response.duration = Date.now() - startTime
-      
+
       return response
-      
+
     } catch (error) {
       logError('AI 请求处理失败', error)
-      
+
+      const hint = `\n提示: \n- 请检查网络连通性或代理设置\n- 如需离线演示: export WRITEFLOW_AI_OFFLINE=true\n- 或正确设置 API_PROVIDER/AI_MODEL 及对应的 *API_KEY 环境变量\n- 可选 API_BASE_URL 覆盖默认网关`
       return {
-        content: `处理请求时发生错误: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `处理请求时发生错误: ${error instanceof Error ? error.message : '未知错误'}${hint}`,
         usage: { inputTokens: 0, outputTokens: 0 },
         cost: 0,
         duration: Date.now() - startTime,

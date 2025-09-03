@@ -227,7 +227,11 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
       if (key.escape) {
         if (isDeleteMode) {
           setIsDeleteMode(false)
+        } else if (showModelListManager) {
+          // 模型列表正在显示：Esc 返回到 ModelConfig 主界面
+          setShowModelListManager(false)
         } else {
+          // 最外层 Esc 才关闭配置界面
           onClose()
         }
       } else if (input === 'd' && !isDeleteMode) {
@@ -408,8 +412,8 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
           {isDeleteMode
             ? '清空模式：按 Enter/Space 清空分配，Esc 取消'
             : availableModels.length === 0
-              ? '使用 ↑/↓ 导航，Enter 配置新模型，Esc 退出'
-              : '使用 ↑/↓ 导航，Space 循环模型，Enter 配置，d 清空，Esc 退出'}
+              ? '使用 ↑/↓ 导航，Enter 配置新模型，Esc 返回'
+              : '使用 ↑/↓ 导航，Space 循环模型，Enter 配置，d 清空，Esc 返回'}
         </Text>
       </Box>
     </Box>

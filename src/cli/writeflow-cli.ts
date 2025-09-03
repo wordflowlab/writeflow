@@ -19,6 +19,7 @@ import { WriteFlowREPL } from '../ui/WriteFlowREPL.js'
 export class WriteFlowCLI {
   private app: WriteFlowApp
   private program: Command
+  private keepAlive?: NodeJS.Timeout
 
   constructor() {
     this.program = new Command()
@@ -138,6 +139,11 @@ export class WriteFlowCLI {
    */
   private startReactUI(): void {
     try {
+      // 标记当前为交互模式，供全局异常处理判断，避免错误时直接退出
+      ;(global as any).WRITEFLOW_INTERACTIVE = true
+      // 注入全局 APP 实例，供 /status 等命令友好读取
+      ;(global as any).WRITEFLOW_APP_INSTANCE = this.app
+
       // 确保应用已正确初始化
       if (!this.app) {
         throw new Error('WriteFlowApp 未初始化')
@@ -146,6 +152,10 @@ export class WriteFlowCLI {
       const replComponent = React.createElement(WriteFlowREPL, {
         writeFlowApp: this.app
       })
+
+      // 保活：Ink 在所有 UI 卸载时可能导致进程自然退出，这里用定时 no-op 防止提前退出
+      this.keepAlive?.hasRef && this.keepAlive.unref()
+      this.keepAlive = setInterval(() => {}, 1 << 30) // 超长间隔，仅用于保持事件循环
 
       render(replComponent)
     } catch (error) {
@@ -220,14 +230,36 @@ export class WriteFlowCLI {
     try {
       await this.app.initialize()
       const status = await this.app.getSystemStatus()
-      
+
       console.log(chalk.cyan.bold('📊 WriteFlow 系统状态'))
       console.log(chalk.gray('─'.repeat(40)))
-      
-      Object.entries(status).forEach(([key, value]) => {
+
+      const simple = { ...status }
+      // 特殊结构字段友好打印
+      if (simple.memory) delete (simple as any).memory
+      if (simple.context) delete (simple as any).context
+
+      Object.entries(simple).forEach(([key, value]) => {
         const displayKey = key.replace(/([A-Z])/g, ' $1').toLowerCase()
-        console.log(`${displayKey}: ${chalk.green(value)}`)
+        console.log(`${displayKey}: ${chalk.green(String(value))}`)
       })
+
+      // 打印 context 摘要
+      if ((status as any).context) {
+        const ctx = (status as any).context
+        console.log(chalk.gray('\nContext'))
+        console.log(`  tokens: ${chalk.green(`${ctx.currentTokens}/${ctx.maxTokens}`)} (${(ctx.utilizationRatio*100).toFixed(1)}%)`)
+        if (ctx.lastCompression) console.log(`  last compression: ${chalk.green(new Date(ctx.lastCompression).toLocaleString())}`)
+      }
+
+      // 打印 memory 摘要
+      if ((status as any).memory) {
+        const mem = (status as any).memory
+        console.log(chalk.gray('\nMemory'))
+        console.log(`  short-term: ${chalk.green(`${mem.shortTerm.messages} msgs, ${mem.shortTerm.tokens} tokens`)}`)
+        console.log(`  mid-term: ${chalk.green(`${mem.midTerm.summaries} summaries, ${mem.midTerm.sessions} sessions`)}`)
+        console.log(`  long-term: ${chalk.green(`${mem.longTerm.knowledge} knowledge, ${mem.longTerm.topics} topics`)}`)
+      }
 
     } catch (error) {
       console.error(chalk.red((error as Error).message))

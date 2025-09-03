@@ -170,30 +170,45 @@ export const systemCommands: SlashCommand[] = [
     
     async call(_args: string, context: AgentContext): Promise<string> {
       const now = new Date().toLocaleString('zh-CN')
-      
+
+      // 读取应用状态（如果 UI 或 CLI 在 global 注入了 app 实例）
+      let agentSummary = ''
+      try {
+        const app: any = (global as any).WRITEFLOW_APP_INSTANCE
+        if (app?.getSystemStatus) {
+          const st = await app.getSystemStatus()
+          const aq = st.h2aQueue
+          const ah = st.agent
+          const bs = st.bridgeStats
+          agentSummary = `\n- h2A: size=${aq?.queueSize||0}, throughput=${aq?.throughput||0}/s, processed=${aq?.messagesProcessed||0}` +
+                         `\n- Agent: state=${ah?.state||'idle'}, healthy=${ah?.healthy}, errors=${ah?.statistics?.errorCount||0}` +
+                         `\n- Bridge: prompts=${bs?.promptsHandled||0}, toolCalls=${bs?.toolCallsExecuted||0}`
+        }
+      } catch {}
+
       return `WriteFlow 系统状态 (${now})
 
 🧠 Agent 状态:
   会话 ID: ${context.sessionId}
   当前状态: ${context.currentState || 'idle'}
   计划模式: ${context.planMode || 'default'}
-  工作目录: ${context.workingDirectory || 'unknown'}
-  
+  工作目录: ${context.workingDirectory || 'unknown'}${agentSummary}
+
 📊 统计信息:
   消息已处理: ${context.statistics?.messagesProcessed || 0}
   工具调用次数: ${context.statistics?.toolInvocations || 0}
   平均响应时间: ${context.statistics?.averageResponseTime || 0}ms
   错误计数: ${context.statistics?.errorCount || 0}
-  
+
 ⚙️ 配置信息:
   最大并发工具: ${context.configuration?.maxConcurrentTools || 5}
   工具超时: ${context.configuration?.toolTimeout || 120000}ms
   安全级别: ${context.configuration?.securityLevel || 'normal'}
-  
+
 💾 资源使用:
   内存使用: ${Math.round((process.memoryUsage().heapUsed / 1024 / 1024) * 100) / 100} MB
   Node.js 版本: ${process.version}
-  
+
 🚀 版本信息:
   WriteFlow: 1.0.4
   状态: 运行正常`

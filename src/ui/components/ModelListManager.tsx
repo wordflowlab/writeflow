@@ -6,6 +6,7 @@ import { getTheme } from '../../utils/theme.js'
 import { getGlobalConfig, ModelPointerType } from '../../utils/config.js'
 import { getModelManager } from '../../services/models/ModelManager.js'
 import { ModelSelector } from './ModelSelector.js'
+import { ModelEditor } from './ModelEditor.js'
 
 type Props = {
   onClose: () => void
@@ -18,6 +19,7 @@ export function ModelListManager({ onClose }: Props): React.ReactNode {
   const [showModelSelector, setShowModelSelector] = useState(false)
   const [isDeleteMode, setIsDeleteMode] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [editingProfile, setEditingProfile] = useState<any | null>(null)
 
   const modelManager = getModelManager()
   const availableModels = modelManager.getAllProfiles().filter(p => p.isActive)
@@ -96,6 +98,9 @@ export function ModelListManager({ onClose }: Props): React.ReactNode {
       if (key.escape) {
         if (isDeleteMode) {
           setIsDeleteMode(false)
+        } else if (showModelSelector) {
+          // 从添加新模型返回列表
+          setShowModelSelector(false)
         } else {
           onClose()
         }
@@ -115,6 +120,10 @@ export function ModelListManager({ onClose }: Props): React.ReactNode {
             return
           }
           handleDeleteModel(item.id)
+        } else if (item.type === 'model') {
+          // 打开编辑器，允许设置/更新 API Key 和 Base URL
+          const profile = availableModels.find(p => p.modelName === item.id)
+          if (profile) setEditingProfile(profile)
         } else if (item.type === 'action') {
           handleAddNewModel()
         }
@@ -124,6 +133,19 @@ export function ModelListManager({ onClose }: Props): React.ReactNode {
   )
 
   useInput(handleInput)
+
+  // 编辑器界面（优先于其它界面渲染）
+  if (editingProfile) {
+    return (
+      <ModelEditor
+        profile={editingProfile}
+        onClose={() => {
+          setEditingProfile(null)
+          setRefreshKey(prev => prev + 1)
+        }}
+      />
+    )
+  }
 
   // If showing ModelSelector, render it directly
   if (showModelSelector) {

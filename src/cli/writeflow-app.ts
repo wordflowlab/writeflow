@@ -8,6 +8,7 @@ import { getVersion } from '../utils/version.js'
 
 // 核心组件
 import { H2AAsyncMessageQueue } from '../core/queue/h2A-queue.js'
+import { CoreEngineAdapter } from '../core/adapter/core-engine-adapter.js'
 import { NOMainAgentEngine } from '../core/agent/nO-engine.js'
 import { WU2ContextCompressor } from '../core/context/wU2-compressor.js'
 import { ContextManager } from '../core/context/context-manager.js'
@@ -22,7 +23,7 @@ import { coreCommands } from './commands/core-commands.js'
 
 // 工具系统
 import { ToolManager } from '../tools/tool-manager.js'
-import { 
+import {
   OutlineGeneratorTool,
   ContentRewriterTool,
   StyleAdapterTool,
@@ -49,6 +50,12 @@ import { Message, MessageType, MessagePriority } from '../types/message.js'
  * 整合所有核心组件
  */
 export class WriteFlowApp extends EventEmitter {
+  // Agent 桥接统计（最小）
+  private agentBridgeStats: { promptsHandled: number; toolCallsExecuted: number } = {
+    promptsHandled: 0,
+    toolCallsExecuted: 0
+  }
+
   // 核心组件
   private messageQueue!: H2AAsyncMessageQueue
   private agentEngine!: NOMainAgentEngine
@@ -178,6 +185,41 @@ export class WriteFlowApp extends EventEmitter {
     // h2A 消息队列
     this.messageQueue = new H2AAsyncMessageQueue(10000, 8000)
 
+    // nO Agent 引擎（需在使用前初始化）
+    this.agentEngine = new NOMainAgentEngine()
+
+    // 可选：启动最小后台消费者以推进队列指标与稳态验证
+    if (process.env.WRITEFLOW_USE_QUEUE === 'true') {
+      // 用最小 CoreEngineAdapter 消费 SlashCommand 消息（当启用队列时）
+      const adapter = new CoreEngineAdapter(
+        this.messageQueue,
+        (cmd, ctx) => this.commandExecutor.executeCommand(cmd, ctx as any),
+        (msgs, allowed, sig) => this.processAIQuery(msgs, allowed, sig),
+        this.agentContext,
+        {
+          agentEnabled: process.env.WRITEFLOW_AGENT_ENABLED === 'true',
+          agentEngine: this.agentEngine,
+          agentStrict: process.env.WRITEFLOW_AGENT_STRICT === 'true'
+        }
+      )
+      adapter.start().catch((e: unknown) => {
+        const err = e as Error
+        console.warn('[CoreEngineAdapter] 异常:', err?.message || e)
+      })
+    }
+
+    // 如果启用 Agent，则启动 Agent 循环，并设置极简桥接回调
+    if (process.env.WRITEFLOW_AGENT_ENABLED === 'true') {
+      this.agentEngine.onPrompt = async (prompt: string, allowed?: string[]) => {
+        // 当前阶段仅事件分发；如需自动投 AI，请设置 WRITEFLOW_AGENT_PROMPT_TO_AI=true（见 startAgentLoop）
+        this.emit('agent-prompt', { content: prompt, allowedTools: allowed })
+      }
+      this.startAgentLoop().catch((e: unknown) => {
+        const err = e as Error
+        console.warn('[nO] Agent 循环异常:', err?.message || e)
+      })
+    }
+
     // wU2 上下文压缩器
     this.contextCompressor = new WU2ContextCompressor({
       threshold: 0.92,
@@ -194,7 +236,7 @@ export class WriteFlowApp extends EventEmitter {
     // 六层安全验证器
     this.securityValidator = new SixLayerSecurityValidator(this.config)
 
-    // nO Agent 引擎  
+    // nO Agent 引擎
     this.agentEngine = new NOMainAgentEngine()
   }
 
@@ -213,7 +255,7 @@ export class WriteFlowApp extends EventEmitter {
       new GrammarCheckerTool(this.config)
     ]
     this.toolManager.registerTools(writingTools)
-    
+
     // 根据配置的API提供商注册对应的客户端
     const aiClients = []
     switch (this.config.apiProvider) {
@@ -333,16 +375,36 @@ export class WriteFlowApp extends EventEmitter {
    */
   async executeCommand(command: string, options: any = {}): Promise<string> {
     try {
+      const useQueue = process.env.WRITEFLOW_USE_QUEUE === 'true'
+
+      if (useQueue) {
+        // 将命令包装为消息并通过 h2A 队列处理（最小试点）
+        const message = H2AAsyncMessageQueue.createMessage(
+          MessageType.SlashCommand,
+          `${command} ${options?.args || ''}`.trim(),
+          MessagePriority.Normal,
+          'cli'
+        )
+        this.messageQueue.enqueue(message)
+
+        // 若严格模式开启，则不再执行本地执行器，由 Agent 协调
+        if (process.env.WRITEFLOW_AGENT_STRICT === 'true') {
+          return '命令已提交到 Agent（STRICT 模式）'
+        }
+
+        // 兼容路径：仍由现有执行器同步处理，收集队列指标
+      }
+
       const result = await this.commandExecutor.executeCommand(command, this.agentContext)
-      
+
       if (!result.success) {
         throw new Error(result.error || '命令执行失败')
       }
 
       // 处理特殊的模型配置命令
       if (result.messages?.[0]?.content === 'LAUNCH_MODEL_CONFIG') {
-        // 返回特殊标记，让 UI 知道需要启动模型配置界面
         this.emit('launch-model-config')
+        // 交互模式：仅在 React UI 内切换界面；返回提示但不退出
         return '正在启动模型配置界面...'
       }
 
@@ -364,9 +426,9 @@ export class WriteFlowApp extends EventEmitter {
    */
   private async processAIQuery(
     messages: Array<{ role: string; content: string }>,
-    allowedTools?: string[],
+    _allowedTools?: string[],
     signal?: AbortSignal,
-    includeTools?: boolean
+    _includeTools?: boolean
   ): Promise<string> {
     // 基于上下文管理器做最小压缩接入
     try {
@@ -388,25 +450,25 @@ export class WriteFlowApp extends EventEmitter {
     } catch (e) {
       console.warn('[Context] 更新上下文失败，继续执行:', (e as Error).message)
     }
-    
+
     // 检查是否已经被中断
     if (signal?.aborted) {
       throw new Error('操作已被中断')
     }
-    
+
     // 构建系统提示词
     let systemPrompt = this.config.systemPrompt
-    
+
     // 构建用户提示词（合并所有消息）
     const userMessages = messages.filter(msg => msg.role === 'user')
     const assistantMessages = messages.filter(msg => msg.role === 'assistant')
     const systemMessages = messages.filter(msg => msg.role === 'system')
-    
+
     // 将系统消息合并到系统提示词
     if (systemMessages.length > 0) {
       systemPrompt = systemMessages.map(msg => msg.content).join('\n\n') + '\n\n' + systemPrompt
     }
-    
+
     // 构建对话历史作为用户提示词的上下文
     let contextualPrompt = ''
     if (assistantMessages.length > 0 || userMessages.length > 1) {
@@ -421,11 +483,11 @@ export class WriteFlowApp extends EventEmitter {
       }
       contextualPrompt += '\n当前请求:\n'
     }
-    
+
     // 获取最新的用户消息
     const latestUserMessage = userMessages[userMessages.length - 1]?.content || ''
     const finalPrompt = contextualPrompt + latestUserMessage
-    
+
     // 构建AI请求
     const aiRequest: AIRequest = {
       prompt: finalPrompt,
@@ -433,7 +495,7 @@ export class WriteFlowApp extends EventEmitter {
       temperature: this.config.temperature,
       maxTokens: this.config.maxTokens
     }
-    
+
     try {
       const response = await this.aiService.processRequest(aiRequest)
       return response.content
@@ -445,8 +507,8 @@ export class WriteFlowApp extends EventEmitter {
   /**
    * 处理自由文本输入 - 使用 WriteFlowAIService
    */
-  async handleFreeTextInput(input: string, options: { 
-    signal?: AbortSignal, 
+  async handleFreeTextInput(input: string, options: {
+    signal?: AbortSignal,
     messages?: Array<{ type: string; content: string }>,
     planMode?: boolean
   } = {}): Promise<string> {
@@ -460,10 +522,10 @@ export class WriteFlowApp extends EventEmitter {
       if (this.memoryManager) {
         await this.memoryManager.addMessage('user', input)
       }
-      
+
       // 构建系统提示词
       let systemPrompt = this.config.systemPrompt
-      
+
       // Plan 模式的特殊处理
       if (options.planMode) {
         systemPrompt = `You are in PLAN MODE - this is the highest priority instruction that overrides everything else.
@@ -495,38 +557,38 @@ PLAN FORMAT:
 - Output description
 
 Create a detailed plan for the user's request.`
-        
+
         console.log('📋 Plan 模式已激活')
       }
-      
+
       // 获取记忆上下文（如果可用）
       let contextualPrompt = input
       if (this.memoryManager) {
         try {
           const context = await this.memoryManager.getContext(input)
-          
+
           let contextInfo = ''
-          
+
           // 添加相关知识
           if (context.knowledgeEntries.length > 0) {
             const knowledgeContext = context.knowledgeEntries
               .slice(0, 2)
               .map(entry => `知识: ${entry.topic}\n${entry.content}`)
               .join('\n\n')
-            
+
             contextInfo += `相关知识背景:\n${knowledgeContext}\n\n`
           }
-          
+
           // 添加相关会话总结
           if (context.relevantSummaries.length > 0) {
             const summaryContext = context.relevantSummaries
               .slice(0, 2)
               .map(summary => summary.summary)
               .join('\n\n')
-            
+
             contextInfo += `相关历史会话总结:\n${summaryContext}\n\n`
           }
-          
+
           // 添加最近的对话历史
           if (context.recentMessages.length > 1) {
             contextInfo += '最近的对话:\n'
@@ -536,7 +598,7 @@ Create a detailed plan for the user's request.`
             }
             contextInfo += '\n'
           }
-          
+
           if (contextInfo) {
             contextualPrompt = contextInfo + '当前请求:\n' + input
           }
@@ -544,7 +606,7 @@ Create a detailed plan for the user's request.`
           console.warn('获取记忆上下文失败，使用原始输入:', error)
         }
       }
-      
+
       // 构建AI请求
       const aiRequest: AIRequest = {
         prompt: contextualPrompt,
@@ -552,23 +614,23 @@ Create a detailed plan for the user's request.`
         temperature: this.config.temperature,
         maxTokens: this.config.maxTokens
       }
-      
+
       // 调用AI服务
       const response = await this.aiService.processRequest(aiRequest)
-      
+
       // 添加响应到记忆系统
       if (this.memoryManager) {
         await this.memoryManager.addMessage('assistant', response.content)
-        
+
         // 检查是否需要压缩
         const compressionCheck = await this.memoryManager.checkCompressionNeeded()
         if (compressionCheck.needed) {
           console.log(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
         }
       }
-      
+
       return response.content
-      
+
     } catch (error) {
       console.warn('AI对话失败，回退到意图检测:', error)
       return this.fallbackToIntentDetection(input)
@@ -580,17 +642,17 @@ Create a detailed plan for the user's request.`
    */
   private async fallbackToIntentDetection(input: string): Promise<string> {
     const intent = await this.detectUserIntent(input)
-    
+
     switch (intent.type) {
       case 'outline':
         return await this.executeCommand(`/outline ${intent.topic}`)
-      
+
       case 'rewrite':
         return await this.executeCommand(`/rewrite ${intent.style} "${intent.content}"`)
-      
+
       case 'research':
         return await this.executeCommand(`/research ${intent.topic}`)
-      
+
       default:
         // 提供更友好的响应，而不是错误
         return `你好！我是WriteFlow AI写作助手。你可以：
@@ -665,15 +727,22 @@ Create a detailed plan for the user's request.`
    */
   async getSystemStatus(): Promise<Record<string, any>> {
     const memoryStats = this.memoryManager ? await this.memoryManager.getStats() : null
-    
+
     return {
       version: getVersion(),
       initialized: this.isInitialized,
-      messageQueueSize: this.messageQueue?.getMetrics().queueSize || 0,
+      h2aQueue: this.messageQueue ? this.messageQueue.getMetrics() : null,
+      agent: this.agentEngine ? this.agentEngine.getHealthStatus() : null,
+      bridgeStats: this.agentBridgeStats || null,
       activeTools: this.toolManager?.getAvailableTools().length || 0,
       availableCommands: this.commandExecutor?.getAvailableCommands().length || 0,
       currentModel: this.config.model,
       securityEnabled: this.config.enabled,
+      // 新增：上下文指标输出
+      context: this.contextManager ? {
+        ...this.contextManager.getMetrics(),
+        compressionStats: this.contextManager.getCompressionStats(),
+      } : null,
       memory: memoryStats ? {
         shortTerm: {
           messages: memoryStats.shortTerm.messageCount,
@@ -735,7 +804,8 @@ Create a detailed plan for the user's request.`
    */
   async executeToolWithEvents(toolName: string, input: any): Promise<any> {
     // 安全校验：六层安全验证（最小接入）
-    if (this.securityValidator) {
+    const securityEnabled = process.env.WRITEFLOW_SECURITY_ENABLED !== 'false' && this.config.enabled
+    if (this.securityValidator && securityEnabled) {
       try {
         const secResp = await this.securityValidator.validate({
           type: 'tool_execution',
@@ -767,7 +837,7 @@ Create a detailed plan for the user's request.`
     // 特殊处理 exit_plan_mode 工具
     if (toolName === 'exit_plan_mode') {
       console.log('🔄 执行 exit_plan_mode 工具，计划内容长度:', input.plan?.length || 0)
-      
+
       // 确保计划内容存在
       if (!input.plan || input.plan.trim().length === 0) {
         return {
@@ -776,10 +846,10 @@ Create a detailed plan for the user's request.`
           error: '计划内容不能为空'
         }
       }
-      
+
       // 发射事件给 UI，传递完整的计划内容
       this.emit('exit-plan-mode', input.plan)
-      
+
       return {
         success: true,
         content: `📋 计划已生成，等待用户确认...
@@ -794,7 +864,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
         }
       }
     }
-    
+
     // 执行其他工具
     return await this.toolManager.executeTool(toolName, input)
   }
@@ -808,7 +878,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     thinkingContent?: string
   }> {
     console.log('🔍 开始拦截工具调用，响应类型:', typeof aiResponse)
-    
+
     let shouldIntercept = false
     let processedResponse = ''
     const toolCalls = []
@@ -816,7 +886,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
 
     // 处理不同格式的响应
     let responseToProcess = aiResponse
-    
+
     // 如果是包装的对象，提取 content
     if (typeof aiResponse === 'object' && aiResponse !== null && !Array.isArray(aiResponse)) {
       if ((aiResponse as any).content) {
@@ -824,15 +894,15 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
         console.log('📦 从包装对象中提取 content')
       }
     }
-    
+
     // 处理结构化响应（content 数组）
     if (Array.isArray(responseToProcess)) {
       console.log('📦 处理结构化响应，内容块数量:', responseToProcess.length)
-      
+
       for (const block of responseToProcess) {
         if (block.type === 'text') {
           let textContent = block.text || ''
-          
+
           // 提取 thinking 内容
           const thinkingMatch = textContent.match(/<thinking>([\s\S]*?)<\/thinking>/i)
           if (thinkingMatch) {
@@ -840,15 +910,15 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
             console.log('🧠 提取到 thinking 内容，长度:', thinkingContent?.length || 0)
             textContent = textContent.replace(thinkingMatch[0], '').trim()
           }
-          
+
           processedResponse += textContent
         } else if (block.type === 'tool_use') {
           shouldIntercept = true
           const toolName = block.name
           const input = block.input
-          
+
           console.log('🎯 检测到工具调用:', toolName)
-          
+
           if (toolName === 'ExitPlanMode' && input?.plan) {
             toolCalls.push({ toolName: 'exit_plan_mode', input })
             console.log('📋 ExitPlanMode 计划内容长度:', input.plan.length)
@@ -859,12 +929,12 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     } else if (typeof aiResponse === 'string') {
       // 处理传统的文本响应（向后兼容）
       console.log('📝 处理传统文本响应，长度:', aiResponse.length)
-      
+
       const thinkingMatch = aiResponse.match(/<thinking>([\s\S]*?)<\/thinking>/i)
       if (thinkingMatch) {
         thinkingContent = thinkingMatch[1].trim()
       }
-      
+
       // 检测传统工具调用格式
       const patterns = [
         /<function_calls>[\s\S]*?<invoke name="ExitPlanMode">[\s\S]*?<parameter name="plan">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi
@@ -872,23 +942,23 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
 
       for (const pattern of patterns) {
         const matches = [...aiResponse.matchAll(pattern)]
-        
+
         for (const match of matches) {
           shouldIntercept = true
           const planContent = match[1].trim()
-          
+
           toolCalls.push({ toolName: 'exit_plan_mode', input: { plan: planContent } })
           console.log('🎯 检测到传统 ExitPlanMode 工具调用')
           this.emit('exit-plan-mode', planContent)
           processedResponse = aiResponse.replace(match[0], '')
         }
       }
-      
+
       if (!shouldIntercept) {
         processedResponse = aiResponse
       }
     }
-    
+
     console.log('✅ 拦截结果:', { shouldIntercept, hasThinking: !!thinkingContent, toolCallsCount: toolCalls.length })
 
     return {
@@ -898,4 +968,77 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       thinkingContent
     }
   }
+
+  /**
+   * 启动 nO Agent 主循环（只读消费，当前阶段不改变外部行为）
+   */
+  private async startAgentLoop(): Promise<void> {
+    try {
+      for await (const resp of this.agentEngine.run()) {
+        // 分发事件，便于 UI 或测试监听
+        try {
+          this.emit('agent-response', resp)
+          if (resp.type === 'plan') this.emit('agent-plan', resp)
+          if (resp.type === 'prompt') this.emit('agent-prompt', resp)
+        } catch {}
+
+        // 统计：处理过的 prompt 计数
+        this.agentBridgeStats.promptsHandled++
+
+
+        // 闭环桥接：当 Agent 产出 prompt 时，先尝试拦截/执行工具；若无工具调用且开启了自动AI，则再投到 AI
+        if (resp.type === 'prompt' && resp.content) {
+          let intercepted = false
+          try {
+            const intercept = await this.interceptToolCalls(resp)
+            if (intercept.shouldIntercept && intercept.toolCalls?.length) {
+              intercepted = true
+              for (const call of intercept.toolCalls) {
+                await this.executeToolWithEvents(call.toolName, call.input)
+                this.agentBridgeStats.toolCallsExecuted++
+              }
+            }
+
+            // 最小闭环：如果没有工具调用但携带了 plan 元数据，则触发 exit_plan_mode
+            if (!intercepted && (resp as any).metadata?.plan) {
+              intercepted = true
+              await this.executeToolWithEvents('exit_plan_mode', { plan: (resp as any).metadata.plan })
+            }
+          } catch (err) {
+            console.warn('[Agent Bridge] 工具拦截/闭环失败:', (err as Error)?.message || err)
+          }
+
+          if (!intercepted && process.env.WRITEFLOW_AGENT_PROMPT_TO_AI === 'true') {
+            try {
+              const content = await this.processAIQuery([{ role: 'user', content: resp.content }], resp.allowedTools)
+              this.emit('agent-ai-result', content)
+            } catch (err) {
+              console.warn('[nO] Agent prompt->AI 失败:', (err as Error)?.message || err)
+            }
+          }
+        }
+      }
+    } catch (e) {
+      const err = e as Error
+      console.warn('[nO] Agent 循环结束:', err?.message || e)
+    }
+  }
+
+
+
+  /**
+   * 最小队列消费者：仅用于推进队列指标与稳态验证
+   * 后续可以在这里对接 Agent 引擎处理消息
+   */
+  private async startQueueConsumer(): Promise<void> {
+    try {
+      for await (const _msg of this.messageQueue) {
+        // 暂不执行业务逻辑
+      }
+    } catch (e) {
+      const err = e as Error
+      console.warn('[h2A] 消费循环结束:', err?.message || e)
+    }
+  }
+
 }

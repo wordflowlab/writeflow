@@ -15,12 +15,12 @@ async function main() {
 // 处理未捕获的错误
 process.on('unhandledRejection', (reason, promise) => {
   console.error('未处理的Promise拒绝:', reason)
-  process.exit(1)
+  if (!(global as any).WRITEFLOW_INTERACTIVE) process.exit(1)
 })
 
 process.on('uncaughtException', (error) => {
   console.error('未捕获的异常:', error)
-  process.exit(1)
+  if (!(global as any).WRITEFLOW_INTERACTIVE) process.exit(1)
 })
 
 // 优雅关闭

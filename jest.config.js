@@ -17,8 +17,10 @@ export default {
   resolver: '<rootDir>/jest.resolver.cjs',
   moduleNameMapper: {
     // 绝对路径映射
-    '^@/(.*)\.js$': '<rootDir>/src/$1.ts',
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)\\.js$': '<rootDir>/src/$1.ts',
+    '^@/(.*)$': '<rootDir>/src/$1',
+    // 第三方 ESM 在 Jest 下的简易 mock
+    '^chalk$': '<rootDir>/tests/mocks/chalk.ts'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: [

@@ -348,6 +348,12 @@ function WriterInput({
     process.stdin.setEncoding('utf8')
     
     const handler = (data: string) => {
+      // ESC: 明确拦截，避免某些终端配置下触发默认退出
+      if (data === '\u001b') {
+        // 可选：清空输入或忽略，这里选择忽略
+        return
+      }
+
       if (data === '\u0003') { // Ctrl+C
         process.exit(0)
       } else if (data === '\r' || data === '\n') {

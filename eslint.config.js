@@ -12,6 +12,18 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
         project: './tsconfig.json'
+      },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
+        global: 'readonly',
+        module: 'readonly',
+        __dirname: 'readonly',
+        React: 'readonly'
       }
     },
     plugins: {
@@ -21,16 +33,17 @@ export default [
       // TypeScript 规则
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/prefer-const': 'error',
+      // 规则不存在于 @typescript-eslint，使用内置 prefer-const 即可
       '@typescript-eslint/no-var-requires': 'error',
       
       // 通用规则
       'no-console': 'off',
+      'no-unused-vars': 'off', // 由 @typescript-eslint/no-unused-vars 接管
       'prefer-const': 'error',
       'no-var': 'error',
       'object-curly-spacing': ['error', 'always'],
       'array-bracket-spacing': ['error', 'never'],
-      'comma-dangle': ['error', 'never'],
+      'comma-dangle': ['error', 'always-multiline'],
       'semi': ['error', 'never'],
       'quotes': ['error', 'single', { allowTemplateLiterals: true }],
       
