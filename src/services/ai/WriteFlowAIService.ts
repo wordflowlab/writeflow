@@ -600,7 +600,7 @@ export class WriteFlowAIService {
   private zodSchemaToJsonSchema(zodSchema: any): any {
     // 简化的 Zod 到 JSON Schema 转换
     // 在实际项目中，建议使用 zod-to-json-schema 库
-    const shape = zodSchema._def?.shape?.()
+    const shape = zodSchema._def?.shape
     if (!shape) {
       return {
         type: 'object',
