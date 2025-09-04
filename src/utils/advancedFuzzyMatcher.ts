@@ -33,13 +33,24 @@ export class AdvancedFuzzyMatcher {
       return { score: 10000, matched: true, algorithm: 'exact' }
     }
     
-    // 尝试所有算法并组合分数
+    // 优先检查前缀匹配 - 这是用户最期望的行为
+    if (text.startsWith(pattern)) {
+      const coverage = pattern.length / text.length
+      return {
+        score: 8000 + coverage * 2000,  // 前缀匹配给予非常高的分数
+        matched: true,
+        algorithm: 'strong-prefix'
+      }
+    }
+    
+    // 尝试其他算法（但不包括太宽松的子序列匹配）
     const algorithms = [
       this.exactPrefixMatch(text, pattern),
       this.hyphenAwareMatch(text, pattern),
       this.wordBoundaryMatch(text, pattern),
       this.abbreviationMatch(text, pattern),
-      this.subsequenceMatch(text, pattern),
+      // 注释掉子序列匹配，它会匹配太多不相关的结果
+      // this.subsequenceMatch(text, pattern),
       this.fuzzySegmentMatch(text, pattern),
     ]
     
@@ -54,9 +65,10 @@ export class AdvancedFuzzyMatcher {
       }
     }
     
+    // 提高匹配阈值，过滤低相关性的结果
     return {
       score: bestScore,
-      matched: bestScore > 10,
+      matched: bestScore > 150,  // 提高到 150，过滤更多误匹配
       algorithm: bestAlgorithm
     }
   }
@@ -222,12 +234,8 @@ export class AdvancedFuzzyMatcher {
       return { score: 150 + coverage * 100, algorithm: 'fuzzy-segment' }
     }
     
-    // 检查模式是否出现在清理后的文本中
-    const index = cleanText.indexOf(cleanPattern)
-    if (index !== -1) {
-      const positionPenalty = index * 5
-      return { score: Math.max(50, 100 - positionPenalty), algorithm: 'fuzzy-contains' }
-    }
+    // 不再检查包含匹配，这会导致太多误匹配
+    // 例如 's' 会匹配 'research' 因为 research 包含 's'
     
     return { score: 0, algorithm: 'fuzzy-segment' }
   }

@@ -1,10 +1,10 @@
 import { Box, Text } from 'ink'
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { getTheme } from '../../utils/theme'
-import { useTerminalSize } from '../../hooks/useTerminalSize'
-import { useUnifiedCompletion } from '../../hooks/useUnifiedCompletion'
-import { CompletionSuggestions } from './CompletionSuggestions'
-import { SlashCommand } from '../../types/command'
+import { getTheme } from '../../utils/theme.js'
+import { useTerminalSize } from '../../hooks/useTerminalSize.js'
+import { useUnifiedCompletion } from '../../hooks/useUnifiedCompletion.js'
+import { CompletionSuggestions } from './CompletionSuggestions.js'
+import { SlashCommand } from '../../types/command.js'
 
 interface Message {
   id?: string
@@ -158,21 +158,7 @@ export function PromptInput({
   
   return (
     <Box flexDirection="column">
-      {/* Mode and model info bar */}
-      <Box justifyContent="space-between" marginBottom={1}>
-        <Box>
-          <Text color={modeColor}>
-            {modeIcon} {mode.toUpperCase()} 模式
-          </Text>
-        </Box>
-        <Box>
-          <Text dimColor>
-            WriteFlow AI 写作助手
-          </Text>
-        </Box>
-      </Box>
-      
-      {/* Input box */}
+      {/* Input box - 直接显示输入框，移除顶部的模式提示 */}
       <Box
         alignItems="flex-start"
         justifyContent="flex-start"

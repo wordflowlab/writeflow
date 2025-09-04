@@ -32,14 +32,30 @@ export class CommandExecutor {
    * 注册新命令
    */
   registerCommand(command: SlashCommand): void {
-    this.availableCommands.push(command)
+    // 检查是否已存在相同的命令
+    const existingIndex = this.availableCommands.findIndex(
+      cmd => cmd.name === command.name && cmd.userFacingName() === command.userFacingName()
+    )
+    
+    if (existingIndex === -1) {
+      this.availableCommands.push(command)
+    }
   }
 
   /**
    * 注册多个命令
    */
   registerCommands(commands: SlashCommand[]): void {
-    this.availableCommands.push(...commands)
+    commands.forEach(command => {
+      // 检查是否已存在相同的命令
+      const existingIndex = this.availableCommands.findIndex(
+        cmd => cmd.name === command.name && cmd.userFacingName() === command.userFacingName()
+      )
+      
+      if (existingIndex === -1) {
+        this.availableCommands.push(command)
+      }
+    })
   }
 
   /**
