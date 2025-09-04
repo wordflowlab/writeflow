@@ -16,7 +16,7 @@ const TodoSchema = z.object({
   status: TodoStatusSchema,
   priority: TodoPrioritySchema,
   createdAt: z.string().transform((str: string) => new Date(str)),
-  updatedAt: z.string().transform((str: string) => new Date(str))
+  updatedAt: z.string().transform((str: string) => new Date(str)),
 })
 
 const TodoArraySchema = z.array(TodoSchema)
@@ -81,7 +81,7 @@ export class TodoStorage {
       return validatedData.map(item => ({
         ...item,
         status: item.status as TodoStatus,
-        priority: item.priority as TodoPriority
+        priority: item.priority as TodoPriority,
       }))
     } catch (error) {
       console.error('加载 Todo 数据失败:', error)
@@ -96,7 +96,7 @@ export class TodoStorage {
       // 原子写入 - 参考 Claude Code eM 函数的 flush: true 选项
       await fs.writeFile(this.sessionFile, data, { 
         encoding: 'utf-8',
-        flag: 'w'  // 确保原子写入
+        flag: 'w',  // 确保原子写入
       })
     } catch (error) {
       console.error('保存 Todo 数据失败:', error)
@@ -115,7 +115,7 @@ export class TodoStorage {
       status: TodoStatus.PENDING,
       priority: params.priority || TodoPriority.MEDIUM,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     }
 
     todos.push(newTodo)
@@ -175,7 +175,7 @@ export class TodoStorage {
       pending: todos.filter(t => t.status === TodoStatus.PENDING).length,
       inProgress: todos.filter(t => t.status === TodoStatus.IN_PROGRESS).length,
       completed: todos.filter(t => t.status === TodoStatus.COMPLETED).length,
-      completionRate: 0
+      completionRate: 0,
     }
 
     if (stats.total > 0) {
@@ -199,7 +199,7 @@ export class TodoStorage {
   getStorageInfo(): { sessionId: string; storagePath: string } {
     return {
       sessionId: this.sessionId,
-      storagePath: this.sessionFile
+      storagePath: this.sessionFile,
     }
   }
 }

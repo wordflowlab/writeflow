@@ -48,7 +48,7 @@ export class SystemReminderInjector {
         type: 'tool_restriction',
         content: this.formatToolRestrictionReminder(toolName, currentMode, permissionResult.reason || ''),
         priority: 'high',
-        persistent: true
+        persistent: true,
       }
     }
 
@@ -58,7 +58,7 @@ export class SystemReminderInjector {
         type: 'mode_notification',
         content: this.formatPlanModeReminder(toolName),
         priority: 'medium',
-        persistent: false
+        persistent: false,
       }
     }
 
@@ -73,7 +73,7 @@ export class SystemReminderInjector {
       type: 'mode_notification',
       content: this.formatModeChangeReminder(fromMode, toMode),
       priority: 'medium',
-      persistent: false
+      persistent: false,
     }
   }
 
@@ -83,12 +83,12 @@ export class SystemReminderInjector {
   private formatToolRestrictionReminder(
     toolName: string, 
     currentMode: PlanMode, 
-    reason: string
+    reason: string,
   ): string {
     const reminders = [
       `🚫 工具调用被拒绝：${toolName}`,
       `📋 当前模式：${this.getModeDisplayName(currentMode)}`,
-      `❌ 拒绝原因：${reason}`
+      `❌ 拒绝原因：${reason}`,
     ]
 
     // 添加具体的解决建议
@@ -122,7 +122,7 @@ export class SystemReminderInjector {
     return [
       `📋 Plan 模式提醒：使用工具 "${toolName}"`,
       '✓ 此工具在计划模式下可用',
-      '💡 请记住：当前处于只读分析模式，完成计划后使用 exit_plan_mode 退出'
+      '💡 请记住：当前处于只读分析模式，完成计划后使用 exit_plan_mode 退出',
     ].join('\n')
   }
 
@@ -135,7 +135,7 @@ export class SystemReminderInjector {
     
     const reminders = [
       `🔄 模式切换：${fromName} → ${toName}`,
-      ''
+      '',
     ]
 
     // 不同模式的特殊说明
@@ -145,7 +145,7 @@ export class SystemReminderInjector {
           '📋 已进入计划模式：',
           '  • 只能使用只读工具（搜索、读取、分析）',
           '  • 禁止修改文件或执行系统命令',
-          '  • 制定完整计划后使用 exit_plan_mode 退出'
+          '  • 制定完整计划后使用 exit_plan_mode 退出',
         )
         break
         
@@ -154,7 +154,7 @@ export class SystemReminderInjector {
           '✏️ 已进入自动接受编辑模式：',
           '  • 所有文件修改将自动应用',
           '  • 无需用户逐个确认',
-          '  • 请谨慎使用此模式'
+          '  • 请谨慎使用此模式',
         )
         break
         
@@ -163,7 +163,7 @@ export class SystemReminderInjector {
           '⚠️ 已进入绕过权限模式：',
           '  • 允许执行危险操作',
           '  • 请格外小心',
-          '  • 仅限高级用户使用'
+          '  • 仅限高级用户使用',
         )
         break
         
@@ -171,7 +171,7 @@ export class SystemReminderInjector {
         reminders.push(
           '🔓 已恢复默认模式：',
           '  • 正常权限级别',
-          '  • 需要用户确认修改操作'
+          '  • 需要用户确认修改操作',
         )
     }
 
@@ -186,7 +186,7 @@ export class SystemReminderInjector {
       [PlanMode.Default]: '默认模式',
       [PlanMode.Plan]: '计划模式',
       [PlanMode.AcceptEdits]: '自动接受编辑模式',
-      [PlanMode.BypassPermissions]: '绕过权限模式'
+      [PlanMode.BypassPermissions]: '绕过权限模式',
     }
     return modeNames[mode] || '未知模式'
   }
@@ -211,18 +211,18 @@ export class SystemReminderInjector {
     const priorityIcons = {
       high: '🚨',
       medium: '📢', 
-      low: '💭'
+      low: '💭',
     }
 
     const typeLabels = {
       tool_restriction: '工具限制',
       mode_notification: '模式通知',
-      permission_warning: '权限警告'
+      permission_warning: '权限警告',
     }
 
     const header = [
       '<system-reminder>',
-      `${priorityIcons[reminder.priority]} ${typeLabels[reminder.type]}`
+      `${priorityIcons[reminder.priority]} ${typeLabels[reminder.type]}`,
     ].join('\n')
 
     const footer = '</system-reminder>'
@@ -232,7 +232,7 @@ export class SystemReminderInjector {
       '',
       reminder.content,
       '',
-      footer
+      footer,
     ].join('\n')
   }
 
@@ -290,10 +290,10 @@ export class SystemReminderInjector {
         '✅ 计划完成后，我会使用 exit_plan_mode 工具请求您的确认',
         '获得批准后将切换到执行模式进行实际的代码修改。',
         '',
-        '这种方式确保了安全性，避免了意外的系统更改。'
+        '这种方式确保了安全性，避免了意外的系统更改。',
       ].join('\n'),
       priority: 'medium',
-      persistent: false
+      persistent: false,
     }
   }
 
@@ -316,10 +316,10 @@ export class SystemReminderInjector {
         '🛡️ 安全建议：',
         '  • 确认操作的必要性',
         '  • 备份重要数据',
-        '  • 仔细检查参数'
+        '  • 仔细检查参数',
       ].join('\n'),
       priority: 'high',
-      persistent: true
+      persistent: true,
     }
   }
 

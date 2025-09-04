@@ -67,7 +67,7 @@ const writeFlowTheme: Theme = {
   // Status indicators
   loading: '#a0a0a0',       // Gray for loading
   thinking: '#00ff87',      // Brand color for AI thinking
-  ready: '#00ff87'          // Brand color for ready state
+  ready: '#00ff87',          // Brand color for ready state
 }
 
 // Light theme variant
@@ -91,7 +91,7 @@ const lightTheme: Theme = {
   selection: '#b3d9ff',
   loading: '#666666',
   thinking: '#007acc',
-  ready: '#007acc'
+  ready: '#007acc',
 }
 
 // Theme getter function
@@ -120,21 +120,21 @@ export function contrastColor(color: string): string {
 export function getWritingTheme(): Partial<Theme> {
   return {
     claude: writeFlowTheme.writing,
-    border: writeFlowTheme.writing
+    border: writeFlowTheme.writing,
   }
 }
 
 export function getEditingTheme(): Partial<Theme> {
   return {
     claude: writeFlowTheme.editing,
-    border: writeFlowTheme.editing
+    border: writeFlowTheme.editing,
   }
 }
 
 export function getReviewingTheme(): Partial<Theme> {
   return {
     claude: writeFlowTheme.reviewing,
-    border: writeFlowTheme.reviewing
+    border: writeFlowTheme.reviewing,
   }
 }
 
@@ -147,5 +147,5 @@ export const COLORS = {
   SUCCESS: '#00ff87',
   WARNING: '#ff9500',
   TEXT: '#ffffff',
-  DIM: '#666666'
+  DIM: '#666666',
 } as const

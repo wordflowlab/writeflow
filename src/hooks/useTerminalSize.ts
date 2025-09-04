@@ -8,7 +8,7 @@ interface TerminalSize {
 // Default terminal size
 const DEFAULT_SIZE: TerminalSize = {
   columns: 80,
-  rows: 24
+  rows: 24,
 }
 
 export function useTerminalSize(): TerminalSize {
@@ -17,7 +17,7 @@ export function useTerminalSize(): TerminalSize {
     if (process.stdout && process.stdout.columns && process.stdout.rows) {
       return {
         columns: process.stdout.columns,
-        rows: process.stdout.rows
+        rows: process.stdout.rows,
       }
     }
     return DEFAULT_SIZE
@@ -29,7 +29,7 @@ export function useTerminalSize(): TerminalSize {
       if (process.stdout && process.stdout.columns && process.stdout.rows) {
         setSize({
           columns: process.stdout.columns,
-          rows: process.stdout.rows
+          rows: process.stdout.rows,
         })
       }
     }
@@ -70,7 +70,7 @@ export const TERMINAL_BREAKPOINTS = {
   SMALL: 60,
   MEDIUM: 80, 
   LARGE: 100,
-  XLARGE: 120
+  XLARGE: 120,
 } as const
 
 export function getTerminalBreakpoint(columns: number): keyof typeof TERMINAL_BREAKPOINTS {

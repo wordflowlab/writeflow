@@ -39,7 +39,7 @@ export class AdvancedFuzzyMatcher {
       return {
         score: 8000 + coverage * 2000,  // 前缀匹配给予非常高的分数
         matched: true,
-        algorithm: 'strong-prefix'
+        algorithm: 'strong-prefix',
       }
     }
     
@@ -69,7 +69,7 @@ export class AdvancedFuzzyMatcher {
     return {
       score: bestScore,
       matched: bestScore > 150,  // 提高到 150，过滤更多误匹配
-      algorithm: bestAlgorithm
+      algorithm: bestAlgorithm,
     }
   }
   
@@ -251,7 +251,7 @@ export function matchAdvanced(candidate: string, query: string): MatchResult {
 export function matchManyAdvanced(
   candidates: string[], 
   query: string,
-  minScore: number = 10
+  minScore: number = 10,
 ): Array<{ candidate: string; score: number; algorithm: string }> {
   return candidates
     .map(candidate => {
@@ -259,7 +259,7 @@ export function matchManyAdvanced(
       return {
         candidate,
         score: result.score,
-        algorithm: result.algorithm
+        algorithm: result.algorithm,
       }
     })
     .filter(item => item.score >= minScore)

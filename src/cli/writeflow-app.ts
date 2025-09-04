@@ -33,7 +33,7 @@ import {
   AnthropicClientTool,
   DeepseekClientTool,
   QwenClientTool,
-  GLMClientTool
+  GLMClientTool,
 } from '../tools/writing/index.js'
 import { WebSearchTool, CitationManagerTool } from '../tools/research/index.js'
 import { WeChatConverterTool } from '../tools/publish/index.js'
@@ -57,7 +57,7 @@ export class WriteFlowApp extends EventEmitter {
   // Agent 桥接统计（最小）
   private agentBridgeStats: { promptsHandled: number; toolCallsExecuted: number } = {
     promptsHandled: 0,
-    toolCallsExecuted: 0
+    toolCallsExecuted: 0,
   }
 
   // 核心组件
@@ -130,13 +130,13 @@ export class WriteFlowApp extends EventEmitter {
         'scholar.google.com',
         'github.com',
         'medium.com',
-        'zhihu.com'
+        'zhihu.com',
       ],
       blockedPaths: ['/etc', '/var', '/sys', '/proc'],
       rateLimiting: {
         requestsPerMinute: 60,
-        burstLimit: 10
-      }
+        burstLimit: 10,
+      },
     }
   }
 
@@ -167,10 +167,10 @@ export class WriteFlowApp extends EventEmitter {
         currentProject: 'writeflow-cli',
         preferences: {
           language: 'zh-CN',
-          outputStyle: 'technical'
+          outputStyle: 'technical',
         },
         tools: this.toolManager.getToolNames(),
-        conversationHistory: []
+        conversationHistory: [],
       }
 
       this.isInitialized = true
@@ -203,8 +203,8 @@ export class WriteFlowApp extends EventEmitter {
         {
           agentEnabled: process.env.WRITEFLOW_AGENT_ENABLED === 'true',
           agentEngine: this.agentEngine,
-          agentStrict: process.env.WRITEFLOW_AGENT_STRICT === 'true'
-        }
+          agentStrict: process.env.WRITEFLOW_AGENT_STRICT === 'true',
+        },
       )
       adapter.start().catch((e: unknown) => {
         const err = e as Error
@@ -231,7 +231,7 @@ export class WriteFlowApp extends EventEmitter {
       maxResearchItems: 20,
       maxDialogueHistory: 50,
       maxReferenceArticles: 10,
-      intelligentRanking: true
+      intelligentRanking: true,
     })
 
     // 上下文管理器
@@ -256,7 +256,7 @@ export class WriteFlowApp extends EventEmitter {
       new OutlineGeneratorTool(this.config),
       new ContentRewriterTool(this.config),
       new StyleAdapterTool(this.config),
-      new GrammarCheckerTool(this.config)
+      new GrammarCheckerTool(this.config),
     ]
     this.toolManager.registerTools(writingTools)
 
@@ -281,20 +281,20 @@ export class WriteFlowApp extends EventEmitter {
     // 注册研究工具
     const researchTools = [
       new WebSearchTool(),
-      new CitationManagerTool()
+      new CitationManagerTool(),
     ]
     this.toolManager.registerTools(researchTools)
 
     // 注册发布工具
     const publishTools = [
-      new WeChatConverterTool()
+      new WeChatConverterTool(),
     ]
     this.toolManager.registerTools(publishTools)
 
     // 注册 Slidev 工具（Agent 可调用）
     const slidevTools = [
       new SlideProjectInitTool(),
-      new SlideExporterTool()
+      new SlideExporterTool(),
     ]
     this.toolManager.registerTools(slidevTools)
 
@@ -303,7 +303,7 @@ export class WriteFlowApp extends EventEmitter {
       maxConcurrentCommands: 3,
       commandTimeout: 120000,
       enableThinkingTokens: true,
-      defaultMaxTokens: 4000
+      defaultMaxTokens: 4000,
     })
 
     // 注册核心命令
@@ -320,7 +320,7 @@ export class WriteFlowApp extends EventEmitter {
       autoCompress: true,
       compressionThreshold: 90,
       maxShortTermMessages: 50,
-      enableKnowledgeExtraction: true
+      enableKnowledgeExtraction: true,
     })
   }
 
@@ -340,7 +340,7 @@ export class WriteFlowApp extends EventEmitter {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: chalk.cyan('writeflow> ')
+      prompt: chalk.cyan('writeflow> '),
     })
 
     console.log(chalk.yellow('💡 提示: 输入 /help 查看可用命令，输入 /exit 退出'))
@@ -396,7 +396,7 @@ export class WriteFlowApp extends EventEmitter {
           MessageType.SlashCommand,
           `${command} ${options?.args || ''}`.trim(),
           MessagePriority.Normal,
-          'cli'
+          'cli',
         )
         this.messageQueue.enqueue(message)
 
@@ -423,7 +423,7 @@ export class WriteFlowApp extends EventEmitter {
 
       // 如果需要AI查询
       if (result.shouldQuery && result.messages) {
-        return await this.processAIQuery(result.messages, result.allowedTools, options.signal)
+        return await this.processAIQuery(result.messages, result.allowedTools, options.signal, true)
       }
 
       // 返回直接结果
@@ -439,9 +439,9 @@ export class WriteFlowApp extends EventEmitter {
    */
   private async processAIQuery(
     messages: Array<{ role: string; content: string }>,
-    _allowedTools?: string[],
+    allowedTools?: string[],
     signal?: AbortSignal,
-    _includeTools?: boolean
+    includeTools?: boolean,
   ): Promise<string> {
     // 基于上下文管理器做最小压缩接入
     try {
@@ -455,7 +455,7 @@ export class WriteFlowApp extends EventEmitter {
             priority: MessagePriority.Normal,
             payload: latestUserMessage,
             timestamp: Date.now(),
-            source: 'cli'
+            source: 'cli',
           }
           await this.contextManager.updateContext(msg, {})
         }
@@ -479,7 +479,7 @@ export class WriteFlowApp extends EventEmitter {
 
     // 将系统消息合并到系统提示词
     if (systemMessages.length > 0) {
-      systemPrompt = systemMessages.map(msg => msg.content).join('\n\n') + '\n\n' + systemPrompt
+      systemPrompt = `${systemMessages.map(msg => msg.content).join('\n\n')  }\n\n${  systemPrompt}`
     }
 
     // 构建对话历史作为用户提示词的上下文
@@ -506,7 +506,10 @@ export class WriteFlowApp extends EventEmitter {
       prompt: finalPrompt,
       systemPrompt,
       temperature: this.config.temperature,
-      maxTokens: this.config.maxTokens
+      maxTokens: this.config.maxTokens,
+      // 如果指定了工具，则启用工具调用
+      allowedTools: allowedTools && allowedTools.length > 0 ? allowedTools : undefined,
+      enableToolCalls: Boolean(includeTools && allowedTools && allowedTools.length > 0),
     }
 
     try {
@@ -613,7 +616,7 @@ Create a detailed plan for the user's request.`
           }
 
           if (contextInfo) {
-            contextualPrompt = contextInfo + '当前请求:\n' + input
+            contextualPrompt = `${contextInfo  }当前请求:\n${  input}`
           }
         } catch (error) {
           console.warn('获取记忆上下文失败，使用原始输入:', error)
@@ -625,7 +628,7 @@ Create a detailed plan for the user's request.`
         prompt: contextualPrompt,
         systemPrompt,
         temperature: this.config.temperature,
-        maxTokens: this.config.maxTokens
+        maxTokens: this.config.maxTokens,
       }
 
       // 调用AI服务
@@ -759,17 +762,17 @@ Create a detailed plan for the user's request.`
       memory: memoryStats ? {
         shortTerm: {
           messages: memoryStats.shortTerm.messageCount,
-          tokens: memoryStats.shortTerm.totalTokens
+          tokens: memoryStats.shortTerm.totalTokens,
         },
         midTerm: {
           summaries: memoryStats.midTerm.summaryCount,
-          sessions: memoryStats.midTerm.totalSessions
+          sessions: memoryStats.midTerm.totalSessions,
         },
         longTerm: {
           knowledge: memoryStats.longTerm.knowledgeCount,
-          topics: memoryStats.longTerm.topicCount
-        }
-      } : null
+          topics: memoryStats.longTerm.topicCount,
+        },
+      } : null,
     }
   }
 
@@ -836,13 +839,13 @@ Create a detailed plan for the user's request.`
           input,
           user: this.agentContext?.userId || 'unknown',
           source: 'cli',
-          timestamp: Date.now()
+          timestamp: Date.now(),
         })
         if (!secResp.allowed) {
           return {
             success: false,
             content: '❌ 安全校验未通过',
-            error: secResp.reason || '安全策略拒绝'
+            error: secResp.reason || '安全策略拒绝',
           }
         }
         if (secResp.warnings?.length) {
@@ -853,7 +856,7 @@ Create a detailed plan for the user's request.`
         return {
           success: false,
           content: '❌ 安全校验异常，已阻断执行',
-          error: (e as Error).message
+          error: (e as Error).message,
         }
       }
     }
@@ -866,7 +869,7 @@ Create a detailed plan for the user's request.`
         return {
           success: false,
           content: '❌ 计划内容为空，请提供详细计划',
-          error: '计划内容不能为空'
+          error: '计划内容不能为空',
         }
       }
 
@@ -883,8 +886,8 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
           plan: input.plan,
           approved: false,
           message: '等待用户确认计划...',
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       }
     }
 
@@ -960,7 +963,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
 
       // 检测传统工具调用格式
       const patterns = [
-        /<function_calls>[\s\S]*?<invoke name="ExitPlanMode">[\s\S]*?<parameter name="plan">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi
+        /<function_calls>[\s\S]*?<invoke name="ExitPlanMode">[\s\S]*?<parameter name="plan">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi,
       ]
 
       for (const pattern of patterns) {
@@ -988,7 +991,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       shouldIntercept,
       processedResponse,
       toolCalls,
-      thinkingContent
+      thinkingContent,
     }
   }
 

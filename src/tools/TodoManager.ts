@@ -41,7 +41,7 @@ export class TodoManager {
       '研究': '正在研究',
       '学习': '正在学习',
       '配置': '正在配置',
-      '安装': '正在安装'
+      '安装': '正在安装',
     }
 
     // 查找匹配的动词
@@ -71,7 +71,7 @@ export class TodoManager {
     const params: CreateTodoParams = {
       content,
       activeForm: activeForm || this.generateActiveForm(content),
-      priority: priority || TodoPriority.MEDIUM
+      priority: priority || TodoPriority.MEDIUM,
     }
     
     return await this.storage.addTodo(params)
@@ -150,7 +150,7 @@ export class TodoManager {
     
     return todos.filter(todo => 
       todo.content.toLowerCase().includes(lowerQuery) ||
-      todo.activeForm.toLowerCase().includes(lowerQuery)
+      todo.activeForm.toLowerCase().includes(lowerQuery),
     )
   }
 
@@ -164,7 +164,7 @@ export class TodoManager {
     const [stats, currentTask, allTodos] = await Promise.all([
       this.getStats(),
       this.getCurrentTask(), 
-      this.getAllTodos()
+      this.getAllTodos(),
     ])
 
     // 获取接下来的待处理任务
@@ -182,14 +182,14 @@ export class TodoManager {
       stats,
       currentTask,
       nextTasks, 
-      recentCompleted
+      recentCompleted,
     }
   }
 
   // 批量操作
   async batchUpdateStatus(ids: string[], status: TodoStatus): Promise<Todo[]> {
     const results = await Promise.all(
-      ids.map(id => this.updateTodoStatus(id, status))
+      ids.map(id => this.updateTodoStatus(id, status)),
     )
     return results.filter(todo => todo !== null) as Todo[]
   }
@@ -248,7 +248,7 @@ export class TodoManager {
     } catch (error) {
       return { 
         isValid: false, 
-        error: error instanceof Error ? error.message : '验证失败' 
+        error: error instanceof Error ? error.message : '验证失败', 
       }
     }
   }
@@ -257,7 +257,7 @@ export class TodoManager {
   getStorageInfo(): { sessionId: string; storagePath: string } {
     return {
       sessionId: this.storage.getSessionId(),
-      storagePath: this.storage.getStoragePath()
+      storagePath: this.storage.getStoragePath(),
     }
   }
 }

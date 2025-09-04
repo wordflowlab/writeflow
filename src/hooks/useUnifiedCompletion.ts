@@ -43,7 +43,7 @@ const INITIAL_STATE: CompletionState = {
   selectedIndex: 0,
   isActive: false,
   context: null,
-  preview: null
+  preview: null,
 }
 
 export function useUnifiedCompletion({
@@ -53,7 +53,7 @@ export function useUnifiedCompletion({
   setCursorOffset,
   commands,
   onSubmit,
-  enabled = true
+  enabled = true,
 }: UseUnifiedCompletionProps) {
   const [state, setState] = useState<CompletionState>(INITIAL_STATE)
   const lastInputRef = useRef('')
@@ -78,7 +78,7 @@ export function useUnifiedCompletion({
       selectedIndex: 0,
       isActive: false,
       context: null,
-      preview: null
+      preview: null,
     }))
   }, [])
 
@@ -90,7 +90,7 @@ export function useUnifiedCompletion({
       selectedIndex: 0,
       isActive: true,
       context,
-      preview: null
+      preview: null,
     }))
   }, [])
 
@@ -131,7 +131,7 @@ export function useUnifiedCompletion({
           type: 'command',
           prefix: commandPart,
           startPos: start,
-          endPos: cursorOffset
+          endPos: cursorOffset,
         }
       } else {
         // 子命令补全
@@ -142,7 +142,7 @@ export function useUnifiedCompletion({
           prefix: subPrefix,
           commandName,
           startPos: start + spaceIndex + 2, // +2 for '/' and space
-          endPos: cursorOffset
+          endPos: cursorOffset,
         }
       }
     }
@@ -167,7 +167,7 @@ export function useUnifiedCompletion({
       score: 100,
       algorithm: 'subcommand',
       displayValue: `${sub}`,
-      value: sub
+      value: sub,
     }))
   }, [])
 
@@ -188,7 +188,7 @@ export function useUnifiedCompletion({
     if (context.type === 'command') {
       completion = `/${suggestion.value} `
     } else {
-      completion = suggestion.value + ' '
+      completion = `${suggestion.value  } `
     }
     
     const newInput = input.slice(0, context.startPos) + completion + input.slice(context.endPos)
@@ -318,6 +318,6 @@ export function useUnifiedCompletion({
     suggestions: state.suggestions,
     selectedIndex: state.selectedIndex,
     isActive: state.isActive,
-    context: state.context
+    context: state.context,
   }
 }

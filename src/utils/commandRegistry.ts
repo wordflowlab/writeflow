@@ -51,7 +51,7 @@ export class CommandRegistry {
         name: command.name,
         description: command.description,
         aliases: command.aliases,
-        userFacingName: () => command.name
+        userFacingName: () => command.name,
       } as SlashCommand
     }
     
@@ -118,7 +118,7 @@ export class CommandRegistry {
           score: 100,
           algorithm: 'all',
           displayValue: `/${cmd.userFacingName()} - ${cmd.description}`,
-          value: cmd.userFacingName()
+          value: cmd.userFacingName(),
         }))
     }
 
@@ -135,7 +135,7 @@ export class CommandRegistry {
           score: matchResult.score,
           algorithm: matchResult.algorithm,
           displayValue: `/${name} - ${command.description}`,
-          value: name
+          value: name,
         })
       }
       
@@ -150,7 +150,7 @@ export class CommandRegistry {
               score: aliasMatch.score * 0.8,
               algorithm: `alias-${aliasMatch.algorithm}`,
               displayValue: `/${name} (${alias}) - ${command.description}`,
-              value: name
+              value: name,
             })
           }
         }
@@ -189,7 +189,7 @@ export class CommandRegistry {
       
       // 过滤匹配的子命令
       return Array.from(subcommands).filter(sub => 
-        sub.toLowerCase().startsWith(subQuery.toLowerCase())
+        sub.toLowerCase().startsWith(subQuery.toLowerCase()),
       )
     }
     

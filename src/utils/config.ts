@@ -303,7 +303,7 @@ export const getGlobalConfig = memoize((): GlobalConfig => {
       modelPointers: {
         ...DEFAULT_GLOBAL_CONFIG.modelPointers,
         ...config.modelPointers,
-      }
+      },
     }
   } catch (error) {
     console.error('解析全局配置失败:', error)
@@ -374,7 +374,7 @@ export function saveProjectConfig(config: ProjectConfig): void {
  */
 export function updateGlobalConfig<K extends keyof GlobalConfig>(
   key: K,
-  value: GlobalConfig[K]
+  value: GlobalConfig[K],
 ): void {
   const config = getGlobalConfig()
   config[key] = value
@@ -386,7 +386,7 @@ export function updateGlobalConfig<K extends keyof GlobalConfig>(
  */
 export function updateProjectConfig<K extends keyof ProjectConfig>(
   key: K,
-  value: ProjectConfig[K]
+  value: ProjectConfig[K],
 ): void {
   const config = getProjectConfig()
   config[key] = value
@@ -621,7 +621,7 @@ export function resetProjectConfig(): void {
 export function exportConfig(): { global: GlobalConfig; project: ProjectConfig } {
   return {
     global: getGlobalConfig(),
-    project: getProjectConfig()
+    project: getProjectConfig(),
   }
 }
 

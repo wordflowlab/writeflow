@@ -37,7 +37,7 @@ export class ToolInterceptor {
   constructor(
     permissionManager: PermissionManager,
     reminderInjector: SystemReminderInjector,
-    config: Partial<InterceptorConfig> = {}
+    config: Partial<InterceptorConfig> = {},
   ) {
     this.permissionManager = permissionManager
     this.reminderInjector = reminderInjector
@@ -47,7 +47,7 @@ export class ToolInterceptor {
       enableSystemReminders: true,
       strictMode: true,
       allowedBypassTools: ['exit_plan_mode', 'get_status', 'help'],
-      ...config
+      ...config,
     }
   }
 
@@ -57,7 +57,7 @@ export class ToolInterceptor {
   async interceptToolCall(
     tool: WritingTool,
     input: ToolInput,
-    context: ToolCallContext
+    context: ToolCallContext,
   ): Promise<ToolCallResult> {
     const { toolName, currentMode } = context
 
@@ -87,14 +87,14 @@ export class ToolInterceptor {
       return {
         success: true,
         data: result,
-        reminder
+        reminder,
       }
 
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : '工具执行失败',
-        reminder: this.reminderInjector.generateToolCallReminder(context) || undefined
+        reminder: this.reminderInjector.generateToolCallReminder(context) || undefined,
       }
     }
   }
@@ -116,21 +116,21 @@ export class ToolInterceptor {
    */
   private createBlockedResult(
     toolName: string, 
-    permissionResult: PermissionCheckResult
+    permissionResult: PermissionCheckResult,
   ): ToolCallResult {
     const currentMode = this.permissionManager.getCurrentMode()
     
     const reminder = this.reminderInjector.generateToolCallReminder({
       toolName,
       parameters: {},
-      currentMode
+      currentMode,
     })
 
     return {
       success: false,
       blocked: true,
       blockReason: permissionResult.reason || `工具 ${toolName} 在当前模式下被禁止`,
-      reminder: reminder || undefined
+      reminder: reminder || undefined,
     }
   }
 
@@ -141,7 +141,7 @@ export class ToolInterceptor {
     tool: WritingTool,
     input: ToolInput,
     context: ToolCallContext,
-    reminder?: SystemReminder
+    reminder?: SystemReminder,
   ): Promise<ToolCallResult> {
     try {
       // 执行 exit_plan_mode 工具
@@ -152,26 +152,26 @@ export class ToolInterceptor {
       if (exitResult?.approved) {
         const modeChangeReminder = this.reminderInjector.generateModeChangeReminder(
           PlanMode.Plan,
-          PlanMode.Default
+          PlanMode.Default,
         )
         
         return {
           success: true,
           data: result,
-          reminder: modeChangeReminder
+          reminder: modeChangeReminder,
         }
       }
 
       return {
         success: true,
         data: result,
-        reminder
+        reminder,
       }
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Exit plan mode 执行失败',
-        reminder
+        reminder,
       }
     }
   }
@@ -182,7 +182,7 @@ export class ToolInterceptor {
   private async executeToolCall(
     tool: WritingTool,
     input: ToolInput,
-    context: ToolCallContext
+    context: ToolCallContext,
   ): Promise<ToolResult> {
     return await tool.execute(input)
   }
@@ -195,7 +195,7 @@ export class ToolInterceptor {
       tool: WritingTool
       input: ToolInput
       context: ToolCallContext
-    }>
+    }>,
   ): Promise<ToolCallResult[]> {
     const results: ToolCallResult[] = []
     
@@ -278,7 +278,7 @@ export class ToolInterceptor {
       ...allowedTools.map(tool => `  • ${tool}`),
       '',
       `❌ 禁止使用的工具 (${forbiddenTools.length}个)：`,
-      ...forbiddenTools.map(tool => `  • ${tool}`)
+      ...forbiddenTools.map(tool => `  • ${tool}`),
     ]
 
     if (mode === PlanMode.Plan) {
@@ -288,7 +288,7 @@ export class ToolInterceptor {
         '  • 当前处于计划制定模式',
         '  • 只能使用只读工具进行分析和研究',
         '  • 完成计划后使用 exit_plan_mode 退出',
-        '  • 获得确认后将切换到执行模式'
+        '  • 获得确认后将切换到执行模式',
       )
     }
 
@@ -303,7 +303,7 @@ export class ToolInterceptor {
       [PlanMode.Default]: '默认模式',
       [PlanMode.Plan]: '计划模式',
       [PlanMode.AcceptEdits]: '自动接受编辑模式',
-      [PlanMode.BypassPermissions]: '绕过权限模式'
+      [PlanMode.BypassPermissions]: '绕过权限模式',
     }
     return modeNames[mode] || '未知模式'
   }

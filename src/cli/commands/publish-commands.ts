@@ -1,6 +1,6 @@
 import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
-import { ReadArticleTool } from '../../tools/base/read-article.js'
+import { readToolAdapter } from '../../tools/adapters/CoreToolsAdapter.js'
 
 /**
  * 发布相关命令实现
@@ -39,8 +39,8 @@ export const publishCommands: SlashCommand[] = [
       let fileContent = ''
       if (filePath.startsWith('./') || filePath.startsWith('/')) {
         try {
-          const readTool = new ReadArticleTool()
-          const result = await readTool.execute({ file_path: filePath })
+          // 使用新的 ReadTool
+          const result = await readToolAdapter.execute({ file_path: filePath })
           
           if (result.success && result.content) {
             // 提取实际内容（去除行号前缀）
@@ -124,8 +124,8 @@ ${getPlatformRequirements(platform)}
       let sourceFormat = 'unknown'
       if (filePath.startsWith('./') || filePath.startsWith('/')) {
         try {
-          const readTool = new ReadArticleTool()
-          const result = await readTool.execute({ file_path: filePath })
+          // 使用新的 ReadTool
+          const result = await readToolAdapter.execute({ file_path: filePath })
           
           if (result.success && result.content) {
             // 提取实际内容（去除行号前缀）

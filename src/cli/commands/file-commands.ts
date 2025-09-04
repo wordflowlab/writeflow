@@ -1,7 +1,6 @@
 import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
-import { ReadArticleTool } from '../../tools/base/read-article.js'
-import { EditArticleTool } from '../../tools/base/edit-article.js'
+import { readToolAdapter } from '../../tools/adapters/CoreToolsAdapter.js'
 import { promises as fs } from 'fs'
 import { join, relative } from 'path'
 
@@ -32,8 +31,8 @@ export const fileCommands: SlashCommand[] = [
       }
       
       try {
-        const readTool = new ReadArticleTool()
-        const result = await readTool.execute({ file_path: filePath })
+        // 使用新的 ReadTool
+        const result = await readToolAdapter.execute({ file_path: filePath })
         
         if (!result.success) {
           return `❌ 读取文件失败: ${result.error}
@@ -102,8 +101,8 @@ export const fileCommands: SlashCommand[] = [
       
       try {
         // 首先读取文件内容
-        const readTool = new ReadArticleTool()
-        const readResult = await readTool.execute({ file_path: filePath })
+        // 使用新的 ReadTool
+        const readResult = await readToolAdapter.execute({ file_path: filePath })
         
         if (!readResult.success) {
           return `❌ 无法读取文件: ${readResult.error}
@@ -120,7 +119,7 @@ ${readResult.content}
 💡 编辑说明:
 此功能显示文件内容供查看。要进行实际编辑，请：
 
-1. 使用 WriteArticle 工具创建新内容
+1. 使用 WriteFlow 的 Write 工具创建新内容
 2. 使用系统编辑器:
    - VS Code: code ${filePath}  
    - Vim: vim ${filePath}

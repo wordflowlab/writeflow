@@ -16,7 +16,7 @@ export function displayCLILogo(): void {
     chalk.hex('#BA55D3')('█████ ') +
     chalk.hex('#DA70D6')('█     ') +
     chalk.hex('#FF69B4')('████  ') +
-    chalk.hex('#FFB6C1')('██   ██')
+    chalk.hex('#FFB6C1')('██   ██'),
   )
   
   console.log(
@@ -28,7 +28,7 @@ export function displayCLILogo(): void {
     chalk.hex('#BA55D3')('█     ') +
     chalk.hex('#DA70D6')('█     ') +
     chalk.hex('#FF69B4')('█   █ ') +
-    chalk.hex('#FFB6C1')('██   ██')
+    chalk.hex('#FFB6C1')('██   ██'),
   )
   
   console.log(
@@ -40,7 +40,7 @@ export function displayCLILogo(): void {
     chalk.hex('#BA55D3')('████  ') +
     chalk.hex('#DA70D6')('█     ') +
     chalk.hex('#FF69B4')('█   █ ') +
-    chalk.hex('#FFB6C1')('██ █ ██')
+    chalk.hex('#FFB6C1')('██ █ ██'),
   )
   
   console.log(
@@ -52,7 +52,7 @@ export function displayCLILogo(): void {
     chalk.hex('#BA55D3')('█     ') +
     chalk.hex('#DA70D6')('█     ') +
     chalk.hex('#FF69B4')('█   █ ') +
-    chalk.hex('#FFB6C1')('██ █ ██')
+    chalk.hex('#FFB6C1')('██ █ ██'),
   )
   
   console.log(
@@ -64,7 +64,7 @@ export function displayCLILogo(): void {
     chalk.hex('#BA55D3')('█     ') +
     chalk.hex('#DA70D6')('█████ ') +
     chalk.hex('#FF69B4')('████  ') +
-    chalk.hex('#FFB6C1')('███████')
+    chalk.hex('#FFB6C1')('███████'),
   )
   
   // 副标题

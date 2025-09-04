@@ -263,9 +263,9 @@ export class SystemReminderService {
     return JSON.stringify(
       todos.map((todo, index) => ({
         [`${index + 1}. [${todo.status}]`]: todo.content.length > 100 
-          ? todo.content.substring(0, 100) + '...'
-          : todo.content
-      }))
+          ? `${todo.content.substring(0, 100)  }...`
+          : todo.content,
+      })),
     )
   }
 
@@ -376,7 +376,7 @@ export class SystemReminderService {
   public injectRemindersIntoMessage(
     message: string,
     hasContext: boolean = false,
-    agentId?: string
+    agentId?: string,
   ): string {
     const reminders = this.generateReminders(hasContext, agentId)
     
@@ -409,5 +409,5 @@ export const getReminderSessionState = () =>
 export const injectRemindersIntoMessage = (
   message: string,
   hasContext: boolean = false,
-  agentId?: string
+  agentId?: string,
 ) => systemReminderService.injectRemindersIntoMessage(message, hasContext, agentId)

@@ -81,7 +81,7 @@ export class AgentLoader {
       tools: Array.isArray(frontmatter.tools) ? frontmatter.tools : [],
       systemPrompt: systemPrompt.trim(),
       model: frontmatter.model_name || frontmatter.model,
-      location: this.getLocationFromPath(configPath)
+      location: this.getLocationFromPath(configPath),
     }
 
     // 动态加载工具
@@ -103,7 +103,7 @@ export class AgentLoader {
       // 用户级配置
       join(homedir(), '.writeflow/agents', `${this.agentName}.md`),
       // 内置配置（如果有的话）
-      (() => { const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename); return join(__dirname, '../../agents', `${this.agentName}.md`) })()
+      (() => { const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename); return join(__dirname, '../../agents', `${this.agentName}.md`) })(),
     ]
 
     for (const path of paths) {
@@ -133,11 +133,15 @@ export class AgentLoader {
       'SlidevProjectInit': { path: '../tools/slidev/SlideProjectInitTool.js', className: 'SlideProjectInitTool' },
       'SlideExporter': { path: '../tools/slidev/SlideExporterTool.js', className: 'SlideExporterTool' },
       'SlideConverter': { path: '../tools/slidev/SlideConverter.js', className: 'SlideConverter' },
-      'ReadArticle': { path: '../tools/base/read-article.js', className: 'ReadArticleTool' },
-      'WriteArticle': { path: '../tools/base/write-article.js', className: 'WriteArticleTool' },
-      'EditArticle': { path: '../tools/base/edit-article.js', className: 'EditArticleTool' },
+      'Read': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'ReadToolAdapter' },
+      'Write': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'WriteToolAdapter' },
+      'Edit': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'EditToolAdapter' },
+      'MultiEdit': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'MultiEditToolAdapter' },
+      'Bash': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'BashToolAdapter' },
+      'Glob': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'GlobToolAdapter' },
+      'Grep': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'GrepToolAdapter' },
       'WebSearch': { path: '../tools/research/web-search.js', className: 'WebSearchTool' },
-      'WebFetch': { path: '../tools/research/web-fetch.js', className: 'WebFetchTool' }
+      'WebFetch': { path: '../tools/research/web-fetch.js', className: 'WebFetchTool' },
     }
 
     for (const toolName of toolNames) {
@@ -163,7 +167,7 @@ export class AgentLoader {
           `../tools/slidev/${toolName}.js`,
           `../tools/writing/${toolName}.js`,
           `../tools/base/${toolName}.js`,
-          `../tools/research/${toolName}.js`
+          `../tools/research/${toolName}.js`,
         ]
 
         let loaded = false

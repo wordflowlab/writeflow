@@ -31,5 +31,5 @@ export default {
   logEvent,
   initialize,
   getFeatureGate,
-  getConfig
+  getConfig,
 }

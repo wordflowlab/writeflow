@@ -5,33 +5,33 @@
 ## 🆕 v2.11+ 新功能亮点
 
 - 🧠 **智能生成**: 基于完整Slidev知识库的AI驱动内容创作
-- 🚀 **一键预览**: 生成→保存→预览完整自动化流程  
+- 🚀 **一步到位**: 主题输入即可生成演示文稿，无需复杂子命令
 - 📋 **智能指导**: 详细的操作步骤和文件命名建议
-- ⚡ **简化命令**: 从复杂操作简化为单个命令
+- ⚡ **系统精简**: 从13个命令精简至5个核心命令，提升用户体验
 
 ## 🚀 快速开始
 
 ### ⚡ 一分钟体验（推荐）
 
-最简单的方式 - 一条命令从主题到预览：
+最简单的方式 - 主命令直接生成：
 
 ```bash
-# 一键生成并预览技术演示
-/slide-auto-preview "Vue 3 响应式原理" --style=technical --duration=30
+# 直接输入主题，智能生成演示
+/slide "Vue 3 响应式原理"
 
-# 一键生成并预览商业汇报  
-/slide-auto-preview "Q4业务增长报告" --style=business --audience=executives
+# 商业汇报主题
+/slide "Q4业务增长报告"
 
-# 一键生成并预览学术演示
-/slide-auto-preview "机器学习最新进展" --style=academic --duration=45
+# 学术演示主题  
+/slide "机器学习最新进展"
 ```
 
-**就是这么简单！** 🎉 命令执行后会：
+**就是这么简单！** 🎉 系统会自动：
 
-1. ⚙️ 智能生成专业PPT内容
-2. 💾 自动保存为 `.md` 文件  
-3. 🎬 自动启动Slidev预览服务
-4. 🌐 浏览器自动打开演示页面
+1. 🧠 识别您输入的是主题而非子命令
+2. ⚙️ 智能生成专业PPT内容
+3. 📋 提供详细的保存和预览指导
+4. 🚀 支持一键预览体验
 
 ### 🎯 传统方式（分步操作）
 
@@ -56,33 +56,34 @@
    /slide-preview 深度学习在计算机视觉中的应用-slides.md
    ```
 
-## 📖 完整命令列表
+## 📖 完整命令列表 - 精简至5个核心命令
+
+### 🎯 主命令
+
+| 命令 | 功能 | 示例 |
+|------|------|------|
+| `/slide` | 智能主命令，支持直接主题生成 | `/slide "React Hooks"` |
 
 ### 🧠 智能生成命令
 
 | 命令 | 功能 | 示例 |
 |------|------|------|
 | `/slide-intelligent` | 智能生成PPT（显示操作指导） | `/slide-intelligent "React Hooks" --style=technical` |
-| `/slide-auto-preview` | 一键生成并预览 | `/slide-auto-preview "产品发布会" --style=business` |
-| `/slide-ai` | `slide-intelligent` 别名 | `/slide-ai "数据分析" --duration=20` |
-| `/slide-smart` | `slide-intelligent` 别名 | `/slide-smart "团队管理" --audience=managers` |
 
-### 🚀 预览和管理命令
+### 🚀 预览命令
 
 | 命令 | 功能 | 示例 |
 |------|------|------|
 | `/slide-preview` | 预览演示文稿 | `/slide-preview slides.md` |
 | `/slide-preview --list` | 查看可用的演示文稿 | `/slide-preview -l` |
 | `/slide-preview --recent` | 查看最近的演示历史 | `/slide-preview -r` |
-| `/slide-preview --help` | 预览命令帮助 | `/slide-preview -h` |
 
-### 🛠️ 传统命令（向后兼容）
+### 🛠️ 创建和转换命令
 
 | 命令 | 功能 | 示例 |
 |------|------|------|
-| `/slide-create` | 创建演示文稿 | `/slide-create "我的主题" --theme=seriph` |
-| `/slide-quick` | 快速生成特定主题PPT | `/slide-quick "探索星空" --theme=default` |
-| `/slide-init` | 初始化Slidev项目 | `/slide-init ./my-slides --title="演示"` |
+| `/slide-create` | 创建演示文稿（支持依赖检查） | `/slide-create "我的主题" --theme=seriph` |
+| `/slide-convert` | 文章转换为演示（支持依赖检查） | `/slide-convert article.md --style=technical` |
 
 ## 💡 参数说明
 
@@ -122,8 +123,11 @@
 ### 🏫 学术演示
 
 ```bash
-# 学术研究演示
-/slide-auto-preview "机器学习在医疗诊断中的应用研究" \
+# 学术研究演示 - 主命令方式
+/slide "机器学习在医疗诊断中的应用研究"
+
+# 或使用智能生成命令获取详细指导
+/slide-intelligent "机器学习在医疗诊断中的应用研究" \
   --style=academic \
   --duration=40 \
   --audience=researchers \
@@ -135,8 +139,11 @@
 ### 💼 商业汇报
 
 ```bash
-# 商业汇报演示
-/slide-auto-preview "Q4业务增长报告" \
+# 商业汇报演示 - 主命令方式
+/slide "Q4业务增长报告"
+
+# 或使用智能生成命令获取详细指导
+/slide-intelligent "Q4业务增长报告" \
   --style=business \
   --duration=25 \
   --audience=executives \
@@ -148,8 +155,11 @@
 ### 👨‍💻 技术分享
 
 ```bash
-# 技术分享演示
-/slide-auto-preview "React 18 并发特性深度解析" \
+# 技术分享演示 - 主命令方式
+/slide "React 18 并发特性深度解析"
+
+# 或使用智能生成命令获取详细指导
+/slide-intelligent "React 18 并发特性深度解析" \
   --style=technical \
   --duration=50 \
   --audience=developers
@@ -160,8 +170,11 @@
 ### 🎨 创意展示
 
 ```bash
-# 创意展示
-/slide-auto-preview "设计系统构建方法论" \
+# 创意展示 - 主命令方式
+/slide "设计系统构建方法论"
+
+# 或使用智能生成命令获取详细指导
+/slide-intelligent "设计系统构建方法论" \
   --style=creative \
   --duration=60 \
   --theme=carbon
@@ -231,14 +244,14 @@ slides overview   > http://localhost:3030/overview/
 
 **A**: 有几种方式：
 - 直接编辑生成的`.md`文件（Slidev会实时更新预览）
-- 使用 `/slide-optimize` 命令优化现有PPT
+- 使用 `/slide-intelligent` 重新生成优化内容
 - 参考 [Slidev官方文档](https://sli.dev) 了解高级特性
 
 ### Q: 文件保存在哪里？
 
 **A**: 
-- 使用 `/slide-auto-preview`：自动保存在当前目录
-- 使用 `/slide-intelligent`：需要手动保存
+- 使用 `/slide "主题"`：系统会生成内容并提供保存指导
+- 使用 `/slide-intelligent`：需要手动保存到当前目录
 - 查看最近文件：`/slide-preview --recent`
 
 ### Q: 如何查看所有可用的演示文稿？
@@ -307,18 +320,20 @@ slides overview   > http://localhost:3030/overview/
 推荐的PPT创作流程：
 
 1. **规划阶段**: 确定主题、受众、时长
-2. **生成阶段**: 选择合适的风格和参数
-3. **预览阶段**: 使用一键预览快速查看效果
-4. **优化阶段**: 根据需要微调内容
-5. **演示阶段**: 使用全屏模式和快捷键
+2. **生成阶段**: 使用 `/slide "主题"` 或 `/slide-intelligent` 生成内容
+3. **保存阶段**: 按照系统指导保存为 `.md` 文件
+4. **预览阶段**: 使用 `/slide-preview` 查看效果
+5. **优化阶段**: 根据需要编辑文件或重新生成
+6. **演示阶段**: 使用全屏模式和快捷键
 
 ## 📈 版本更新历史
 
-### v2.11.0 (最新)
-- ✅ 新增 `/slide-auto-preview` 一键生成预览命令
-- ✅ 增强智能生成命令的用户指导
-- ✅ 优化预览系统的依赖检查和错误处理
-- ✅ 添加智能文件命名和历史记录功能
+### v2.11.0 (最新) - 系统精简优化
+- ✅ **主命令智能化**: `/slide` 支持直接主题输入，自动识别并生成演示
+- ✅ **系统大幅精简**: 从13个命令精简至5个核心命令，提升用户体验
+- ✅ **依赖检查优化**: `create` 和 `convert` 命令支持自动依赖检查和安装指导
+- ✅ **用户交互增强**: 所有核心命令支持三选项用户交互模式
+- ✅ **文档全面更新**: 重新梳理用户指南，突出简化的使用方式
 
 ### v2.10.1
 - ✅ 集成完整 Slidev 知识库

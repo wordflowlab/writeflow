@@ -26,14 +26,14 @@ export interface Todo {
 export const STATUS_PRIORITIES: Record<TodoStatus, number> = {
   [TodoStatus.COMPLETED]: 0,     // 已完成：最高优先级显示
   [TodoStatus.IN_PROGRESS]: 1,   // 进行中：中等优先级显示  
-  [TodoStatus.PENDING]: 2        // 待处理：最低优先级显示
+  [TodoStatus.PENDING]: 2,        // 待处理：最低优先级显示
 }
 
 // 任务优先级映射 (参考 Claude Code Ma0)
 export const TASK_PRIORITIES: Record<TodoPriority, number> = {
   [TodoPriority.HIGH]: 0,    // 高优先级
   [TodoPriority.MEDIUM]: 1,  // 中等优先级
-  [TodoPriority.LOW]: 2      // 低优先级
+  [TodoPriority.LOW]: 2,      // 低优先级
 }
 
 // Todo 创建参数

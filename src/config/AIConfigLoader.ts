@@ -29,8 +29,8 @@ const DEFAULT_CONFIG: AIProjectConfig = {
   toolPreferences: {
     preferredModels: ['claude-3-opus', 'gpt-4'],
     maxTokens: 4096,
-    temperature: 0.7
-  }
+    temperature: 0.7,
+  },
 }
 
 /**
@@ -59,7 +59,7 @@ export class AIConfigLoader {
       'WRITEFLOW.md',
       'AI_GUIDE.md',
       '.writeflow/instructions.md',
-      '.ai/guide.md'
+      '.ai/guide.md',
     ]
 
     for (const fileName of configFiles) {
@@ -98,7 +98,7 @@ export class AIConfigLoader {
     const configFiles = [
       '.writeflow.json',
       '.writeflow/config.json',
-      'writeflow.config.json'
+      'writeflow.config.json',
     ]
 
     for (const fileName of configFiles) {
@@ -238,13 +238,13 @@ export class AIConfigLoader {
 
     const [config, guide] = await Promise.all([
       this.loadProjectConfig(root),
-      this.loadProjectGuide(root)
+      this.loadProjectGuide(root),
     ])
 
     return {
       config,
       guide,
-      projectRoot: root
+      projectRoot: root,
     }
   }
 

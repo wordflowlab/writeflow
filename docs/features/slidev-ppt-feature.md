@@ -122,13 +122,15 @@ whenToUse: |
   - 优化现有的 Slidev 演示文稿
   - 导出演示文稿为多种格式
 tools:
-  - SlidevGenerator
-  - SlideConverter
-  - SlideOptimizer
-  - SlideExporter
-  - ReadArticle
-  - WriteArticle
-  - WebSearch
+  - Read           # 读取文件
+  - Write          # 写入文件
+  - Edit           # 编辑文件
+  - MultiEdit      # 批量编辑
+  - Bash           # 执行系统命令
+  - Glob           # 文件模式匹配
+  - Grep           # 内容搜索
+  - WebSearch      # 网络搜索
+  - WebFetch       # 网页获取
 model_name: main  # 可选：指定使用的模型
 ---
 

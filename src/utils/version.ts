@@ -17,7 +17,7 @@ function getWriteFlowRoot(): string {
       // 本地安装路径 
       join(process.cwd(), 'node_modules', 'writeflow'),
       // 开发环境路径
-      process.cwd()
+      process.cwd(),
     ]
     
     for (const path of possiblePaths) {

@@ -1,6 +1,6 @@
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { RewriteOptions, AIWritingConfig } from '../../types/writing.js'
-import { ReadArticleTool } from '../base/read-article.js'
+import { readToolAdapter } from '../adapters/CoreToolsAdapter.js'
 
 /**
  * ContentRewriter 工具
@@ -11,7 +11,7 @@ export class ContentRewriterTool implements WritingTool {
   description = '智能改写文章内容'
   securityLevel = 'ai-powered' as const
 
-  private readTool = new ReadArticleTool()
+  // 使用导入的 readTool 实例
 
   constructor(private config: AIWritingConfig) {}
 
@@ -52,7 +52,7 @@ export class ContentRewriterTool implements WritingTool {
       // 获取原始内容
       let originalContent: string
       if (filePath) {
-        const readResult = await this.readTool.execute({ file_path: filePath })
+        const readResult = await readToolAdapter.execute({ file_path: filePath })
         if (!readResult.success) {
           return {
             success: false,

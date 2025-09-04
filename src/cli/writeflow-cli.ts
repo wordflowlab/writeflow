@@ -127,7 +127,7 @@ export class WriteFlowCLI {
         onExit: () => {
           console.log(chalk.yellow('\n👋 引导已取消，您可以随时运行 writeflow start 重新开始'))
           process.exit(0)
-        }
+        },
       })
 
       const { unmount } = render(onboardingComponent)
@@ -140,7 +140,7 @@ export class WriteFlowCLI {
   private startReactUI(): void {
     try {
       // 标记当前为交互模式，供全局异常处理判断，避免错误时直接退出
-      ;(global as any).WRITEFLOW_INTERACTIVE = true
+      (global as any).WRITEFLOW_INTERACTIVE = true
       // 注入全局 APP 实例，供 /status 等命令友好读取
       ;(global as any).WRITEFLOW_APP_INSTANCE = this.app
 
@@ -150,7 +150,7 @@ export class WriteFlowCLI {
       }
 
       const replComponent = React.createElement(WriteFlowREPL, {
-        writeFlowApp: this.app
+        writeFlowApp: this.app,
       })
 
       // 保活：Ink 在所有 UI 卸载时可能导致进程自然退出，这里用定时 no-op 防止提前退出
@@ -171,7 +171,7 @@ export class WriteFlowCLI {
   private async executeSlashCommand(command: string, options: any): Promise<void> {
     // 确保命令以斜杠开头
     if (!command.startsWith('/')) {
-      command = '/' + command
+      command = `/${  command}`
     }
 
     // 显示简化版Logo

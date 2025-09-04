@@ -1,5 +1,4 @@
 import { WritingTool, ToolInput, ToolResult } from '../types/tool.js'
-import { ReadArticleTool, WriteArticleTool, EditArticleTool } from './base/index.js'
 import { ExitPlanModeTool } from './ExitPlanMode.js'
 import { createTodoToolAdapters } from './writing/index.js'
 
@@ -25,10 +24,7 @@ export class ToolManager {
    */
   private registerBaseTools(): void {
     const baseTools: WritingTool[] = [
-      new ReadArticleTool(),
-      new WriteArticleTool(),
-      new EditArticleTool(),
-      new ExitPlanModeTool()
+      new ExitPlanModeTool(),
     ]
 
     // 添加 Todo 工具（适配器返回的是兼容的 WritingTool）
@@ -65,7 +61,7 @@ export class ToolManager {
       if (!tool) {
         return {
           success: false,
-          error: `工具不存在: ${toolName}`
+          error: `工具不存在: ${toolName}`,
         }
       }
 
@@ -75,7 +71,7 @@ export class ToolManager {
         if (!isValid) {
           return {
             success: false,
-            error: '工具输入验证失败'
+            error: '工具输入验证失败',
           }
         }
       }
@@ -94,7 +90,7 @@ export class ToolManager {
       
       return {
         success: false,
-        error: `工具执行异常: ${(error as Error).message}`
+        error: `工具执行异常: ${(error as Error).message}`,
       }
     }
   }
@@ -107,7 +103,7 @@ export class ToolManager {
     input: ToolInput
   }>): Promise<ToolResult[]> {
     const promises = executions.map(({ toolName, input }) =>
-      this.executeTool(toolName, input)
+      this.executeTool(toolName, input),
     )
 
     return Promise.all(promises)
@@ -169,7 +165,7 @@ export class ToolManager {
         toolStats[history.toolName] = {
           executions: 0,
           successes: 0,
-          totalDuration: 0
+          totalDuration: 0,
         }
       }
       
@@ -193,7 +189,7 @@ export class ToolManager {
       successfulExecutions: successful,
       failedExecutions: failed,
       averageDuration: avgDuration,
-      toolStats
+      toolStats,
     }
   }
 
@@ -212,7 +208,7 @@ export class ToolManager {
       toolName,
       timestamp: Date.now(),
       success,
-      duration
+      duration,
     })
 
     // 保持历史记录在合理范围内

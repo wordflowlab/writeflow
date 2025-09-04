@@ -66,7 +66,7 @@ export class PlanModeManager {
       'glob',
       'get_status',
       'help',
-      'exit_plan_mode'
+      'exit_plan_mode',
     ],
     // Plan 模式下禁止的修改工具
     restricted: [
@@ -76,13 +76,13 @@ export class PlanModeManager {
       'git',
       'npm',
       'install',
-      'execute'
-    ]
+      'execute',
+    ],
   }
 
   constructor(
     config: Partial<PlanModeConfig> = {},
-    events: PlanModeEvents = {}
+    events: PlanModeEvents = {},
   ) {
     // 初始化核心组件
     this.permissionManager = new PermissionManager()
@@ -92,12 +92,12 @@ export class PlanModeManager {
       enablePermissionCheck: true,
       enableSystemReminders: true,
       strictMode: true,
-      allowedBypassTools: ['exit_plan_mode', 'get_status', 'help', 'read_article', 'search_files', 'list_directory']
+      allowedBypassTools: ['exit_plan_mode', 'get_status', 'help', 'read_article', 'search_files', 'list_directory'],
     }
     this.toolInterceptor = new ToolInterceptor(
       this.permissionManager,
       this.reminderInjector,
-      interceptorConfig
+      interceptorConfig,
     )
 
     this.exitPlanTool = new ExitPlanModeTool()
@@ -108,7 +108,7 @@ export class PlanModeManager {
       planApproved: false,
       entryTime: 0,
       planHistory: [],
-      systemReminders: []
+      systemReminders: [],
     }
 
     // 初始化配置
@@ -118,7 +118,7 @@ export class PlanModeManager {
       planQualityCheck: true,
       maxPlanHistory: 10,
       reminderDisplayDuration: 300000, // 5分钟
-      ...config
+      ...config,
     }
 
     this.events = events
@@ -139,7 +139,7 @@ export class PlanModeManager {
       planApproved: false,
       entryTime: Date.now(),
       planHistory: [],
-      systemReminders: []
+      systemReminders: [],
     }
 
     // 触发事件
@@ -220,10 +220,10 @@ export class PlanModeManager {
             `📝 反馈：${exitResult.message}`,
             '',
             '💡 建议的后续步骤：',
-            ...(exitResult.nextSteps || []).map(step => `  • ${step}`)
+            ...(exitResult.nextSteps || []).map(step => `  • ${step}`),
           ].join('\n'),
           priority: 'medium',
-          persistent: true
+          persistent: true,
         }
         reminders.push(rejectionReminder)
 
@@ -239,7 +239,7 @@ export class PlanModeManager {
         success: true,
         approved: exitResult.approved,
         result: exitResult,
-        reminders
+        reminders,
       }
 
     } catch (error) {
@@ -252,16 +252,16 @@ export class PlanModeManager {
           '',
           `错误信息：${error instanceof Error ? error.message : '未知错误'}`,
           '',
-          '请重新制定计划并再次尝试'
+          '请重新制定计划并再次尝试',
         ].join('\n'),
         priority: 'high',
-        persistent: true
+        persistent: true,
       }
 
       return {
         success: false,
         approved: false,
-        reminders: [errorReminder]
+        reminders: [errorReminder],
       }
     }
   }
@@ -294,7 +294,7 @@ export class PlanModeManager {
     const context = {
       toolName,
       parameters,
-      currentMode: PlanMode.Plan
+      currentMode: PlanMode.Plan,
     }
 
     // 使用工具拦截器检查权限
@@ -305,7 +305,7 @@ export class PlanModeManager {
       return {
         allowed: false,
         reminder: reminder || undefined,
-        reason: `工具 "${toolName}" 在 Plan 模式下被禁止`
+        reason: `工具 "${toolName}" 在 Plan 模式下被禁止`,
       }
     }
 
@@ -314,7 +314,7 @@ export class PlanModeManager {
       const reminder = this.reminderInjector.generateToolCallReminder(context)
       return {
         allowed: true,
-        reminder: reminder || undefined
+        reminder: reminder || undefined,
       }
     }
 
@@ -390,14 +390,14 @@ export class PlanModeManager {
       report.push(
         `🔹 激活时长：${minutes}分${seconds}秒`,
         `🔹 当前计划：${this.state.currentPlan ? '已制定' : '未制定'}`,
-        `🔹 计划历史：${this.state.planHistory.length} 个`
+        `🔹 计划历史：${this.state.planHistory.length} 个`,
       )
 
       if (this.state.currentPlan) {
         report.push(
           '',
           '📝 当前计划摘要：',
-          ...this.state.currentPlan.split('\n').slice(0, 3).map(line => `  ${line}`)
+          ...this.state.currentPlan.split('\n').slice(0, 3).map(line => `  ${line}`),
         )
         
         if (this.state.currentPlan.split('\n').length > 3) {
@@ -411,7 +411,7 @@ export class PlanModeManager {
       report.push(
         '',
         `⚠️ 活跃提醒：${activeReminders.length} 个`,
-        ...activeReminders.map(reminder => `  • ${reminder.type}: ${reminder.content.split('\n')[0]}`)
+        ...activeReminders.map(reminder => `  • ${reminder.type}: ${reminder.content.split('\n')[0]}`),
       )
     }
 
@@ -499,7 +499,7 @@ Plan mode is active. The user indicated that they do not want you to execute yet
 2. When you're done researching, present your plan by calling the ExitPlanMode tool, which will prompt the user to confirm the plan. Do NOT make any file changes or run any tools that modify the system state in any way until the user has confirmed the plan.
 </system-reminder>`,
       priority: 'high',
-      persistent: true
+      persistent: true,
     }
   }
 
@@ -542,10 +542,10 @@ Plan mode is active. The user indicated that they do not want you to execute yet
         '计划内容已准备就绪，请选择执行方式：',
         '• 自动批准编辑 - 退出计划模式并自动执行所有修改',
         '• 手动确认编辑 - 退出计划模式但需手动确认每个修改', 
-        '• 继续计划 - 保持计划模式继续完善计划'
+        '• 继续计划 - 保持计划模式继续完善计划',
       ].join('\n'),
       priority: 'high',
-      persistent: true
+      persistent: true,
     }
     
     this.state.systemReminders.push(reminder)
@@ -561,7 +561,7 @@ Plan mode is active. The user indicated that they do not want you to execute yet
       planApproved: false,
       entryTime: 0,
       planHistory: [],
-      systemReminders: []
+      systemReminders: [],
     }
     this.clearReminders()
   }

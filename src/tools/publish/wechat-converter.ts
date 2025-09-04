@@ -1,6 +1,6 @@
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { WeChatFormat, PlatformConfig } from '../../types/publish.js'
-import { ReadArticleTool } from '../base/read-article.js'
+import { readToolAdapter } from '../adapters/CoreToolsAdapter.js'
 
 /**
  * WeChatConverter 工具
@@ -11,7 +11,7 @@ export class WeChatConverterTool implements WritingTool {
   description = '转换内容为微信公众号格式'
   securityLevel = 'ai-powered' as const
 
-  private readTool = new ReadArticleTool()
+  // 使用导入的 readTool 实例
 
   async execute(input: ToolInput): Promise<ToolResult> {
     try {
@@ -32,7 +32,7 @@ export class WeChatConverterTool implements WritingTool {
       // 获取内容
       let originalContent: string
       if (filePath) {
-        const readResult = await this.readTool.execute({ file_path: filePath })
+        const readResult = await readToolAdapter.execute({ file_path: filePath })
         if (!readResult.success) {
           return { success: false, error: `读取文件失败: ${readResult.error}` }
         }

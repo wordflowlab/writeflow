@@ -47,7 +47,7 @@ export const TOOL_PERMISSIONS: Record<string, ToolPermissionLevel> = {
   // 危险操作工具（始终需要特别权限）
   'delete_file': ToolPermissionLevel.DANGEROUS,
   'format_disk': ToolPermissionLevel.DANGEROUS,
-  'system_restart': ToolPermissionLevel.DANGEROUS
+  'system_restart': ToolPermissionLevel.DANGEROUS,
 }
 
 /**
@@ -57,22 +57,22 @@ export const MODE_PERMISSION_MAP: Record<PlanMode, ToolPermissionLevel[]> = {
   [PlanMode.Default]: [
     ToolPermissionLevel.READ_ONLY,
     ToolPermissionLevel.SAFE_WRITE,
-    ToolPermissionLevel.SYSTEM_MODIFY
+    ToolPermissionLevel.SYSTEM_MODIFY,
   ],
   [PlanMode.Plan]: [
-    ToolPermissionLevel.READ_ONLY  // Plan模式只允许只读工具
+    ToolPermissionLevel.READ_ONLY,  // Plan模式只允许只读工具
   ],
   [PlanMode.AcceptEdits]: [
     ToolPermissionLevel.READ_ONLY,
     ToolPermissionLevel.SAFE_WRITE,
-    ToolPermissionLevel.SYSTEM_MODIFY
+    ToolPermissionLevel.SYSTEM_MODIFY,
   ],
   [PlanMode.BypassPermissions]: [
     ToolPermissionLevel.READ_ONLY,
     ToolPermissionLevel.SAFE_WRITE,
     ToolPermissionLevel.SYSTEM_MODIFY,
-    ToolPermissionLevel.DANGEROUS  // 绕过权限模式允许危险操作
-  ]
+    ToolPermissionLevel.DANGEROUS,  // 绕过权限模式允许危险操作
+  ],
 }
 
 /**
@@ -117,7 +117,7 @@ export class PermissionManager {
       return {
         allowed: false,
         reason: `工具 "${toolName}" 未在权限表中定义`,
-        suggestion: '请联系管理员添加此工具的权限配置'
+        suggestion: '请联系管理员添加此工具的权限配置',
       }
     }
 
@@ -136,10 +136,10 @@ export class PermissionManager {
    */
   private generatePermissionDeniedResult(
     toolName: string, 
-    toolLevel: ToolPermissionLevel
+    toolLevel: ToolPermissionLevel,
   ): PermissionCheckResult {
     const result: PermissionCheckResult = {
-      allowed: false
+      allowed: false,
     }
 
     switch (this.currentMode) {
@@ -203,7 +203,7 @@ export class PermissionManager {
     }
 
     return alternatives.filter(alt => 
-      TOOL_PERMISSIONS[alt] === ToolPermissionLevel.READ_ONLY
+      TOOL_PERMISSIONS[alt] === ToolPermissionLevel.READ_ONLY,
     )
   }
 
@@ -238,7 +238,7 @@ export class PermissionManager {
       case PlanMode.BypassPermissions:
         return {
           allowed: true, // 在我们的实现中，暂时允许切换到绕过权限模式
-          reason: '切换到绕过权限模式将允许执行危险操作'
+          reason: '切换到绕过权限模式将允许执行危险操作',
         }
         
       default:
@@ -263,7 +263,7 @@ export class PermissionManager {
       [ToolPermissionLevel.READ_ONLY]: 0,
       [ToolPermissionLevel.SAFE_WRITE]: 0,
       [ToolPermissionLevel.SYSTEM_MODIFY]: 0,
-      [ToolPermissionLevel.DANGEROUS]: 0
+      [ToolPermissionLevel.DANGEROUS]: 0,
     }
 
     Object.values(TOOL_PERMISSIONS).forEach(level => {
@@ -274,7 +274,7 @@ export class PermissionManager {
       currentMode: this.currentMode,
       allowedTools: allowedTools.length,
       forbiddenTools: forbiddenTools.length,
-      toolBreakdown
+      toolBreakdown,
     }
   }
 
@@ -299,7 +299,7 @@ export class PermissionManager {
       `  • 只读工具: ${stats.toolBreakdown[ToolPermissionLevel.READ_ONLY]}个`,
       `  • 安全写入: ${stats.toolBreakdown[ToolPermissionLevel.SAFE_WRITE]}个`,
       `  • 系统修改: ${stats.toolBreakdown[ToolPermissionLevel.SYSTEM_MODIFY]}个`,
-      `  • 危险操作: ${stats.toolBreakdown[ToolPermissionLevel.DANGEROUS]}个`
+      `  • 危险操作: ${stats.toolBreakdown[ToolPermissionLevel.DANGEROUS]}个`,
     ]
 
     return report.join('\n')

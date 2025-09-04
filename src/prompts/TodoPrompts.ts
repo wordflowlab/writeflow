@@ -223,29 +223,29 @@ export function generateWritingTaskExamples(): Array<{
 }> {
   return [
     {
-      content: "研究人工智能最新发展趋势",
-      activeForm: "正在研究人工智能发展趋势",
-      scenario: "技术博客写作"
+      content: '研究人工智能最新发展趋势',
+      activeForm: '正在研究人工智能发展趋势',
+      scenario: '技术博客写作',
     },
     {
-      content: "撰写产品核心功能介绍",
-      activeForm: "正在撰写产品功能介绍",
-      scenario: "营销文案创作"
+      content: '撰写产品核心功能介绍',
+      activeForm: '正在撰写产品功能介绍',
+      scenario: '营销文案创作',
     },
     {
-      content: "设计文章整体结构大纲",
-      activeForm: "正在设计文章结构大纲",
-      scenario: "长篇文章创作"
+      content: '设计文章整体结构大纲',
+      activeForm: '正在设计文章结构大纲',
+      scenario: '长篇文章创作',
     },
     {
-      content: "收集相关案例和数据支撑",
-      activeForm: "正在收集案例和数据",
-      scenario: "分析报告写作"
+      content: '收集相关案例和数据支撑',
+      activeForm: '正在收集案例和数据',
+      scenario: '分析报告写作',
     },
     {
-      content: "校对全文并优化表达",
-      activeForm: "正在校对和优化全文",
-      scenario: "文章润色阶段"
-    }
+      content: '校对全文并优化表达',
+      activeForm: '正在校对和优化全文',
+      scenario: '文章润色阶段',
+    },
   ]
 }

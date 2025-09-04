@@ -5,7 +5,7 @@ import { WritingTool, ToolInput, ToolResult } from '../types/tool.js'
  * ExitPlanMode 工具输入参数
  */
 export const ExitPlanModeInputSchema = z.object({
-  plan: z.string().min(1).describe('The plan you came up with, that you want to run by the user for approval. Supports markdown. The plan should be pretty concise.')
+  plan: z.string().min(1).describe('The plan you came up with, that you want to run by the user for approval. Supports markdown. The plan should be pretty concise.'),
 })
 
 export type ExitPlanModeInput = z.infer<typeof ExitPlanModeInputSchema>
@@ -76,8 +76,8 @@ Examples:
           plan: '',
           approved: false,
           message: '计划内容不能为空，请提供详细的实施计划',
-          nextSteps: ['重新制定详细计划', '确保包含具体实施步骤']
-        }
+          nextSteps: ['重新制定详细计划', '确保包含具体实施步骤'],
+        },
       }
     }
 
@@ -91,8 +91,8 @@ Examples:
           plan,
           approved: false,
           message: `计划质量需要改进：${planQuality.issues.join(', ')}`,
-          nextSteps: planQuality.suggestions
-        }
+          nextSteps: planQuality.suggestions,
+        },
       }
     }
 
@@ -122,9 +122,9 @@ ${formattedPlan}
         nextSteps: [
           '更新 TodoList 任务列表',
           '开始按计划执行代码修改',
-          '定期检查进度并更新状态'
-        ]
-      }
+          '定期检查进度并更新状态',
+        ],
+      },
     }
   }
 
@@ -173,7 +173,7 @@ ${formattedPlan}
     return {
       isGood: issues.length === 0,
       issues,
-      suggestions
+      suggestions,
     }
   }
 
@@ -211,7 +211,7 @@ ${formattedPlan}
       /api|接口/i.test(plan),
       /架构|architecture/i.test(plan),
       /重构|refactor/i.test(plan),
-      /测试|test/i.test(plan)
+      /测试|test/i.test(plan),
     ].filter(Boolean).length
 
     let complexity: 'low' | 'medium' | 'high' = 'low'
@@ -243,7 +243,7 @@ ${formattedPlan}
       totalSteps,
       estimatedTime,
       complexity,
-      mainTasks
+      mainTasks,
     }
   }
 
@@ -268,7 +268,7 @@ ${formattedPlan}
         content: result.approved 
           ? 'User has approved the plan. There is nothing else needed from you now. Please respond with "ok"'
           : `Plan was rejected: ${result.message}`,
-        tool_use_id: toolUseId
+        tool_use_id: toolUseId,
       }
     } else {
       // 直接调用的详细响应
@@ -281,8 +281,8 @@ ${formattedPlan}
         metadata: {
           plan: result.plan,
           approved: result.approved,
-          nextSteps: result.nextSteps
-        }
+          nextSteps: result.nextSteps,
+        },
       }
     }
   }
