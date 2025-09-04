@@ -128,35 +128,66 @@ export class AgentLoader {
    * 动态加载工具
    */
   private async loadTools(toolNames: string[]): Promise<void> {
+    // 工具名称映射：配置中的名称 -> 实际的工具类文件
+    const toolMapping: Record<string, { path: string; className: string }> = {
+      'SlidevProjectInit': { path: '../tools/slidev/SlideProjectInitTool.js', className: 'SlideProjectInitTool' },
+      'SlideExporter': { path: '../tools/slidev/SlideExporterTool.js', className: 'SlideExporterTool' },
+      'SlideConverter': { path: '../tools/slidev/SlideConverter.js', className: 'SlideConverter' },
+      'ReadArticle': { path: '../tools/base/read-article.js', className: 'ReadArticleTool' },
+      'WriteArticle': { path: '../tools/base/write-article.js', className: 'WriteArticleTool' },
+      'EditArticle': { path: '../tools/base/edit-article.js', className: 'EditArticleTool' },
+      'WebSearch': { path: '../tools/research/web-search.js', className: 'WebSearchTool' },
+      'WebFetch': { path: '../tools/research/web-fetch.js', className: 'WebFetchTool' }
+    }
+
     for (const toolName of toolNames) {
       if (this.tools.has(toolName)) {
         continue // 已加载
       }
 
       try {
-        // 尝试从 slidev 工具目录加载
-        const toolPath = `../tools/slidev/${toolName}.js`
-        const toolModule = await import(toolPath)
-        const ToolClass = toolModule.default || toolModule[toolName]
-        
-        if (ToolClass) {
-          const toolInstance = new ToolClass()
-          this.tools.set(toolName, toolInstance)
+        const toolConfig = toolMapping[toolName]
+        if (toolConfig) {
+          const toolModule = await import(toolConfig.path)
+          const ToolClass = toolModule.default || toolModule[toolConfig.className]
+          
+          if (ToolClass) {
+            const toolInstance = new ToolClass()
+            this.tools.set(toolName, toolInstance)
+            continue
+          }
+        }
+
+        // 如果映射中没有找到，尝试通用加载方式
+        const paths = [
+          `../tools/slidev/${toolName}.js`,
+          `../tools/writing/${toolName}.js`,
+          `../tools/base/${toolName}.js`,
+          `../tools/research/${toolName}.js`
+        ]
+
+        let loaded = false
+        for (const path of paths) {
+          try {
+            const toolModule = await import(path)
+            const ToolClass = toolModule.default || toolModule[toolName]
+            
+            if (ToolClass) {
+              const toolInstance = new ToolClass()
+              this.tools.set(toolName, toolInstance)
+              loaded = true
+              break
+            }
+          } catch (e) {
+            // 继续尝试下一个路径
+          }
+        }
+
+        if (!loaded) {
+          console.warn(`无法加载工具 ${toolName}: 未找到对应的工具类`)
         }
       } catch (error) {
-        // 如果是基础工具，尝试从主工具目录加载
-        try {
-          const basePath = `../tools/writing/${toolName}.js`
-          const baseModule = await import(basePath)
-          const BaseClass = baseModule.default || baseModule[toolName]
-          
-          if (BaseClass) {
-            const baseInstance = new BaseClass()
-            this.tools.set(toolName, baseInstance)
-          }
-        } catch (baseError) {
-          console.warn(`无法加载工具 ${toolName}:`, error)
-        }
+        console.warn(`无法加载工具 ${toolName}:`, error)
       }
     }
   }

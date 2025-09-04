@@ -305,7 +305,7 @@ export const slideConvertCommand: SlashCommand = {
 
 /**
  * slide-export: 将 Markdown/文本转换为 Slidev 并落盘，可选导出 PDF
- * 用法：/slide-export <输出目录> --from=<markdown路径> [--pdf]
+ * 用法：/slide-export <输出目录> --from=<markdown路径|"主题文本"> [--pdf] [--theme=default]
  */
 export const slideExportCommand: SlashCommand = {
   type: 'local',
@@ -405,8 +405,22 @@ export const slideInitCommand: SlashCommand = {
       `mdc: true\n` +
       `---\n\n`
 
-    const coverTpl = rfs(join(process.cwd(), 'src/templates/slidev/default/cover.md'), 'utf-8')
-    const endTpl = rfs(join(process.cwd(), 'src/templates/slidev/default/end.md'), 'utf-8')
+    // 使用内置模板，避免路径问题
+    const coverTpl = `# {{title}}
+
+<div class="pt-12">
+  <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
+    开始演示 <carbon:arrow-right class="inline"/>
+  </span>
+</div>`
+
+    const endTpl = `---
+layout: end
+---
+
+# 谢谢
+
+Questions?`
 
     const render = (tpl: string) => tpl
       .replace(/\{\{title\}\}/g, title)
@@ -475,6 +489,341 @@ export const slideBuildCommand: SlashCommand = {
 }
 
 /**
+ * /slide-quick：快速生成主题 PPT
+ */
+export const slideQuickCommand: SlashCommand = {
+  type: 'local',
+  name: 'slide-quick',
+  description: '快速生成指定主题的 Slidev 演示文稿',
+  aliases: ['quick-ppt', '快速PPT'],
+  usage: '/slide-quick <主题> [--dir=./slides] [--theme=default]',
+  examples: [
+    '/slide-quick "探索星空" --dir=./space-slides --theme=seriph'
+  ],
+  async call(args: string): Promise<string> {
+    const parts = args.trim().split(/\s+/)
+    if (parts.length === 0) {
+      return '用法：/slide-quick <主题> [--dir=./slides] [--theme=default]'
+    }
+    
+    // 解析主题（支持引号）
+    const match = args.match(/^"([^"]+)"/) || args.match(/^'([^']+)'/)
+    const topic = match ? match[1] : parts[0]
+    const rest = match ? args.substring(match[0].length) : parts.slice(1).join(' ')
+    
+    const outputDir = resolve((rest.match(/--dir=([^\s]+)/)?.[1]) || './slides')
+    const theme = (rest.match(/--theme=([^\s]+)/)?.[1]) || 'seriph'
+    
+    // 根据主题生成内容
+    let content = generateTopicContent(topic, theme)
+    
+    // 创建目录并写入文件
+    mkdirSync(outputDir, { recursive: true })
+    const slidesPath = join(outputDir, 'slides.md')
+    writeFileSync(slidesPath, content, 'utf-8')
+    
+    return `✅ 已生成"${topic}"主题的 Slidev 演示：\n- 输出目录：${outputDir}\n- 文件：slides.md\n- 预览命令：npx @slidev/cli ${slidesPath} --open`
+  },
+  userFacingName: () => 'slide-quick'
+}
+
+/**
+ * 根据主题生成内容
+ */
+function generateTopicContent(topic: string, theme: string): string {
+  const templates: Record<string, () => string> = {
+    '探索星空': () => generateSpaceExplorationSlides(topic, theme),
+    '默认': () => generateDefaultSlides(topic, theme)
+  }
+  
+  const generator = templates[topic] || templates['默认']
+  return generator()
+}
+
+/**
+ * 生成探索星空主题的幻灯片
+ */
+function generateSpaceExplorationSlides(title: string, theme: string): string {
+  return `---
+theme: ${theme}
+title: ${title}
+aspectRatio: 16/9
+highlighter: shiki
+monaco: true
+mdc: true
+background: 'linear-gradient(45deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+---
+
+# ${title}
+## 宇宙的奥秘与人类的征程
+
+> 仰望星空，脚踏实地
+
+<div class="pt-12">
+  <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
+    开始探索 <carbon:arrow-right class="inline"/>
+  </span>
+</div>
+
+---
+layout: center
+class: text-center
+---
+
+# 🌌 宇宙概览
+
+<div class="text-6xl text-blue-400 mb-8">
+  ∞
+</div>
+
+<div class="text-xl text-gray-300 space-y-4">
+  <p>宇宙年龄：约 138 亿年</p>
+  <p>可观测宇宙直径：约 930 亿光年</p>
+  <p>估计星系数量：超过 2 万亿个</p>
+</div>
+
+---
+
+# 🌟 宇宙的诞生与演化
+
+<div class="grid grid-cols-3 gap-6 mt-8">
+
+<div class="p-4 border border-blue-500 rounded-lg">
+<h3 class="text-blue-400 font-bold mb-2">大爆炸理论</h3>
+<ul class="text-sm space-y-1">
+  <li>• 138亿年前的奇点爆炸</li>
+  <li>• 宇宙急剧膨胀</li>
+  <li>• 基本粒子形成</li>
+</ul>
+</div>
+
+<div class="p-4 border border-purple-500 rounded-lg">
+<h3 class="text-purple-400 font-bold mb-2">暗物质时代</h3>
+<ul class="text-sm space-y-1">
+  <li>• 暗物质占宇宙27%</li>
+  <li>• 形成宇宙结构骨架</li>
+  <li>• 引力聚集物质</li>
+</ul>
+</div>
+
+<div class="p-4 border border-green-500 rounded-lg">
+<h3 class="text-green-400 font-bold mb-2">恒星形成</h3>
+<ul class="text-sm space-y-1">
+  <li>• 氢气云坍塌</li>
+  <li>• 核聚变点燃</li>
+  <li>• 第一代恒星诞生</li>
+</ul>
+</div>
+
+</div>
+
+---
+
+# ⭐ 恒星的生命周期
+
+<v-clicks>
+
+## 1. 原恒星阶段
+- 星云坍塌
+- 温度逐渐升高
+- 核聚变尚未开始
+
+## 2. 主序星阶段
+- 氢聚变成氦
+- 能量输出稳定
+- 太阳现处此阶段
+
+## 3. 红巨星阶段
+- 氢燃料耗尽
+- 外层膨胀
+- 温度下降
+
+## 4. 终极命运
+- 白矮星（小质量）
+- 中子星（中等质量）
+- 黑洞（大质量）
+
+</v-clicks>
+
+---
+
+# 🚀 人类探索星空
+
+<div class="text-2xl text-blue-300 mb-6">从古代观星到现代航天</div>
+
+<div class="grid grid-cols-2 gap-8 max-w-4xl mx-auto">
+
+<div class="space-y-4">
+  <h3 class="text-xl font-bold text-green-400">🔭 观测发展</h3>
+  <ul class="text-left space-y-2">
+    <li>• 肉眼观测（古代）</li>
+    <li>• 光学望远镜（17世纪）</li>
+    <li>• 射电望远镜（20世纪）</li>
+    <li>• 空间望远镜（现代）</li>
+  </ul>
+</div>
+
+<div class="space-y-4">
+  <h3 class="text-xl font-bold text-purple-400">🛸 空间探索</h3>
+  <ul class="text-left space-y-2">
+    <li>• 人造卫星（1957）</li>
+    <li>• 载人航天（1961）</li>
+    <li>• 登月计划（1969）</li>
+    <li>• 空间站（1971-今）</li>
+  </ul>
+</div>
+
+</div>
+
+---
+
+# 🔮 未来展望
+
+<div class="grid grid-cols-2 gap-8">
+
+<div class="space-y-4">
+  <h3 class="text-xl font-bold text-blue-400">近期计划 (2024-2030)</h3>
+  <ul class="space-y-2">
+    <li>• 月球基地建设</li>
+    <li>• 火星移民准备</li>
+    <li>• 小行星采矿</li>
+  </ul>
+</div>
+
+<div class="space-y-4">
+  <h3 class="text-xl font-bold text-purple-400">远期愿景 (2030+)</h3>
+  <ul class="space-y-2">
+    <li>• 星际旅行</li>
+    <li>• 寻找地外生命</li>
+    <li>• 人类文明扩展</li>
+  </ul>
+</div>
+
+</div>
+
+---
+layout: center
+class: text-center
+---
+
+# 🌠 结语
+
+<div class="text-3xl mb-8">
+  探索星空，就是探索我们自己
+</div>
+
+<blockquote class="text-xl text-gray-300 italic">
+  "我们都是星尘，我们都是黄金"
+</blockquote>
+
+<div class="text-lg text-blue-300 mt-4">
+  — 卡尔·萨根
+</div>
+
+---
+layout: end
+---
+
+# 谢谢观看
+
+<div class="text-center space-y-4 mt-12">
+  
+<div class="text-2xl">🌌 Questions & Discussion 🌌</div>
+
+<div class="text-lg text-gray-400">
+  继续探索宇宙的奥秘
+</div>
+
+</div>`
+}
+
+/**
+ * 生成默认主题的幻灯片
+ */
+function generateDefaultSlides(title: string, theme: string): string {
+  return `---
+theme: ${theme}
+title: ${title}
+aspectRatio: 16/9
+highlighter: shiki
+monaco: true
+mdc: true
+---
+
+# ${title}
+
+> 开始你的演示
+
+<div class="pt-12">
+  <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
+    开始 <carbon:arrow-right class="inline"/>
+  </span>
+</div>
+
+---
+
+# 目录
+
+- 章节 1
+- 章节 2  
+- 章节 3
+- 总结
+
+---
+
+# 章节 1
+
+<v-clicks>
+
+- 要点 A
+- 要点 B
+- 要点 C
+
+</v-clicks>
+
+---
+
+# 章节 2
+
+## 子标题
+
+内容描述...
+
+\`\`\`typescript
+// 代码示例
+function example() {
+  return "Hello World"
+}
+\`\`\`
+
+---
+
+# 章节 3
+
+![图片示例](/placeholder-image.png)
+
+---
+
+# 总结
+
+<v-clicks>
+
+- 关键要点 1
+- 关键要点 2
+- 下一步行动
+
+</v-clicks>
+
+---
+layout: end
+---
+
+# 谢谢
+
+Questions?`
+}
+
+/**
  * /slide export：导出 PDF/PNG
  */
 export const slideStdExportCommand: SlashCommand = {
@@ -504,6 +853,7 @@ export const slideCommands: SlashCommand[] = [
   slideCreateCommand,
   slideConvertCommand,
   slideExportCommand,
+  slideQuickCommand,
   slideInitCommand,
   slideDevCommand,
   slideBuildCommand,
