@@ -35,7 +35,8 @@ import {
   QwenClientTool,
   GLMClientTool,
 } from '../tools/writing/index.js'
-import { WebSearchTool, CitationManagerTool } from '../tools/research/index.js'
+import { WebSearchTool } from '../tools/web/WebSearchTool.js'
+import { CitationTool } from '../tools/writing/CitationTool.js'
 import { WeChatConverterTool } from '../tools/publish/index.js'
 import { SlideProjectInitTool } from '../tools/slidev/SlideProjectInitTool.js'
 import { SlideExporterTool } from '../tools/slidev/SlideExporterTool.js'
@@ -352,7 +353,7 @@ export class WriteFlowApp extends EventEmitter {
     // 注册研究工具
     const researchTools = [
       new WebSearchTool(),
-      new CitationManagerTool(),
+      new CitationTool(),
     ]
     this.toolManager.registerTools(researchTools)
 
@@ -599,6 +600,27 @@ ${this.projectWritingConfig}`
 
     try {
       const response = await this.aiService.processRequest(aiRequest)
+
+      // 统一拦截一步，提取 thinking 和可能的传统工具调用（兼容非 function-calling 提供商）
+      try {
+        const intercept = await this.interceptToolCalls(response.content)
+        if (intercept.thinkingContent) {
+          // 将 thinking 通过事件发给 UI（可选择展示）
+          this.emit('ai-thinking', intercept.thinkingContent)
+        }
+        if (intercept.shouldIntercept && intercept.toolCalls?.length) {
+          for (const call of intercept.toolCalls) {
+            await this.executeToolWithEvents(call.toolName, call.input)
+          }
+        }
+        // 若拦截返回了清理后的正文，优先返回它
+        if (intercept.processedResponse) {
+          return intercept.processedResponse
+        }
+      } catch (e) {
+        console.warn('[AI] 拦截/解析工具调用失败，使用原始响应:', (e as Error)?.message)
+      }
+
       return response.content
     } catch (error) {
       throw new Error(`AI查询失败: ${error instanceof Error ? error.message : '未知错误'}`)
@@ -736,6 +758,9 @@ Create a detailed plan for the user's request.`
         maxTokens: this.config.maxTokens,
         stream: this.config.stream,
         onToken: options.onToken,
+        // 允许 AI 直接调用 Todo 工具（DeepSeek/OpenAI 兼容路径优先生效）
+        allowedTools: ['todo_write', 'todo_read', 'exit_plan_mode'],
+        enableToolCalls: true,
       }
 
       // 调用AI服务
@@ -1056,6 +1081,13 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
             toolCalls.push({ toolName: 'exit_plan_mode', input })
             console.log('📋 ExitPlanMode 计划内容长度:', input.plan.length)
             this.emit('exit-plan-mode', input.plan)
+          } else if (toolName === 'TodoWrite' || toolName === 'todo_write') {
+            // TodoWrite 更新任务列表
+            toolCalls.push({ toolName: 'todo_write', input })
+            console.log('🗒️  TodoWrite 调用已拦截，转交 todo_write 工具执行')
+          } else if (toolName === 'TodoRead' || toolName === 'todo_read') {
+            toolCalls.push({ toolName: 'todo_read', input })
+            console.log('📖  TodoRead 调用已拦截，转交 todo_read 工具执行')
           }
         }
       }
@@ -1071,6 +1103,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       // 检测传统工具调用格式
       const patterns = [
         /<function_calls>[\s\S]*?<invoke name="ExitPlanMode">[\s\S]*?<parameter name="plan">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi,
+        /<function_calls>[\s\S]*?<invoke name="TodoWrite">[\s\S]*?<parameter name="todos">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi,
       ]
 
       for (const pattern of patterns) {
@@ -1078,12 +1111,27 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
 
         for (const match of matches) {
           shouldIntercept = true
-          const planContent = match[1].trim()
-
-          toolCalls.push({ toolName: 'exit_plan_mode', input: { plan: planContent } })
-          console.log('🎯 检测到传统 ExitPlanMode 工具调用')
-          this.emit('exit-plan-mode', planContent)
-          processedResponse = aiResponse.replace(match[0], '')
+          if (pattern.source.includes('ExitPlanMode')) {
+            const planContent = match[1].trim()
+            toolCalls.push({ toolName: 'exit_plan_mode', input: { plan: planContent } })
+            console.log('🎯 检测到传统 ExitPlanMode 工具调用')
+            this.emit('exit-plan-mode', planContent)
+            processedResponse = aiResponse.replace(match[0], '')
+          } else {
+            // 传统 TodoWrite 调用：尝试解析 todos JSON
+            const rawTodos = match[1].trim()
+            let parsed: any = null
+            try {
+              const cleaned = rawTodos.replace(/^```[a-zA-Z]*\n?/,'').replace(/```\s*$/,'')
+              parsed = JSON.parse(cleaned)
+            } catch (e) {
+              console.warn('⚠️  解析传统 TodoWrite 参数失败，按原始文本传递:', (e as Error).message)
+            }
+            const input = parsed ? { todos: parsed } : { todos: rawTodos }
+            toolCalls.push({ toolName: 'todo_write', input })
+            console.log('🎯 检测到传统 TodoWrite 工具调用')
+            processedResponse = aiResponse.replace(match[0], '')
+          }
         }
       }
 

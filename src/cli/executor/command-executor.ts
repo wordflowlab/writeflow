@@ -7,6 +7,7 @@ import { fileCommands } from '../commands/file-commands.js'
 import { publishCommands } from '../commands/publish-commands.js'
 import { styleCommands } from '../commands/style-commands.js'
 import { todoCommands } from '../commands/todo-commands.js'
+import { mcpCommands } from '../commands/mcp-commands.js'
 
 /**
  * 命令执行器
@@ -24,7 +25,8 @@ export class CommandExecutor {
       ...fileCommands,
       ...publishCommands,
       ...styleCommands,
-      ...todoCommands
+      ...todoCommands,
+      ...mcpCommands
     ]
   }
 

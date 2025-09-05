@@ -51,13 +51,33 @@ export function RichTextRenderer({
       return null
     }
 
-    // 应用样式属性
+    // 根据内容类型分配更鲜明的颜色
+    const getTypeColor = () => {
+      switch (type) {
+        case 'heading': 
+          return theme.info  // 使用鲜明的蓝色作为标题
+        case 'strong': 
+          return theme.warning  // 使用橙色强调粗体
+        case 'em': 
+          return theme.claude   // 使用品牌绿色强调斜体
+        case 'link': 
+          return theme.info     // 链接使用蓝色
+        case 'blockquote': 
+          return theme.dimText  // 引用使用稍微暗一些但仍清晰的灰色
+        case 'list_item': 
+          return theme.text     // 列表项使用正常文本颜色
+        default: 
+          return color || theme.text
+      }
+    }
+
+    // 应用样式属性，使用增强的颜色
     const textProps = {
       key: index,
-      color: color,
-      bold: style.bold,
-      italic: style.italic,
-      underline: style.underline,
+      color: getTypeColor(),
+      bold: style.bold || type === 'strong',
+      italic: style.italic || type === 'em',
+      underline: style.underline || type === 'link',
       dimColor: style.dim,
       wrap: wrap ? "wrap" as const : undefined
     }

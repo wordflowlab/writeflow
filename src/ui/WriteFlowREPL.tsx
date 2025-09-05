@@ -383,8 +383,17 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
 
     writeFlowApp.on('launch-model-config', handleLaunchModelConfig)
 
+    // 展示 AI 的思维片段（<thinking> 内容），作为可见但轻量的提示
+    const handleThinking = (content: string) => {
+      const thinkingMsg = createSystemMessage(`🧠 思考片段\n${content}`)
+      // 插入“思考片段”但不影响后续输出
+      setMessages(prev => [...prev, thinkingMsg])
+    }
+    writeFlowApp.on('ai-thinking', handleThinking)
+
     return () => {
       writeFlowApp.off('launch-model-config', handleLaunchModelConfig)
+      writeFlowApp.off('ai-thinking', handleThinking)
     }
   }, [writeFlowApp])
 

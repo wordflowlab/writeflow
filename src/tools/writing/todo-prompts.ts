@@ -1,7 +1,5 @@
 /**
- * TodoList 工具提示词
- * 基于 Claude Code v1.0.33 的完整提示词系统
- * 专为 WriteFlow AI 写作助手优化
+ * TodoList 工具提示词（迁移至 tools/writing 目录，便于与工具同域）
  */
 
 export const TODO_WRITE_DESCRIPTION = `更新当前会话的任务列表。主动且频繁地使用此工具来追踪进度和待处理任务。`
@@ -82,88 +80,41 @@ The assistant used the todo list because:
 4. The todo list helps methodically track improvements across different aspects
 5. This systematic approach ensures all optimization requirements are addressed
 </reasoning>
-</example>
 
-## Examples of When NOT to Use the Todo List
+## Operational Guidelines
 
-<example>
-User: 这个标题怎么样："AI时代的机遇与挑战"
-Assistant: 这个标题很不错！"AI时代的机遇与挑战"简洁明了，既涵盖了积极面（机遇）也包含了需要关注的方面（挑战），主题明确且容易理解。
+1. **Task Creation Standards**:
+   - Each writing task must include a clear action-oriented description
+   - Provide both forms: content and activeForm
+   - Use specific writing verbs (e.g., 研究/撰写/优化/校对)
 
-<reasoning>
-The assistant did not use the todo list because this is a simple evaluation request with no actual writing task to complete. The user is simply asking for feedback, not requesting the assistant to perform multiple steps or writing tasks.
-</reasoning>
-</example>
-
-<example>
-User: 帮我把这句话改得更简洁："由于技术的不断发展和进步，我们的生活变得越来越便利"
-Assistant: 可以改为："技术进步让我们的生活更加便利。"
-* Uses writing tools to refine the sentence *
-
-<reasoning>
-The assistant did not use the todo list because this is a single, straightforward sentence revision task. Refining one sentence doesn't require tracking multiple steps or systematic organization.
-</reasoning>
-</example>
-
-<example>
-User: 现在是几点？
-Assistant: 我无法获取当前的实时时间信息。建议您查看您的设备时钟或搜索"现在几点"来获取准确的当前时间。
-
-<reasoning>
-The assistant did not use the todo list because this is an informational request with no writing task involved. There are no multiple steps to track or organize.
-</reasoning>
-</example>
-
-## Task States and Management
-
-1. **Task States**: Use these states to track progress:
-   - pending: Task not yet started
-   - in_progress: Currently working on (limit to ONE task at a time)
-   - completed: Task finished successfully
-
-   **IMPORTANT**: Task descriptions must have two forms:
-   - content: The imperative form describing what needs to be done (e.g., "撰写技术分析", "校对全文")
-   - activeForm: The present continuous form shown during execution (e.g., "正在撰写技术分析", "正在校对全文")
-
-2. **Task Management**:
-   - Update task status in real-time as you work
-   - Mark tasks complete IMMEDIATELY after finishing (don't batch completions)
-   - Exactly ONE task must be in_progress at any time (not less, not more)
-   - Complete current tasks before starting new ones
-   - Remove tasks that are no longer relevant from the list entirely
-
-3. **Task Completion Requirements**:
-   - ONLY mark a task as completed when you have FULLY accomplished it
-   - If you encounter errors, blockers, or cannot finish, keep the task as in_progress
-   - When blocked, create a new task describing what needs to be resolved
-   - Never mark a task as completed if:
-     - Writing quality is poor
-     - Implementation is partial
-     - You encountered unresolved issues
-     - You couldn't find necessary research materials or references
-
-4. **Task Breakdown for Writing**:
-   - Create specific, actionable writing items
-   - Break complex writing projects into smaller, manageable steps
-   - Use clear, descriptive task names with writing-specific verbs
-   - Always provide both forms:
-     - content: "撰写产品介绍"
-     - activeForm: "正在撰写产品介绍"
+2. **Task State Management**:
+   - Exactly ONE task should be in_progress at any time
+   - Update status immediately when switching tasks
+   - Mark tasks as completed only when fully finished
 
 ## Writing-Specific Guidelines
+- Technical: 研究 → 大纲 → 撰写 → 校对 → 优化
+- Creative: 构思 → 草稿 → 完善 → 润色 → 终稿
+- Business: 分析 → 结构 → 撰写 → 调整 → 审核
 
-### Task Creation for Different Writing Types
-- **Technical Writing**: 研究 → 大纲 → 撰写 → 校对 → 优化
-- **Creative Writing**: 构思 → 草稿 → 完善 → 润色 → 终稿
-- **Business Writing**: 分析需求 → 结构设计 → 内容撰写 → 格式调整 → 最终审核
-- **Academic Writing**: 文献调研 → 论证框架 → 章节撰写 → 引用整理 → 全文校对
+## Tool Invocation Format
 
-### Priority Guidelines for Writing Tasks
-- **High Priority**: 核心内容撰写、关键章节、deadline紧急任务
-- **Medium Priority**: 结构调整、格式优化、补充内容
-- **Low Priority**: 细节润色、风格统一、最终校对
+### Preferred (Function Calling)
+Use native function calling with the following schema:
 
-When in doubt, use this tool. Being proactive with writing task management demonstrates attentiveness and ensures you complete all writing requirements successfully.
+- name: todo_write
+- parameters: { "todos": Todo[] }
+
+Each Todo item must contain: id, content, activeForm, status (one of pending|in_progress|completed), optional priority.
+
+### Fallback (Traditional Markup)
+If your provider does not support function calling, output ONLY the following block (no extra text):
+<function_calls>
+  <invoke name="TodoWrite">
+    <parameter name="todos">[{"id":"1","content":"写开篇","activeForm":"正在写开篇","status":"in_progress"}]</parameter>
+  </invoke>
+</function_calls>
 `
 
 export const TODO_READ_DESCRIPTION = `读取当前会话的任务列表`
@@ -182,70 +133,52 @@ Use this tool when you need to:
 - Plan next steps in your writing workflow
 - Provide status updates to the user about writing progress
 
-The tool returns a formatted view of all writing tasks with their current status, making it easy to track writing project progress and ensure nothing is overlooked.
+## Tool Invocation Format
+
+### Preferred (Function Calling)
+- name: todo_read
+- parameters: {}
+
+### Fallback (Traditional Markup)
+Output ONLY the following block when function calling is unavailable:
+<function_calls>
+  <invoke name="TodoRead">
+    <parameter name="todos">[]</parameter>
+  </invoke>
+</function_calls>
 `
 
-/**
- * 获取 TodoWrite 工具的完整提示词
- */
+/** 获取 TodoWrite 工具的完整提示词 */
 export function getTodoWritePrompt(): string {
   return TODO_WRITE_PROMPT
 }
 
-/**
- * 获取 TodoWrite 工具的简短描述
- */
+/** 获取 TodoWrite 工具的简短描述 */
 export function getTodoWriteDescription(): string {
   return TODO_WRITE_DESCRIPTION
 }
 
-/**
- * 获取 TodoRead 工具的完整提示词
- */
+/** 获取 TodoRead 工具的完整提示词 */
 export function getTodoReadPrompt(): string {
   return TODO_READ_PROMPT
 }
 
-/**
- * 获取 TodoRead 工具的简短描述
- */
+/** 获取 TodoRead 工具的简短描述 */
 export function getTodoReadDescription(): string {
   return TODO_READ_DESCRIPTION
 }
 
-/**
- * 为写作场景生成示例任务
- */
+/** 为写作场景生成示例任务 */
 export function generateWritingTaskExamples(): Array<{
   content: string
   activeForm: string
   scenario: string
 }> {
   return [
-    {
-      content: '研究人工智能最新发展趋势',
-      activeForm: '正在研究人工智能发展趋势',
-      scenario: '技术博客写作',
-    },
-    {
-      content: '撰写产品核心功能介绍',
-      activeForm: '正在撰写产品功能介绍',
-      scenario: '营销文案创作',
-    },
-    {
-      content: '设计文章整体结构大纲',
-      activeForm: '正在设计文章结构大纲',
-      scenario: '长篇文章创作',
-    },
-    {
-      content: '收集相关案例和数据支撑',
-      activeForm: '正在收集案例和数据',
-      scenario: '分析报告写作',
-    },
-    {
-      content: '校对全文并优化表达',
-      activeForm: '正在校对和优化全文',
-      scenario: '文章润色阶段',
-    },
+    { content: '研究人工智能最新发展趋势', activeForm: '正在研究人工智能发展趋势', scenario: '技术博客写作' },
+    { content: '撰写产品核心功能介绍', activeForm: '正在撰写产品功能介绍', scenario: '营销文案创作' },
+    { content: '设计文章整体结构大纲', activeForm: '正在设计文章结构大纲', scenario: '长篇文章创作' },
+    { content: '收集相关案例和数据支撑', activeForm: '正在收集案例和数据', scenario: '分析报告写作' },
+    { content: '校对全文并优化表达', activeForm: '正在校对和优化全文', scenario: '文章润色阶段' },
   ]
 }

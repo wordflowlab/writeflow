@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from '@jest/globals'
-import { WebSearchTool } from '@/tools/research/web-search.js'
+import { WebSearchTool } from '@/tools/web/WebSearchTool.js'
 
 describe('WebSearchTool', () => {
   let searchTool: WebSearchTool

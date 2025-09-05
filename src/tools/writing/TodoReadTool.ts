@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { WritingTool, ToolUseContext, ToolResult, ValidationResult } from '../../types/WritingTool.js'
 import { TodoManager } from '../TodoManager.js'
 import { Todo, TodoStatus } from '../../types/Todo.js'
-import { getTodoReadDescription, getTodoReadPrompt } from '../../prompts/TodoPrompts.js'
+import { getTodoReadDescription, getTodoReadPrompt } from './todo-prompts.js'
 
 // 定义输入 Schema - 参考 Claude Code FL6，不需要任何参数
 const InputSchema = z.object({}).describe(

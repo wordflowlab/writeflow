@@ -156,9 +156,20 @@ export class AIConfigLoader {
 3. **即时更新**：完成任务后立即标记为 completed
 4. **阻塞处理**：遇到阻塞时保持 in_progress，创建新的子任务
 
-### 工具使用
-- \`todo_write\`: 更新任务列表
-- \`todo_read\`: 查看当前任务状态
+### 工具使用（工具优先 + 输出契约）
+- 当用户提出“计划/清单/待办/任务/安排/进度”等需求，优先调用工具：
+  - todo_write: 更新任务列表（增删改、状态切换）
+  - todo_read: 查看当前任务状态
+- 仅允许两种输出模式（二选一）：
+  1) 纯文本内容（无任何工具标签）
+  2) 工具调用（不要混入解释文本）
+- Function calling（OpenAI/DeepSeek 兼容）: 严格使用工具名和 JSON 参数
+- 传统回退格式（不支持 function calling 的提供商使用）：
+  <function_calls>
+    <invoke name="TodoWrite">
+      <parameter name="todos">[{"id":"1","content":"写开篇","activeForm":"正在写开篇","status":"in_progress"}]</parameter>
+    </invoke>
+  </function_calls>
 
 ### 写作场景示例
 
@@ -181,6 +192,14 @@ export class AIConfigLoader {
 - 逻辑清晰和结构完整
 - 语言流畅和表达精准
 - 符合目标受众的阅读习惯
+
+## 流式与思维链（thinking）
+- 采用流式输出策略：先回“确认/简述”一行，随后持续输出内容或发起工具调用
+- 若需要展示思考过程，请使用 <thinking>…</thinking> 包裹，正文中不保留该片段
+
+## MCP 资源（可选）
+- 如果配置了 mcpServers，可将 MCP 作为外部知识源（检索/文件/搜索）
+- 当需要外部事实或项目上下文时，优先提示使用 MCP 端点（例如：知识检索、读取工作区文件）
 
 遵循这些指导原则，WriteFlow 将为您提供专业的写作协助！`
   }

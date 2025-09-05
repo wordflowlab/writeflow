@@ -1,9 +1,11 @@
+import React from 'react'
+import { Box, Text } from 'ink'
 import { z } from 'zod'
 import { WritingTool, ToolUseContext, ToolResult, ValidationResult } from '../../types/WritingTool.js'
 import { TodoManager } from '../TodoManager.js'
 import { Todo, TodoStatus, TodoPriority } from '../../types/Todo.js'
 import { emitReminderEvent, TodoChangeEvent } from '../../services/SystemReminderService.js'
-import { getTodoWriteDescription, getTodoWritePrompt } from '../../prompts/TodoPrompts.js'
+import { getTodoWriteDescription, getTodoWritePrompt } from './todo-prompts.js'
 
 // 定义输入 Schema - 完全复刻 Claude Code 的结构
 const TodoItemSchema = z.object({
@@ -31,6 +33,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
   securityLevel = 'safe' as const
 
   private todoManager: TodoManager
+  private cachedTodos: Todo[] = [] // 缓存最新的 todos 数据用于渲染
 
   constructor(todoManager?: TodoManager) {
     this.todoManager = todoManager || new TodoManager()
@@ -105,6 +108,9 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
 
       // 保存新的任务列表
       await this.todoManager.saveTodos(todoList)
+      
+      // 缓存最新数据供渲染使用
+      this.cachedTodos = todoList
 
       // 生成成功消息 - 复刻 Claude Code 的标准响应
       const successMessage = 'Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable'
@@ -153,6 +159,84 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
     }
     
     return `正在更新任务列表 (${todos.length} 个任务)`
+  }
+
+  // 渲染工具结果消息 - 借鉴 Kode 的实现
+  renderToolResultMessage(): React.ReactElement {
+    // 使用缓存的 todos 数据
+    const currentTodos = this.cachedTodos
+
+    if (currentTodos.length === 0) {
+      return (
+        <Box flexDirection="column" width="100%">
+          <Box flexDirection="row">
+            <Text color="#6B7280">&nbsp;&nbsp;⎿ &nbsp;</Text>
+            <Text color="#9CA3AF">暂无任务</Text>
+          </Box>
+        </Box>
+      )
+    }
+
+    // 排序: [completed, in_progress, pending] - 与 Kode 相同的逻辑
+    const sortedTodos = [...currentTodos].sort((a, b) => {
+      const order = ['completed', 'in_progress', 'pending']
+      return (
+        order.indexOf(a.status) - order.indexOf(b.status) ||
+        a.content.localeCompare(b.content)
+      )
+    })
+
+    // 找到下一个待处理任务（排序后的第一个 pending 任务）
+    const nextPendingIndex = sortedTodos.findIndex(todo => todo.status === TodoStatus.PENDING)
+
+    return (
+      <Box flexDirection="column" width="100%">
+        {sortedTodos.map((todo: Todo, index: number) => {
+          // 确定复选框符号和颜色 - 借鉴 Kode 的精确配色
+          let checkbox: string
+          let textColor: string
+          let isBold = false
+          let isStrikethrough = false
+
+          if (todo.status === TodoStatus.COMPLETED) {
+            checkbox = '☒'
+            textColor = '#6B7280' // 完成任务使用专业灰色
+            isStrikethrough = true
+          } else if (todo.status === TodoStatus.IN_PROGRESS) {
+            checkbox = '☐'
+            textColor = '#10B981' // 进行中任务使用专业绿色
+            isBold = true
+          } else if (todo.status === TodoStatus.PENDING) {
+            checkbox = '☐'
+            // 只有第一个待处理任务获得紫色高亮
+            if (index === nextPendingIndex) {
+              textColor = '#8B5CF6' // 下一个待处理任务使用专业紫色
+              isBold = true
+            } else {
+              textColor = '#9CA3AF' // 其他待处理任务使用柔和灰色
+            }
+          } else {
+            checkbox = '☐'
+            textColor = '#9CA3AF'
+          }
+
+          return (
+            <Box key={todo.id || index} flexDirection="row" marginBottom={0}>
+              <Text color="#6B7280">&nbsp;&nbsp;⎿ &nbsp;</Text>
+              <Box flexDirection="row" flexGrow={1}>
+                <Text color={textColor} bold={isBold} strikethrough={isStrikethrough}>
+                  {checkbox}
+                </Text>
+                <Text> </Text>
+                <Text color={textColor} bold={isBold} strikethrough={isStrikethrough}>
+                  {todo.content}
+                </Text>
+              </Box>
+            </Box>
+          )
+        })}
+      </Box>
+    )
   }
 
   // 私有辅助方法

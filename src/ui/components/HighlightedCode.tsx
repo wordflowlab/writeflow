@@ -20,7 +20,12 @@ export function HighlightedCode({
     try {
       // 检查语言是否被支持
       if (language && supportsLanguage(language)) {
-        return highlight(code, { language })
+        // 使用默认高亮，但通过 CSS 样式优化颜色显示
+        return highlight(code, { 
+          language,
+          // 使用内置的 'atom-one-dark' 主题获得更好的对比度
+          theme: 'atom-one-dark'
+        })
       } else {
         // 如果语言不支持，使用默认的代码块颜色
         return code
@@ -39,13 +44,13 @@ export function HighlightedCode({
   )
 }
 
-// 专门用于行内代码的组件
+// 专门用于行内代码的组件 - 增强可见性
 export function InlineCode({ code }: { code: string }) {
   const theme = getTheme()
   
   return (
-    <Text color={theme.codeBlock} bold>
-      {code}
+    <Text color={theme.codeBlock} bold backgroundColor="#333333">
+      {` ${code} `}
     </Text>
   )
 }
@@ -65,8 +70,8 @@ export function CodeBlock({
   return (
     <>
       {showLanguage && language !== 'text' && (
-        <Text color={theme.dimText} dimColor>
-          {language}
+        <Text color={theme.info} backgroundColor="#333333" bold>
+          {` ${language} `}
         </Text>
       )}
       <HighlightedCode code={code} language={language} />

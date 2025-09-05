@@ -46,48 +46,48 @@ export interface Theme {
   processing: string
 }
 
-// WriteFlow color palette
+// WriteFlow color palette - optimized for better visibility
 const writeFlowTheme: Theme = {
-  // Core text colors
-  text: '#ffffff',
-  secondaryText: '#a0a0a0',
-  dimText: '#666666',
-  muted: '#808080',
+  // Core text colors - increased brightness and contrast
+  text: '#ffffff',          // Pure white for maximum readability
+  secondaryText: '#e0e0e0', // Brighter gray for better visibility
+  dimText: '#b0b0b0',       // Much lighter dim text for better readability
+  muted: '#a0a0a0',         // Brighter muted text
   
-  // Brand colors - WriteFlow specific
+  // Brand colors - WriteFlow specific with better contrast
   claude: '#00ff87',        // Bright green for WriteFlow branding
   success: '#00ff87',       // Same as claude for consistency  
-  error: '#ff6b6b',         // Red for errors
-  warning: '#ff9500',       // Orange for warnings
-  info: '#00aaff',          // Blue for info messages
+  error: '#ff5555',         // Brighter red for better visibility
+  warning: '#ffaa00',       // Brighter orange for warnings
+  info: '#33ccff',          // Brighter blue for info messages
   
-  // UI elements
-  border: '#333333',
-  secondaryBorder: '#555555',
+  // UI elements with better contrast
+  border: '#404040',        // Lighter border for better definition
+  secondaryBorder: '#606060', // Even lighter secondary borders
   background: '#000000',
   
-  // Message-specific colors
-  userMessage: '#cccccc',   // Light gray for user messages
+  // Message-specific colors with enhanced visibility
+  userMessage: '#e0e0e0',   // Much brighter for user messages
   assistantMessage: '#ffffff', // Pure white for assistant messages
-  systemMessage: '#888888', // Medium gray for system messages
+  systemMessage: '#cccccc', // Brighter gray for system messages
   codeBlock: '#00ff87',     // Brand green for code
-  quote: '#888888',         // Gray for quotes
+  quote: '#b0b0b0',         // Brighter gray for quotes
   
-  // Writing mode colors
+  // Writing mode colors with better visibility
   writing: '#00ff87',       // Bright green for creative writing
-  editing: '#ff9500',       // Orange for editing mode
-  reviewing: '#007acc',     // Blue for review mode
+  editing: '#ffaa00',       // Brighter orange for editing mode
+  reviewing: '#33aaff',     // Brighter blue for review mode
   
-  // Interactive elements
+  // Interactive elements with enhanced visibility
   suggestion: '#00ff87',    // Same as brand color
-  highlight: '#ffff00',     // Yellow for highlighting
-  selection: '#0066cc',     // Blue for selections
+  highlight: '#ffff00',     // Bright yellow for highlighting
+  selection: '#3388ff',     // Brighter blue for selections
   
-  // Status indicators
-  loading: '#a0a0a0',       // Gray for loading
+  // Status indicators with better contrast
+  loading: '#cccccc',       // Much brighter gray for loading
   thinking: '#00ff87',      // Brand color for AI thinking
   ready: '#00ff87',         // Brand color for ready state
-  processing: '#ff9500',    // Orange for processing
+  processing: '#ffaa00',    // Brighter orange for processing
 }
 
 // Light theme variant - optimized for light backgrounds

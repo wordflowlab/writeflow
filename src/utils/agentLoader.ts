@@ -140,8 +140,8 @@ export class AgentLoader {
       'Bash': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'BashToolAdapter' },
       'Glob': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'GlobToolAdapter' },
       'Grep': { path: '../tools/adapters/CoreToolsAdapter.js', className: 'GrepToolAdapter' },
-      'WebSearch': { path: '../tools/research/web-search.js', className: 'WebSearchTool' },
-      'WebFetch': { path: '../tools/research/web-fetch.js', className: 'WebFetchTool' },
+      'WebSearch': { path: '../tools/web/WebSearchTool.js', className: 'WebSearchTool' },
+      'WebFetch': { path: '../tools/web/WebFetchTool.js', className: 'WebFetchTool' },
     }
 
     for (const toolName of toolNames) {
@@ -167,7 +167,7 @@ export class AgentLoader {
           `../tools/slidev/${toolName}.js`,
           `../tools/writing/${toolName}.js`,
           `../tools/base/${toolName}.js`,
-          `../tools/research/${toolName}.js`,
+          `../tools/web/${toolName}.js`,
         ]
 
         let loaded = false

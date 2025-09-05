@@ -92,10 +92,10 @@ export type {
 } from './components/ai/StreamingAIChat.js'
 
 // 演示和工具
-export {
-  runStreamingDemo,
-  runInteractiveDemo
-} from './demo/streamingDemo.js'
+// export {
+//   runStreamingDemo,
+//   runInteractiveDemo
+// } from './demo/streamingDemo.js'
 
 export {
   runFormatDemo

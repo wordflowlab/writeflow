@@ -339,14 +339,14 @@ export class NetworkOptimizer extends EventEmitter {
    * 记录成功请求
    */
   private recordRequestSuccess(connectionId: string, latency: number, response: Response): void {
+    // 估算接收字节数
+    const contentLength = parseInt(response.headers.get('content-length') || '0')
+    
     const connection = this.connections.get(connectionId)
     if (connection) {
       connection.status = 'connected'
       connection.lastActivity = Date.now()
       connection.latencies.push(latency)
-      
-      // 估算接收字节数
-      const contentLength = parseInt(response.headers.get('content-length') || '0')
       connection.bytesReceived += contentLength
     }
     
