@@ -9,7 +9,7 @@ import { WritingModeStep } from './WritingModeStep.js'
 import { ModelConfigStep } from './ModelConfigStep.js'
 import { PreferencesStep } from './PreferencesStep.js'
 import { getGlobalConfig, saveGlobalConfig, WritingPreferences } from '../../../utils/config.js'
-import { ThemeNames } from '../../../utils/theme.js'
+import { ThemeNames, getRecommendedTheme } from '../../../utils/theme.js'
 
 interface WriteFlowOnboardingProps {
   onComplete: () => void
@@ -28,7 +28,7 @@ export function WriteFlowOnboarding({
     goToNextStep,
   } = useOnboardingStep()
 
-  const [selectedTheme, setSelectedTheme] = useState<ThemeNames>('dark')
+  const [selectedTheme, setSelectedTheme] = useState<ThemeNames>(getRecommendedTheme())
   const [writingPreferences, setWritingPreferences] = useState<WritingPreferences>({
     defaultLanguage: 'zh-CN',
     writingStyle: 'friendly',

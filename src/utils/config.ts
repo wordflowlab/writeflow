@@ -191,7 +191,7 @@ export type GlobalConfig = {
   numStartups: number
   autoUpdaterStatus?: AutoUpdaterStatus
   userID?: string
-  theme: 'dark' | 'light'
+  theme: 'dark' | 'light' | 'dark-accessible' | 'light-accessible' | 'auto'
   hasCompletedOnboarding?: boolean
   // 跟踪重置入职的最后版本，与 MIN_VERSION_REQUIRING_ONBOARDING_RESET 一起使用
   lastOnboardingVersion?: string
@@ -281,35 +281,41 @@ export function getProjectConfigPath(): string {
 /**
  * 获取全局配置
  */
-export const getGlobalConfig = memoize((): GlobalConfig => {
-  const configPath = getGlobalConfigPath()
+// 非缓存版本的全局配置读取，确保主题等设置实时生效
+export const getGlobalConfig: (() => GlobalConfig) & { cache: { clear: () => void } } = (() => {
+  const fn = (): GlobalConfig => {
+    const configPath = getGlobalConfigPath()
 
-  if (!existsSync(configPath)) {
-    return cloneDeep(DEFAULT_GLOBAL_CONFIG)
-  }
-
-  try {
-    const configData = readFileSync(configPath, 'utf-8')
-    const config = safeParseJSON(configData, DEFAULT_GLOBAL_CONFIG)
-    
-    // 合并默认配置以确保新字段存在
-    return {
-      ...DEFAULT_GLOBAL_CONFIG,
-      ...config,
-      customApiKeyResponses: {
-        ...DEFAULT_GLOBAL_CONFIG.customApiKeyResponses,
-        ...config.customApiKeyResponses,
-      },
-      modelPointers: {
-        ...DEFAULT_GLOBAL_CONFIG.modelPointers,
-        ...config.modelPointers,
-      },
+    if (!existsSync(configPath)) {
+      return cloneDeep(DEFAULT_GLOBAL_CONFIG)
     }
-  } catch (error) {
-    console.error('解析全局配置失败:', error)
-    return cloneDeep(DEFAULT_GLOBAL_CONFIG)
+
+    try {
+      const configData = readFileSync(configPath, 'utf-8')
+      const config = safeParseJSON(configData, DEFAULT_GLOBAL_CONFIG)
+      
+      // 合并默认配置以确保新字段存在
+      return {
+        ...DEFAULT_GLOBAL_CONFIG,
+        ...config,
+        customApiKeyResponses: {
+          ...DEFAULT_GLOBAL_CONFIG.customApiKeyResponses,
+          ...config.customApiKeyResponses,
+        },
+        modelPointers: {
+          ...DEFAULT_GLOBAL_CONFIG.modelPointers,
+          ...config.modelPointers,
+        },
+      }
+    } catch (error) {
+      console.error('解析全局配置失败:', error)
+      return cloneDeep(DEFAULT_GLOBAL_CONFIG)
+    }
   }
-})
+
+  ;(fn as any).cache = { clear: () => {} }
+  return fn as typeof fn & { cache: { clear: () => void } }
+})()
 
 /**
  * 获取项目配置

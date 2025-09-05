@@ -362,9 +362,8 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
 
 
   const messagesJSX = useMemo((): MessageJSX[] => {
-    // 注意：Static 的 items 如果每次 render 都创建新数组，Ink 会认为是不同 items，
-    // 会不断重置滚动位置。这里把静态项与消息项分开管理，且静态项引用保持稳定。
-    const messageItems: MessageJSX[] = validMessages.map((msg) => ({
+    // 仅保留动态消息项，避免主题切换时 Static 内容无法更新
+    return validMessages.map((msg) => ({
       type: 'message',
       jsx: (
         <WriterMessage
@@ -374,15 +373,6 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
         />
       ),
     }))
-
-    return [
-      { type: 'static', jsx: (
-        <Box flexDirection="column" key="writeflow-welcome">
-          <WriteFlowLogo />
-        </Box>
-      )},
-      ...messageItems
-    ]
   }, [validMessages])
 
   const handleSubmit = useCallback(async (message: string) => {
@@ -474,10 +464,10 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
   return (
     <Box flexDirection="column" width="100%">
 
-      {/* 静态内容渲染 - Static 组件模式（保证 items 引用稳定，避免滚动重置） */}
-      <Static items={messagesJSX.filter(_ => _.type === 'static')}>
-        {_ => _.jsx}
-      </Static>
+      {/* 顶部欢迎与品牌区（非 Static，主题切换可立即反映） */}
+      <Box flexDirection="column">
+        <WriteFlowLogo />
+      </Box>
 
       {/* 消息内容渲染 - 回退为原先一次性渲染列表，避免重复输入出现 */}
       {messagesJSX.filter(_ => _.type === 'message').map(_ => _.jsx)}
