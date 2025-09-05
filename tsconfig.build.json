@@ -29,6 +29,10 @@
   "exclude": [
     "tests/**/*",
     "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "src/services/performance/**",
+    "src/ui/streaming.ts",
+    "src/scripts/**",
+    "src/ui/demo/**"
   ]
 }

@@ -322,7 +322,7 @@ export class WriteFlowAIService {
               const deltaText = evt.delta.text as string
               content += deltaText
               const estimated = Math.ceil(content.length / 4)
-              responseManager.updateStreamingProgress(streamId, estimated)
+              responseManager.updateStreamingProgress(streamId, { tokenCount: estimated, characterCount: content.length, chunkSize: deltaText.length, contentType: 'text' })
               if (typeof request.onToken === 'function') {
                 try { request.onToken(deltaText) } catch {}
               } else if (!isInteractiveUI) {
@@ -468,7 +468,7 @@ export class WriteFlowAIService {
             if (delta) {
               content += delta
               const estimatedTokens = Math.ceil(content.length / 4)
-              responseManager.updateStreamingProgress(streamId, estimatedTokens)
+              responseManager.updateStreamingProgress(streamId, { tokenCount: estimatedTokens, characterCount: content.length, chunkSize: delta.length, contentType: 'text' })
               if (typeof request.onToken === 'function') {
                 try { request.onToken(delta) } catch {}
               } else if (!isInteractiveUI && !process.stdout.destroyed && !pipeClosed) {
