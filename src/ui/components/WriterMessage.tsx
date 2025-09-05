@@ -2,6 +2,7 @@ import { Box, Text } from 'ink'
 import React from 'react'
 import { getTheme } from '../../utils/theme'
 import { useTerminalSize } from '../../hooks/useTerminalSize'
+import { RichTextRenderer, SimpleRichText } from './RichTextRenderer.js'
 
 interface Message {
   type: 'user' | 'assistant'
@@ -42,12 +43,17 @@ export function WriterMessage({
   const isUser = message.type === 'user'
   const isAssistant = message.type === 'assistant'
   
+  // 使用主题中定义的消息专用颜色
+  const textColor = isUser ? theme.userMessage : theme.assistantMessage
+  const indicatorColor = isUser ? theme.dimText : theme.claude
+  const indicator = isUser ? ' > ' : '   '
+  
   return (
     <Box flexDirection="row" marginTop={addMargin ? 1 : 0} width="100%">
       {/* Message indicator */}
       <Box minWidth={3} width={3}>
-        <Text color={isUser ? theme.secondaryText : theme.text}>
-          {isUser ? ' > ' : '   '}
+        <Text color={indicatorColor}>
+          {indicator}
         </Text>
       </Box>
       
@@ -57,25 +63,26 @@ export function WriterMessage({
         {(showMode || showTimestamp) && (
           <Box flexDirection="row" justifyContent="space-between" marginBottom={1}>
             {showMode && message.mode && (
-              <Text color={MODE_COLORS[message.mode]} dimColor>
+              <Text color={theme[message.mode]} dimColor>
                 {MODE_ICONS[message.mode]} {message.mode.toUpperCase()}
               </Text>
             )}
             {showTimestamp && message.timestamp && (
-              <Text dimColor>
+              <Text color={theme.dimText}>
                 {message.timestamp.toLocaleTimeString()}
               </Text>
             )}
           </Box>
         )}
         
-        {/* Message text */}
-        <Text 
-          color={isUser ? theme.secondaryText : theme.text}
-          wrap="wrap"
-        >
-          {message.content}
-        </Text>
+        {/* Message text - 使用富文本渲染器 */}
+        <Box width="100%">
+          <RichTextRenderer 
+            content={message.content}
+            wrap={true}
+            preserveWhitespace={true}
+          />
+        </Box>
       </Box>
     </Box>
   )
@@ -122,27 +129,34 @@ export function AssistantResponseMessage({
   // Handle different types of assistant responses
   const isThinking = showThinking && content.includes('思考中')
   const isError = content.startsWith('错误:') || content.includes('Error')
+  const isProcessing = content.includes('处理中') || content.includes('生成中')
+  
+  // 根据消息类型选择颜色
+  let messageColor = theme.assistantMessage
+  if (isError) messageColor = theme.error
+  else if (isProcessing) messageColor = theme.processing
   
   return (
     <Box flexDirection="row" marginTop={addMargin ? 1 : 0} width="100%">
       <Box minWidth={3} width={3}>
-        <Text color={theme.text}>   </Text>
+        <Text color={theme.claude}>   </Text>
       </Box>
       
       <Box flexDirection="column" width={columns - 4}>
         {isThinking && (
           <Box flexDirection="row" marginBottom={1}>
-            <Text color={theme.claude}>🤔 </Text>
-            <Text color={theme.claude}>AI 正在思考...</Text>
+            <Text color={theme.thinking}>🤔 </Text>
+            <Text color={theme.thinking}>AI 正在思考...</Text>
           </Box>
         )}
         
-        <Text 
-          color={isError ? theme.error : theme.text}
-          wrap="wrap"
-        >
-          {content}
-        </Text>
+        <Box width="100%">
+          <RichTextRenderer 
+            content={content}
+            wrap={true}
+            preserveWhitespace={true}
+          />
+        </Box>
       </Box>
     </Box>
   )
@@ -162,9 +176,9 @@ export function SystemMessage({
   const { columns } = useTerminalSize()
   
   const colors = {
-    info: theme.secondaryText,
+    info: theme.info,
     success: theme.success,
-    warning: '#ff9500',
+    warning: theme.warning,
     error: theme.error
   }
   
@@ -182,9 +196,9 @@ export function SystemMessage({
       </Box>
       
       <Box flexDirection="column" width={columns - 4}>
-        <Text color={colors[type]} wrap="wrap">
-          {content}
-        </Text>
+        <Box width="100%">
+          <SimpleRichText content={content} />
+        </Box>
       </Box>
     </Box>
   )
@@ -207,7 +221,7 @@ export function MessageSeparator({ label }: { label?: string }) {
         width={columns - 2}
       >
         {label && (
-          <Text color={theme.secondaryText} dimColor>
+          <Text color={theme.dimText}>
             {label}
           </Text>
         )}

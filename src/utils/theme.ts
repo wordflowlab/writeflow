@@ -8,18 +8,26 @@ export interface Theme {
   text: string
   secondaryText: string
   dimText: string
-  muted: string  // 添加 muted 颜色
+  muted: string
   
   // Brand colors
   claude: string
   success: string
   error: string
   warning: string
+  info: string
   
   // UI colors
   border: string
   secondaryBorder: string
   background: string
+  
+  // Message-specific colors
+  userMessage: string
+  assistantMessage: string
+  systemMessage: string
+  codeBlock: string
+  quote: string
   
   // Mode-specific colors
   writing: string
@@ -35,6 +43,7 @@ export interface Theme {
   loading: string
   thinking: string
   ready: string
+  processing: string
 }
 
 // WriteFlow color palette
@@ -50,11 +59,19 @@ const writeFlowTheme: Theme = {
   success: '#00ff87',       // Same as claude for consistency  
   error: '#ff6b6b',         // Red for errors
   warning: '#ff9500',       // Orange for warnings
+  info: '#00aaff',          // Blue for info messages
   
   // UI elements
   border: '#333333',
   secondaryBorder: '#555555',
   background: '#000000',
+  
+  // Message-specific colors
+  userMessage: '#cccccc',   // Light gray for user messages
+  assistantMessage: '#ffffff', // Pure white for assistant messages
+  systemMessage: '#888888', // Medium gray for system messages
+  codeBlock: '#00ff87',     // Brand green for code
+  quote: '#888888',         // Gray for quotes
   
   // Writing mode colors
   writing: '#00ff87',       // Bright green for creative writing
@@ -69,7 +86,8 @@ const writeFlowTheme: Theme = {
   // Status indicators
   loading: '#a0a0a0',       // Gray for loading
   thinking: '#00ff87',      // Brand color for AI thinking
-  ready: '#00ff87',          // Brand color for ready state
+  ready: '#00ff87',         // Brand color for ready state
+  processing: '#ff9500',    // Orange for processing
 }
 
 // Light theme variant - optimized for light backgrounds
@@ -82,9 +100,16 @@ const lightTheme: Theme = {
   success: '#2c7a39',       // Deep green for success messages
   error: '#cc0000',         // Pure red for errors
   warning: '#e65100',       // Orange for warnings
+  info: '#0066cc',          // Blue for info messages
   border: '#cccccc',
   secondaryBorder: '#e0e0e0',
   background: '#ffffff',
+  // Message-specific colors
+  userMessage: '#333333',   // Dark gray for user messages
+  assistantMessage: '#1a1a1a', // Almost black for assistant messages
+  systemMessage: '#666666', // Medium gray for system messages
+  codeBlock: '#007acc',     // Blue for code
+  quote: '#666666',         // Gray for quotes
   writing: '#007acc',
   editing: '#e65100',
   reviewing: '#2c7a39',
@@ -94,6 +119,7 @@ const lightTheme: Theme = {
   loading: '#666666',
   thinking: '#007acc',
   ready: '#2c7a39',
+  processing: '#e65100',    // Orange for processing
 }
 
 // Dark accessible theme - high contrast version
@@ -106,9 +132,16 @@ const darkAccessibleTheme: Theme = {
   success: '#00ff87',
   error: '#ff4444',         // Brighter red for better contrast
   warning: '#ffaa00',       // Brighter orange
+  info: '#00ccff',          // Bright blue for info
   border: '#555555',
   secondaryBorder: '#777777',
   background: '#000000',
+  // Message-specific colors
+  userMessage: '#dddddd',   // Bright gray for user messages
+  assistantMessage: '#ffffff', // Pure white for assistant messages
+  systemMessage: '#aaaaaa', // Light gray for system messages
+  codeBlock: '#00ff87',     // Bright green for code
+  quote: '#aaaaaa',         // Light gray for quotes
   writing: '#00ff87',
   editing: '#ffaa00',
   reviewing: '#00aaff',
@@ -118,6 +151,7 @@ const darkAccessibleTheme: Theme = {
   loading: '#cccccc',
   thinking: '#00ff87',
   ready: '#00ff87',
+  processing: '#ffaa00',    // Orange for processing
 }
 
 // Light accessible theme - high contrast version  
@@ -130,9 +164,16 @@ const lightAccessibleTheme: Theme = {
   success: '#006600',       // Darker green
   error: '#cc0000',         // Pure red
   warning: '#cc4400',       // Darker orange
+  info: '#0044aa',          // Dark blue for info
   border: '#999999',
   secondaryBorder: '#cccccc',
   background: '#ffffff',
+  // Message-specific colors
+  userMessage: '#222222',   // Very dark gray for user messages
+  assistantMessage: '#000000', // Pure black for assistant messages
+  systemMessage: '#444444', // Dark gray for system messages
+  codeBlock: '#0066cc',     // Dark blue for code
+  quote: '#444444',         // Dark gray for quotes
   writing: '#0066cc',
   editing: '#cc4400',
   reviewing: '#006600',
@@ -142,6 +183,7 @@ const lightAccessibleTheme: Theme = {
   loading: '#333333',
   thinking: '#0066cc',
   ready: '#006600',
+  processing: '#cc4400',    // Orange for processing
 }
 
 // Theme getter function
@@ -319,6 +361,13 @@ export const COLORS = {
   ERROR: '#ff6b6b',
   SUCCESS: '#00ff87',
   WARNING: '#ff9500',
+  INFO: '#00aaff',
   TEXT: '#ffffff',
   DIM: '#666666',
+  USER_MESSAGE: '#cccccc',
+  ASSISTANT_MESSAGE: '#ffffff',
+  SYSTEM_MESSAGE: '#888888',
+  CODE_BLOCK: '#00ff87',
+  QUOTE: '#888888',
+  PROCESSING: '#ff9500',
 } as const

@@ -134,8 +134,7 @@ export function useAIStreaming(options: AIStreamingOptions = {}) {
         chunkSize: finalOptions.chunkSize || chunkSize,
         streamId: streamId.current,
         enableToolCalls: finalOptions.enableToolCalls || enableToolCalls,
-        allowedTools: finalOptions.allowedTools || allowedTools,
-        theme
+        allowedTools: finalOptions.allowedTools || allowedTools
       }
 
       setState(prev => ({ ...prev, isStreaming: true, isLoading: false }))

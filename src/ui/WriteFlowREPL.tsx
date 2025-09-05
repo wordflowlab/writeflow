@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
 import { useTerminalSize } from '../hooks/useTerminalSize.js'
+import { RichTextRenderer } from './components/RichTextRenderer.js'
 import { ModelConfig } from './components/ModelConfig.js'
 import { getSessionState } from '../utils/state.js'
 import { PromptInput } from './components/PromptInput.js'
@@ -192,14 +193,14 @@ function Spinner() {
   return (
     <Box flexDirection="row" marginTop={1}>
       <Box flexWrap="nowrap" height={1} width={2}>
-        <Text color={theme.claude}>{frames[frame]}</Text>
+        <Text color={theme.thinking}>{frames[frame]}</Text>
       </Box>
-      <Text color={theme.claude}>{message.current}… </Text>
-      <Text color={theme.secondaryText}>
-        ({elapsedTime}s · <Text bold>esc</Text> 中断)
+      <Text color={theme.thinking}>{message.current}… </Text>
+      <Text color={theme.dimText}>
+        ({elapsedTime}s · <Text bold color={theme.warning}>esc</Text> 中断)
       </Text>
       {currentError && (
-        <Text color={theme.secondaryText}>
+        <Text color={theme.error}>
           · {currentError}
         </Text>
       )}
@@ -226,9 +227,9 @@ function WriteFlowStatusIndicator({
       {isThinking ? (
         // 使用增强的 Spinner，移除边框
         <Spinner />
-      ) : (
-        <Text color={theme.claude}>{status}</Text>
-      )}
+      ) : status ? (
+        <Text color={theme.ready}>{status}</Text>
+      ) : null}
     </Box>
   )
 }
@@ -295,26 +296,58 @@ function WriterMessage({
   const theme = getTheme()
   const { columns } = useTerminalSize()
 
+  // 使用主题中定义的消息专用颜色
+  const getMessageColor = () => {
+    switch (type) {
+      case 'user': return theme.userMessage
+      case 'system': return theme.systemMessage
+      case 'assistant': 
+        // 检查是否是错误消息
+        if (message.startsWith('错误:') || message.includes('Error')) {
+          return theme.error
+        }
+        // 检查是否是处理中消息
+        if (message.includes('处理中') || message.includes('生成中')) {
+          return theme.processing
+        }
+        return theme.assistantMessage
+      default: return theme.text
+    }
+  }
+
+  const getIndicatorColor = () => {
+    switch (type) {
+      case 'user': return theme.dimText
+      case 'system': return theme.warning
+      case 'assistant': return theme.claude
+      default: return theme.text
+    }
+  }
+
+  const getIndicator = () => {
+    switch (type) {
+      case 'user': return ' > '
+      case 'system': return ' ! '
+      case 'assistant': return '   '
+      default: return '   '
+    }
+  }
+
   return (
     <Box flexDirection="row" marginBottom={1} width="100%">
       <Box minWidth={3}>
-        <Text color={
-          type === 'user' ? theme.secondaryText :
-          type === 'system' ? theme.secondaryText : theme.text
-        }>
-          {type === 'user' ? ' > ' : type === 'system' ? ' ! ' : '   '}
+        <Text color={getIndicatorColor()}>
+          {getIndicator()}
         </Text>
       </Box>
       <Box flexDirection="column" width={columns - 4}>
-        <Text
-          color={
-            type === 'user' ? theme.secondaryText :
-            type === 'system' ? theme.secondaryText : theme.text
-          }
-          wrap="wrap"
-        >
-          {message}
-        </Text>
+        <Box width="100%">
+          <RichTextRenderer 
+            content={message}
+            wrap={true}
+            preserveWhitespace={true}
+          />
+        </Box>
       </Box>
     </Box>
   )

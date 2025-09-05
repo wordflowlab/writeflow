@@ -53,6 +53,7 @@
     "enquirer": "^2.4.0",
     "figures": "^6.1.0",
     "gray-matter": "^4.0.3",
+    "highlight.js": "^11.11.1",
     "ink": "^6.2.3",
     "marked": "^16.2.1",
     "openai": "^5.19.1",

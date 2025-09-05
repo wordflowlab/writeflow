@@ -67,7 +67,7 @@ export class StreamingAIService extends WriteFlowAIService {
     try {
       // 创建流式处理器
       const processor = createStreamProcessor(streamId, {
-        theme: request.theme,
+        theme: 'dark',
         renderDelay: request.renderDelay || 50,
         chunkSize: request.chunkSize || 30,
         enableDoubleBuffer: true,
@@ -138,7 +138,7 @@ export class StreamingAIService extends WriteFlowAIService {
         // 保持原始输出
         return originalWrite(chunk, encoding, callback)
       }
-    } as any
+    }
 
     try {
       // 调用原始的流式处理

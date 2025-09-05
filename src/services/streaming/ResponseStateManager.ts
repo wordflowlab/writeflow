@@ -450,11 +450,11 @@ export class ResponseStateManager {
   setUIPerformanceThresholds(thresholds: UIPerformanceThresholds): void {
     // 存储阈值配置（可以扩展到配置系统）
     this.uiThresholds = {
-      minAcceptableFPS: 15,
-      maxAcceptableRenderTime: 50, // ms
-      maxAllowedDroppedFrames: 10,
-      lagWarningThreshold: 2000, // ms
-      ...thresholds
+      ...thresholds,
+      minAcceptableFPS: thresholds.minAcceptableFPS || 15,
+      maxAcceptableRenderTime: thresholds.maxAcceptableRenderTime || 50, // ms
+      maxAllowedDroppedFrames: thresholds.maxAllowedDroppedFrames || 10,
+      lagWarningThreshold: thresholds.lagWarningThreshold || 2000 // ms
     }
   }
 
