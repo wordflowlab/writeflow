@@ -389,7 +389,7 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
       const trimmedMessage = message.trim()
       let response: string
 
-      // 预创建一个空的助手消息，用于流式增量填充
+      // 预创建一个空的助手消息用于流式增量输出
       const streamingAssistant = createAssistantMessage('')
       setMessages(prev => [...prev, streamingAssistant])
 
@@ -405,21 +405,30 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
         // 处理斜杠命令
         response = await writeFlowApp.executeCommand(trimmedMessage, { onToken })
       } else {
-        // 普通对话直接走自由文本路径（避免 /chat 未定义导致报错）
+        // 普通对话直接走自由文本路径
         // @ts-ignore - 访问类方法
         response = await writeFlowApp.handleFreeTextInput(trimmedMessage, { onToken })
       }
 
-      // 将最终响应写入同一个助手消息，保证无重复
+      // 将最终响应写入同一条消息，避免重复
       setMessages(prev => prev.map(m => (
         m.uuid === streamingAssistant.uuid
           ? { ...m, message: response }
           : m
       )))
-      } catch (error) {
-        // 如果命令方式失败，尝试直接调用私有方法（临时解决方案）
-        try {
-          // @ts-ignore - 临时访问私有方法
+    } catch (error) {
+      // 如果命令方式失败，尝试直接调用私有方法（临时解决方案）
+      try {
+        // @ts-ignore - 临时访问私有方法
+        const streamingAssistant = createAssistantMessage('')
+        setMessages(prev => [...prev, streamingAssistant])
+        const onToken = (chunk: string) => {
+          setMessages(prev => prev.map(m => (
+            m.uuid === streamingAssistant.uuid
+              ? { ...m, message: (m.message || '') + chunk }
+              : m
+          )))
+        }
         const result = await writeFlowApp.handleFreeTextInput(message.trim(), { onToken })
 
         // 智能解析返回结果
@@ -447,7 +456,6 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
           responseText = String(result)
         }
 
-        // 覆盖同一条消息
         setMessages(prev => prev.map(m => (
           m.uuid === streamingAssistant.uuid
             ? { ...m, message: responseText }
