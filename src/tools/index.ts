@@ -165,5 +165,5 @@ export {
   GlobToolAdapter,
   GrepToolAdapter,
   BashToolAdapter,
-  createCoreToolAdapters
+  createCoreToolAdapters,
 } from './adapters/CoreToolsAdapter.js'

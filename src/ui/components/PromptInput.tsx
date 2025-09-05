@@ -162,7 +162,7 @@ export function PromptInput({
       <Box
         alignItems="flex-start"
         justifyContent="flex-start"
-        borderColor={modeColor}
+        borderColor={theme.claude}
         borderDimColor={isLoading || isDisabled}
         borderStyle="round"
         width="100%"
@@ -174,7 +174,7 @@ export function PromptInput({
           justifyContent="flex-start"
           width={3}
         >
-          <Text color={isLoading ? theme.secondaryText : modeColor}>
+          <Text color={isLoading ? theme.secondaryText : theme.claude}>
             {' > '}
           </Text>
         </Box>
@@ -185,7 +185,7 @@ export function PromptInput({
               <Text dimColor>{placeholder}</Text>
             )}
             {!isLoading && !isDisabled && (
-              <Text color={modeColor}>|</Text>
+              <Text color={theme.claude}>|</Text>
             )}
           </Text>
         </Box>

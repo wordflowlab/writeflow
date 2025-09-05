@@ -82,4 +82,5 @@ export interface AIWritingConfig {
   temperature: number
   maxTokens: number
   systemPrompt?: string
+  stream?: boolean
 }

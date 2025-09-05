@@ -117,7 +117,27 @@ export class WriteFlowApp extends EventEmitter {
       model: process.env.AI_MODEL || this.getDefaultModel(),
       temperature: 0.7,
       maxTokens: 4000,
-      systemPrompt: '你是WriteFlow AI写作助手，专门帮助用户进行技术文章写作。',
+      systemPrompt: `你是 WriteFlow AI 写作助手，专门帮助用户进行技术文章写作。
+
+核心实时响应要求：
+- 始终使用流式输出，提供实时反馈和进度指示
+- 响应速度优先：立即开始输出，边思考边回答
+- 用户体验至上：每个响应都要考虑实时性和互动性
+- 支持中断：用户可随时按 ESC 中断长时间处理
+- 进度可见：显示处理进度、token 计数和持续时间
+
+技术架构要求：
+- 充分利用 H2A 消息队列系统实现高性能并发处理
+- 使用 CoreEngineAdapter 提供统一的工具调用接口
+- 通过 ContextManager 维护会话连续性和上下文理解
+- 遵循 WriteFlow 核心组件设计模式
+
+交互模式：
+- 主动提供建议和改进方案
+- 支持多轮对话和上下文继承
+- 实时显示处理状态和进度信息
+- 优雅处理错误和异常情况`,
+      stream: process.env.WRITEFLOW_STREAM === 'false' ? false : true, // 默认启用流式输出
 
       // 安全配置
       enabled: true,
@@ -192,8 +212,12 @@ export class WriteFlowApp extends EventEmitter {
     // nO Agent 引擎（需在使用前初始化）
     this.agentEngine = new NOMainAgentEngine()
 
-    // 可选：启动最小后台消费者以推进队列指标与稳态验证
-    if (process.env.WRITEFLOW_USE_QUEUE === 'true') {
+    // 核心系统配置
+    const useQueue = process.env.WRITEFLOW_USE_QUEUE !== 'false' // 默认启用 H2A 队列
+    const agentEnabled = process.env.WRITEFLOW_AGENT_ENABLED !== 'false' // 默认启用 Agent 引擎
+
+    // 启动 H2A 高性能消息队列系统
+    if (useQueue) {
       // 用最小 CoreEngineAdapter 消费 SlashCommand 消息（当启用队列时）
       const adapter = new CoreEngineAdapter(
         this.messageQueue,
@@ -201,7 +225,7 @@ export class WriteFlowApp extends EventEmitter {
         (msgs, allowed, sig) => this.processAIQuery(msgs, allowed, sig),
         this.agentContext,
         {
-          agentEnabled: process.env.WRITEFLOW_AGENT_ENABLED === 'true',
+          agentEnabled: agentEnabled,
           agentEngine: this.agentEngine,
           agentStrict: process.env.WRITEFLOW_AGENT_STRICT === 'true',
         },
@@ -212,8 +236,8 @@ export class WriteFlowApp extends EventEmitter {
       })
     }
 
-    // 如果启用 Agent，则启动 Agent 循环，并设置极简桥接回调
-    if (process.env.WRITEFLOW_AGENT_ENABLED === 'true') {
+    // 启用 Agent 引擎系统
+    if (agentEnabled) {
       this.agentEngine.onPrompt = async (prompt: string, allowed?: string[]) => {
         // 当前阶段仅事件分发；如需自动投 AI，请设置 WRITEFLOW_AGENT_PROMPT_TO_AI=true（见 startAgentLoop）
         this.emit('agent-prompt', { content: prompt, allowedTools: allowed })
@@ -423,7 +447,7 @@ export class WriteFlowApp extends EventEmitter {
 
       // 如果需要AI查询
       if (result.shouldQuery && result.messages) {
-        return await this.processAIQuery(result.messages, result.allowedTools, options.signal, true)
+        return await this.processAIQuery(result.messages, result.allowedTools, options.signal, true, options.onToken)
       }
 
       // 返回直接结果
@@ -442,6 +466,7 @@ export class WriteFlowApp extends EventEmitter {
     allowedTools?: string[],
     signal?: AbortSignal,
     includeTools?: boolean,
+    onToken?: (chunk: string) => void,
   ): Promise<string> {
     // 基于上下文管理器做最小压缩接入
     try {
@@ -507,6 +532,8 @@ export class WriteFlowApp extends EventEmitter {
       systemPrompt,
       temperature: this.config.temperature,
       maxTokens: this.config.maxTokens,
+      stream: this.config.stream,
+      onToken,
       // 如果指定了工具，则启用工具调用
       allowedTools: allowedTools && allowedTools.length > 0 ? allowedTools : undefined,
       enableToolCalls: Boolean(includeTools && allowedTools && allowedTools.length > 0),
@@ -526,7 +553,8 @@ export class WriteFlowApp extends EventEmitter {
   async handleFreeTextInput(input: string, options: {
     signal?: AbortSignal,
     messages?: Array<{ type: string; content: string }>,
-    planMode?: boolean
+    planMode?: boolean,
+    onToken?: (chunk: string) => void,
   } = {}): Promise<string> {
     try {
       // 检查是否被中断
@@ -546,11 +574,19 @@ export class WriteFlowApp extends EventEmitter {
       if (options.planMode) {
         systemPrompt = `You are in PLAN MODE - this is the highest priority instruction that overrides everything else.
 
-Your ONLY task is to create a detailed implementation plan.
+Your ONLY task is to create a detailed implementation plan with REAL-TIME STREAMING OUTPUT.
+
+REAL-TIME RESPONSE REQUIREMENTS:
+- Use streaming output for immediate feedback and progress indication
+- Start responding instantly, build plan incrementally as you analyze
+- Show your thinking process in real-time
+- Support user interruption with ESC key
+- Display processing progress and duration
 
 WORKFLOW:
-1. Think through the user's request step by step
-2. Create a comprehensive plan with specific actions
+1. Think through the user's request step by step (stream thoughts)
+2. Create a comprehensive plan with specific actions (real-time updates)
+3. Leverage WriteFlow's core architecture for performance
 
 PLAN FORMAT:
 ## Implementation Plan
@@ -629,6 +665,8 @@ Create a detailed plan for the user's request.`
         systemPrompt,
         temperature: this.config.temperature,
         maxTokens: this.config.maxTokens,
+        stream: this.config.stream,
+        onToken: options.onToken,
       }
 
       // 调用AI服务

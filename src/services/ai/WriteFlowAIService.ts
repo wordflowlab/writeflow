@@ -5,10 +5,15 @@
 
 import { getGlobalConfig, ModelProfile } from '../../utils/config.js'
 import { getModelManager } from '../models/ModelManager.js'
+import { getModelCapabilities } from '../models/modelCapabilities.js'
 import { logError } from '../../utils/log.js'
 import { getTool } from '../../tools/index.js'
 import { AgentContext } from '../../types/agent.js'
 import { ToolUseContext } from '../../Tool.js'
+import { getStreamingService, StreamingService, StreamingRequest } from '../streaming/StreamingService.js'
+import { getResponseStateManager } from '../streaming/ResponseStateManager.js'
+import { startStreamingProgress, stopStreamingProgress } from '../streaming/ProgressIndicator.js'
+import { getOutputFormatter } from '../../ui/utils/outputFormatter.js'
 
 export interface AIRequest {
   prompt: string
@@ -17,6 +22,7 @@ export interface AIRequest {
   maxTokens?: number
   temperature?: number
   stream?: boolean
+  onToken?: (chunk: string) => void
   allowedTools?: string[]
   enableToolCalls?: boolean
 }
@@ -32,6 +38,13 @@ export interface AIResponse {
   model: string
   toolCalls?: ToolCall[]
   hasToolInteraction?: boolean
+  streamingStats?: {
+    duration: number
+    tokenCount: number
+    tokensPerSecond: number
+    startTime: number
+    endTime: number
+  }
 }
 
 export interface ToolCall {
@@ -55,9 +68,87 @@ export class WriteFlowAIService {
   private modelManager = getModelManager()
   
   /**
-   * 处理 AI 请求
+   * 处理 AI 请求（支持流式和非流式）
    */
   async processRequest(request: AIRequest): Promise<AIResponse> {
+    // 如果请求流式处理，委托给流式服务
+    if (request.stream) {
+      return this.processStreamingRequest(request)
+    }
+    
+    return this.processNonStreamingRequest(request)
+  }
+  
+  /**
+   * 处理流式 AI 请求 - 简化版本，直接处理而不依赖复杂的 StreamingService
+   */
+  async processStreamingRequest(request: AIRequest): Promise<AIResponse> {
+    const startTime = Date.now()
+    
+    try {
+      // 离线模式下直接回退到非流式处理
+      if (process.env.WRITEFLOW_AI_OFFLINE === 'true') {
+        return this.processNonStreamingRequest({ ...request, stream: false })
+      }
+      
+      // 从请求或环境变量获取模型名称
+      const modelName = request.model || process.env.AI_MODEL || this.getDefaultModelName()
+      if (!modelName) {
+        console.warn('没有指定模型，回退到非流式处理')
+        return this.processNonStreamingRequest({ ...request, stream: false })
+      }
+      
+      // 根据模型名称创建临时的模型配置
+      const modelProfile = this.createTempModelProfile(modelName)
+      if (!modelProfile) {
+        console.warn(`不支持的模型: ${modelName}，回退到非流式处理`)
+        return this.processNonStreamingRequest({ ...request, stream: false })
+      }
+      
+      // 检查模型是否支持流式
+      const capabilities = getModelCapabilities(modelName)
+      if (!capabilities.supportsStreaming) {
+        console.warn(`模型 ${modelName} 不支持流式，回退到非流式处理`)
+        return this.processNonStreamingRequest({ ...request, stream: false })
+      }
+      
+      // 直接调用对应的 API 进行流式处理
+      switch (modelProfile.provider) {
+        case 'deepseek':
+          return await this.callDeepSeekAPI(modelProfile, request)
+        case 'anthropic':
+        case 'bigdream':
+          return await this.callAnthropicAPI(modelProfile, request)
+        case 'openai':
+          return await this.callOpenAIAPI(modelProfile, request)
+        case 'kimi':
+          return await this.callKimiAPI(modelProfile, request)
+        default:
+          console.warn(`不支持流式的提供商: ${modelProfile.provider}，回退到非流式处理`)
+          return this.processNonStreamingRequest({ ...request, stream: false })
+      }
+      
+    } catch (error) {
+      logError('流式 AI 请求处理失败', error)
+      
+      // 标记流式响应错误（如果有活跃的流式会话）
+      const responseManager = getResponseStateManager()
+      const activeStats = responseManager.getActiveStreamingStats()
+      if (activeStats.activeStreams > 0) {
+        // 找到可能的流式会话并标记错误
+        console.warn(`发现 ${activeStats.activeStreams} 个活跃流式会话，标记为错误状态`)
+      }
+      
+      // 回退到非流式处理，明确设置 stream: false 防止递归
+      console.warn('流式处理失败，回退到非流式处理')
+      return this.processNonStreamingRequest({ ...request, stream: false })
+    }
+  }
+  
+  /**
+   * 处理非流式 AI 请求
+   */
+  async processNonStreamingRequest(request: AIRequest): Promise<AIResponse> {
     const startTime = Date.now()
 
     try {
@@ -140,7 +231,7 @@ export class WriteFlowAIService {
     
     const url = profile.baseURL || 'https://api.anthropic.com/v1/messages'
     
-    const payload = {
+    const payload: any = {
       model: profile.modelName,
       max_tokens: request.maxTokens || profile.maxTokens,
       temperature: request.temperature || 0.3,
@@ -152,7 +243,11 @@ export class WriteFlowAIService {
       ],
       ...(request.systemPrompt && { system: request.systemPrompt })
     }
-    
+    // Anthropic 也支持流式
+    if (request.stream) {
+      payload.stream = true
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -168,6 +263,10 @@ export class WriteFlowAIService {
       throw new Error(`Anthropic API 错误: ${response.status} - ${errorText}`)
     }
     
+    if (request.stream) {
+      return await this.handleAnthropicStreamingResponse(response, profile, request)
+    }
+
     const data = await response.json()
     
     return {
@@ -179,6 +278,76 @@ export class WriteFlowAIService {
       cost: this.calculateCost(data.usage, profile.provider),
       duration: 0, // 将在外部设置
       model: profile.modelName
+    }
+  }
+
+  /**
+   * 处理 Anthropic SSE 流式响应
+   * 事件类型参见官方：message_start/content_block_start/content_block_delta/.../message_delta/message_stop
+   */
+  private async handleAnthropicStreamingResponse(response: Response, profile: ModelProfile, request: AIRequest): Promise<AIResponse> {
+    if (!response.body) throw new Error('Response body is null')
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+    let content = ''
+
+    const responseManager = getResponseStateManager()
+    const streamId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    responseManager.startStreaming(streamId)
+    const isInteractiveUI = (global as any).WRITEFLOW_INTERACTIVE === true
+    const useConsoleProgress = typeof request.onToken !== 'function' && !isInteractiveUI
+    if (useConsoleProgress) {
+      startStreamingProgress({ style: 'claude', showDuration: true, showTokens: true, showInterruptHint: true })
+    }
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+        for (const part of parts) {
+          const line = part.trim()
+          if (!line.startsWith('data:')) continue
+          const dataStr = line.slice(5).trim()
+          if (!dataStr || dataStr === '[DONE]') continue
+          try {
+            const evt = JSON.parse(dataStr)
+            // content_block_delta 携带文本增量
+            if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta' && evt.delta?.text) {
+              const deltaText = evt.delta.text as string
+              content += deltaText
+              const estimated = Math.ceil(content.length / 4)
+              responseManager.updateStreamingProgress(streamId, estimated)
+              if (typeof request.onToken === 'function') {
+                try { request.onToken(deltaText) } catch {}
+              } else if (!isInteractiveUI) {
+                process.stdout.write(deltaText)
+              }
+            }
+          } catch {
+            // 忽略解析失败
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+      if (useConsoleProgress) stopStreamingProgress()
+    }
+
+    const finalTokens = Math.ceil(content.length / 4)
+    const stats = responseManager.completeStreaming(streamId, finalTokens)
+
+    return {
+      content,
+      usage: { inputTokens: 0, outputTokens: finalTokens },
+      cost: 0,
+      duration: stats.duration,
+      model: profile.modelName,
     }
   }
   
@@ -210,7 +379,7 @@ export class WriteFlowAIService {
       messages,
       max_tokens: request.maxTokens || profile.maxTokens,
       temperature: request.temperature || 0.3,
-      stream: false
+      stream: request.stream || false
     }
     
     const response = await fetch(url, {
@@ -227,6 +396,12 @@ export class WriteFlowAIService {
       throw new Error(`DeepSeek API 错误: ${response.status} - ${errorText}`)
     }
     
+    // 如果是流式请求，处理流式响应
+    if (request.stream) {
+      return await this.handleStreamingResponse(response, profile, request)
+    }
+    
+    // 非流式处理
     const data = await response.json()
     
     return {
@@ -241,6 +416,128 @@ export class WriteFlowAIService {
     }
   }
   
+  /**
+   * 处理流式响应
+   */
+  private async handleStreamingResponse(response: Response, profile: ModelProfile, request: AIRequest): Promise<AIResponse> {
+    if (!response.body) {
+      throw new Error('Response body is null')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+    let content = ''
+    let usage = { inputTokens: 0, outputTokens: 0 }
+    let pipeClosed = false
+    
+    // 获取响应状态管理器并开始流式跟踪（在交互式 UI 下禁用控制台输出）
+    const responseManager = getResponseStateManager()
+    const streamId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    responseManager.startStreaming(streamId)
+    const isInteractiveUI = (global as any).WRITEFLOW_INTERACTIVE === true
+    const useConsoleProgress = typeof request.onToken !== 'function' && !isInteractiveUI
+    if (useConsoleProgress) {
+      startStreamingProgress({ style: 'claude', showTokens: true, showDuration: true, showInterruptHint: true })
+    }
+    
+    // 监听管道关闭事件
+    process.stdout.on('error', (error) => {
+      if ((error as any).code === 'EPIPE') {
+        pipeClosed = true
+      }
+    })
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+
+        for (const part of parts) {
+          const line = part.trim()
+          if (!line.startsWith('data:')) continue
+          const dataStr = line.slice(5).trim()
+          if (dataStr === '[DONE]') continue
+          try {
+            const data = JSON.parse(dataStr)
+            const delta = data.choices?.[0]?.delta?.content
+            if (delta) {
+              content += delta
+              const estimatedTokens = Math.ceil(content.length / 4)
+              responseManager.updateStreamingProgress(streamId, estimatedTokens)
+              if (typeof request.onToken === 'function') {
+                try { request.onToken(delta) } catch {}
+              } else if (!isInteractiveUI && !process.stdout.destroyed && !pipeClosed) {
+                try {
+                  const canWrite = process.stdout.write(delta)
+                  if (!canWrite) process.stdout.once('drain', () => {})
+                } catch {
+                  pipeClosed = true
+                }
+              }
+            }
+            if (data.usage) {
+              usage.inputTokens = data.usage.prompt_tokens || 0
+              usage.outputTokens = data.usage.completion_tokens || 0
+            }
+          } catch {
+            // 忽略解析失败
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock()
+    }
+    
+    // 完成流式响应并获取统计信息
+    const finalTokenCount = usage.outputTokens || Math.ceil(content.length / 4)
+    const streamingStats = responseManager.completeStreaming(streamId, finalTokenCount)
+    
+    // 停止进度指示器（仅控制台模式）
+    if (useConsoleProgress) {
+      stopStreamingProgress()
+    }
+    
+    // 在流式处理完成后，提供格式化后的最终输出
+    if (useConsoleProgress) {
+      try {
+        const formatter = getOutputFormatter({
+          enableColors: process.stdout.isTTY,
+          theme: process.env.WRITEFLOW_THEME === 'light' ? 'light' : 'dark'
+        })
+        const formatted = formatter.formatStreamOutput(content, { maxWidth: 80 })
+        if (formatted.hasCodeBlocks && formatted.codeBlockCount > 0) {
+          process.stderr.write(`\n${formatter.formatSuccess(`包含 ${formatted.codeBlockCount} 个代码块的内容已输出`)}\n`)
+        }
+      } catch (formatError) {
+        console.warn(`最终格式化失败: ${formatError}`)
+      }
+    }
+    
+    return {
+      content,
+      usage,
+      cost: this.calculateCost({
+        prompt_tokens: usage.inputTokens,
+        completion_tokens: usage.outputTokens
+      }, profile.provider),
+      duration: streamingStats.duration,
+      model: profile.modelName,
+      // 添加流式性能统计（可选）
+      streamingStats: {
+        duration: streamingStats.duration,
+        tokenCount: finalTokenCount,
+        tokensPerSecond: streamingStats.tokensPerSecond,
+        startTime: streamingStats.startTime,
+        endTime: streamingStats.endTime
+      }
+    }
+  }
+
   /**
    * 调用 OpenAI API
    */
@@ -258,12 +555,13 @@ export class WriteFlowAIService {
     }
     messages.push({ role: 'user', content: request.prompt })
     
-    const payload = {
+    const payload: any = {
       model: profile.modelName,
       messages,
       max_tokens: request.maxTokens || profile.maxTokens,
-      temperature: request.temperature || 0.3
+      temperature: request.temperature || 0.3,
     }
+    if (request.stream) payload.stream = true
     
     const response = await fetch(url, {
       method: 'POST',
@@ -278,7 +576,10 @@ export class WriteFlowAIService {
       const errorText = await response.text()
       throw new Error(`OpenAI API 错误: ${response.status} - ${errorText}`)
     }
-    
+    if (request.stream) {
+      return await this.handleStreamingResponse(response, profile, request)
+    }
+
     const data = await response.json()
     
     return {
@@ -310,12 +611,13 @@ export class WriteFlowAIService {
     }
     messages.push({ role: 'user', content: request.prompt })
     
-    const payload = {
+    const payload: any = {
       model: profile.modelName,
       messages,
       max_tokens: request.maxTokens || profile.maxTokens,
-      temperature: request.temperature || 0.3
+      temperature: request.temperature || 0.3,
     }
+    if (request.stream) payload.stream = true
     
     const response = await fetch(url, {
       method: 'POST',
@@ -330,7 +632,10 @@ export class WriteFlowAIService {
       const errorText = await response.text()
       throw new Error(`Kimi API 错误: ${response.status} - ${errorText}`)
     }
-    
+    if (request.stream) {
+      return await this.handleStreamingResponse(response, profile, request)
+    }
+
     const data = await response.json()
     
     return {
@@ -345,6 +650,117 @@ export class WriteFlowAIService {
     }
   }
   
+  /**
+   * 获取默认模型名称
+   */
+  private getDefaultModelName(): string {
+    // 优先使用 AI_MODEL 环境变量
+    if (process.env.AI_MODEL) {
+      return process.env.AI_MODEL
+    }
+    
+    // 其次使用 API_PROVIDER 推断模型
+    const provider = process.env.API_PROVIDER
+    switch (provider) {
+      case 'deepseek':
+        return 'deepseek-chat'
+      case 'qwen3':
+        return 'qwen-turbo'
+      case 'glm4.5':
+        return 'glm-4-flash'
+      case 'anthropic':
+        return 'claude-3-sonnet-20240229'
+      case 'openai':
+        return 'gpt-3.5-turbo'
+      case 'kimi':
+        return 'moonshot-v1-8k'
+      default:
+        // 最后检查有哪些 API Key 可用，智能选择默认模型
+        if (process.env.DEEPSEEK_API_KEY) return 'deepseek-chat'
+        if (process.env.ANTHROPIC_API_KEY) return 'claude-3-sonnet-20240229'
+        if (process.env.OPENAI_API_KEY) return 'gpt-3.5-turbo'
+        if (process.env.KIMI_API_KEY) return 'moonshot-v1-8k'
+        if (process.env.GLM_API_KEY) return 'glm-4-flash'
+        
+        return 'deepseek-chat' // 最终默认使用 DeepSeek
+    }
+  }
+
+  /**
+   * 根据模型名称创建临时的模型配置
+   */
+  private createTempModelProfile(modelName: string): ModelProfile | null {
+    // 根据模型名称推断提供商
+    let provider: string
+    let baseURL: string | undefined
+    
+    if (modelName.includes('deepseek')) {
+      provider = 'deepseek'
+      baseURL = 'https://api.deepseek.com/v1/chat/completions'
+    } else if (modelName.includes('claude') || modelName.includes('anthropic')) {
+      provider = 'anthropic'
+      baseURL = 'https://api.anthropic.com/v1/messages'
+    } else if (modelName.includes('gpt') || modelName.includes('openai')) {
+      provider = 'openai'
+      baseURL = 'https://api.openai.com/v1/chat/completions'
+    } else if (modelName.includes('moonshot') || modelName.includes('kimi')) {
+      provider = 'kimi'
+      baseURL = 'https://api.moonshot.cn/v1/chat/completions'
+    } else if (modelName.includes('qwen')) {
+      provider = 'openai' // Qwen 使用 OpenAI 兼容协议
+      baseURL = process.env.API_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+    } else if (modelName.includes('glm')) {
+      provider = 'openai' // GLM 使用 OpenAI 兼容协议
+      baseURL = process.env.API_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4'
+    } else {
+      // 根据环境变量推断
+      provider = process.env.API_PROVIDER || 'deepseek'
+      baseURL = process.env.API_BASE_URL
+    }
+
+    // 创建临时的模型配置
+    const profile: ModelProfile = {
+      name: `temp-${modelName}`,
+      provider: provider as any,
+      modelName: modelName,
+      baseURL: baseURL,
+      apiKey: this.getAPIKeyForProvider(provider),
+      maxTokens: 4000,
+      contextLength: 128000,
+      isActive: true
+    }
+
+    // 验证 API 密钥是否可用
+    if (!profile.apiKey) {
+      console.warn(`找不到 ${provider} 的 API 密钥`)
+      return null
+    }
+
+    return profile
+  }
+
+  /**
+   * 根据提供商获取 API 密钥
+   */
+  private getAPIKeyForProvider(provider: string): string {
+    const envKeys = {
+      anthropic: ['ANTHROPIC_API_KEY', 'CLAUDE_API_KEY'],
+      deepseek: ['DEEPSEEK_API_KEY'],
+      openai: ['OPENAI_API_KEY'],
+      kimi: ['KIMI_API_KEY', 'MOONSHOT_API_KEY'],
+      qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
+      glm: ['GLM_API_KEY', 'ZHIPUAI_API_KEY']
+    }
+
+    const keys = envKeys[provider as keyof typeof envKeys] || []
+    for (const key of keys) {
+      const value = process.env[key]
+      if (value) return value
+    }
+
+    return ''
+  }
+
   /**
    * 获取 API 密钥
    */
@@ -409,6 +825,11 @@ export class WriteFlowAIService {
     // 转换工具定义
     const tools = await this.convertToolsToDeepSeekFormat(request.allowedTools!)
     
+    // 如果没有工具或工具为空，回退到标准调用
+    if (!tools || tools.length === 0) {
+      return await this.callDeepSeekAPI(profile, { ...request, enableToolCalls: false, allowedTools: undefined })
+    }
+    
     let totalInputTokens = 0
     let totalOutputTokens = 0
     let conversationHistory = ''
@@ -427,7 +848,7 @@ export class WriteFlowAIService {
         tool_choice: 'auto',
         max_tokens: request.maxTokens || profile.maxTokens,
         temperature: request.temperature || 0.3,
-        stream: false
+        stream: request.stream || false
       }
 
       const response: any = await fetch(url, {
@@ -444,7 +865,15 @@ export class WriteFlowAIService {
         throw new Error(`DeepSeek API 错误: ${response.status} - ${errorText}`)
       }
 
-      const data: any = await response.json()
+      let data: any
+      // 如果是流式请求且是第一轮（用户消息），直接处理流式响应
+      if (request.stream && iteration === 0 && !tools.length) {
+        // 对于带工具的流式请求，我们暂时回退到非流式处理
+        // 因为工具调用需要完整的响应来解析tool_calls
+        data = await response.json()
+      } else {
+        data = await response.json()
+      }
       const message: any = data.choices?.[0]?.message
       
       totalInputTokens += data.usage?.prompt_tokens || 0
@@ -551,6 +980,11 @@ export class WriteFlowAIService {
    */
   private async convertToolsToDeepSeekFormat(allowedTools: string[]): Promise<any[]> {
     const tools = []
+    
+    // 如果没有允许的工具，直接返回空数组
+    if (!allowedTools || allowedTools.length === 0) {
+      return []
+    }
     
     for (const toolName of allowedTools) {
       const tool = getTool(toolName)

@@ -34,7 +34,7 @@ const MessageSchema = z.object({
   content: z.string(),
   timestamp: z.string().transform((str: string) => new Date(str)),
   tokens: z.number().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 })
 
 const MessageArraySchema = z.array(MessageSchema)

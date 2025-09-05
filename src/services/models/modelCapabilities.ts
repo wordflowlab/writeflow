@@ -22,6 +22,14 @@ export interface ModelCapabilities {
   supportsAssistantPrefill: boolean
   supportsPromptCaching: boolean
   
+  // 流式能力
+  streamingProtocol?: {
+    type: 'sse' | 'websocket'
+    format: 'openai' | 'anthropic' | 'deepseek' | 'gemini'
+    supportsReasoning?: boolean
+    supportsCacheStats?: boolean
+  }
+  
   // 成本信息
   pricing?: {
     inputCostPerToken: number
@@ -58,6 +66,10 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: true,
     supportsAssistantPrefill: true,
     supportsPromptCaching: true,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'anthropic'
+    },
     pricing: {
       inputCostPerToken: 0.000015,
       outputCostPerToken: 0.000075,
@@ -170,6 +182,10 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: true,
     supportsAssistantPrefill: true,
     supportsPromptCaching: true,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'anthropic'
+    },
     pricing: {
       inputCostPerToken: 0.000003,
       outputCostPerToken: 0.000015,
@@ -276,6 +292,11 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: false,
     supportsAssistantPrefill: false,
     supportsPromptCaching: true,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'deepseek',
+      supportsCacheStats: true
+    },
     pricing: {
       inputCostPerToken: 0.00000027,
       outputCostPerToken: 0.0000011,
@@ -300,6 +321,12 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: false,
     supportsAssistantPrefill: false,
     supportsPromptCaching: true,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'deepseek',
+      supportsReasoning: true,
+      supportsCacheStats: true
+    },
     pricing: {
       inputCostPerToken: 0.00000055,
       outputCostPerToken: 0.00000219,
@@ -325,6 +352,10 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: true,
     supportsAssistantPrefill: false,
     supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
     pricing: {
       inputCostPerToken: 0.0000025,
       outputCostPerToken: 0.00001
@@ -372,6 +403,14 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: false,
     supportsAssistantPrefill: false,
     supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.000012,
+      outputCostPerToken: 0.000012
+    },
     writingCapabilities: {
       creativityLevel: 'medium',
       technicalWriting: true,
@@ -391,6 +430,14 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: false,
     supportsAssistantPrefill: false,
     supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.000024,
+      outputCostPerToken: 0.000024
+    },
     writingCapabilities: {
       creativityLevel: 'medium',
       technicalWriting: true,
@@ -410,8 +457,261 @@ const MODEL_CAPABILITIES: Record<string, ModelCapabilities> = {
     supportsVision: false,
     supportsAssistantPrefill: false,
     supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00006,
+      outputCostPerToken: 0.00006
+    },
     writingCapabilities: {
       creativityLevel: 'medium',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  // 智谱 AI (GLM) 模型
+  'glm-4.5': {
+    contextLength: 128000,
+    maxOutputTokens: 8192,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: false,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00005,
+      outputCostPerToken: 0.00005
+    },
+    writingCapabilities: {
+      creativityLevel: 'high',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  'glm-4.5v': {
+    contextLength: 128000,
+    maxOutputTokens: 8192,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00005,
+      outputCostPerToken: 0.00005
+    },
+    writingCapabilities: {
+      creativityLevel: 'high',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  'glm-4v': {
+    contextLength: 8192,
+    maxOutputTokens: 4096,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00005,
+      outputCostPerToken: 0.00005
+    },
+    writingCapabilities: {
+      creativityLevel: 'high',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  'glm-4-long': {
+    contextLength: 128000,
+    maxOutputTokens: 8192,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: false,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00001,
+      outputCostPerToken: 0.00001
+    },
+    writingCapabilities: {
+      creativityLevel: 'medium',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  'charglm-4': {
+    contextLength: 8192,
+    maxOutputTokens: 4096,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: false,
+    supportsVision: false,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00005,
+      outputCostPerToken: 0.00005
+    },
+    writingCapabilities: {
+      creativityLevel: 'high',
+      technicalWriting: false,
+      academicWriting: false,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  'glm-z1-air': {
+    contextLength: 128000,
+    maxOutputTokens: 8192,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: false,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00001,
+      outputCostPerToken: 0.00001
+    },
+    writingCapabilities: {
+      creativityLevel: 'high',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  // Qwen 系列模型
+  'qwen-turbo': {
+    contextLength: 8192,
+    maxOutputTokens: 8192,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: false,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.000002,
+      outputCostPerToken: 0.000002
+    },
+    writingCapabilities: {
+      creativityLevel: 'medium',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  'qwen-plus': {
+    contextLength: 32768,
+    maxOutputTokens: 8192,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: false,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.000008,
+      outputCostPerToken: 0.000008
+    },
+    writingCapabilities: {
+      creativityLevel: 'high',
+      technicalWriting: true,
+      academicWriting: true,
+      multilingualSupport: true,
+      styleAdaptation: true
+    }
+  },
+
+  'qwen-max': {
+    contextLength: 8192,
+    maxOutputTokens: 8192,
+    apiArchitecture: { primary: 'chat_completions' },
+    supportsStreaming: true,
+    supportsSystemMessages: true,
+    supportsFunctionCalling: true,
+    supportsVision: false,
+    supportsAssistantPrefill: false,
+    supportsPromptCaching: false,
+    streamingProtocol: {
+      type: 'sse',
+      format: 'openai'
+    },
+    pricing: {
+      inputCostPerToken: 0.00002,
+      outputCostPerToken: 0.00006
+    },
+    writingCapabilities: {
+      creativityLevel: 'high',
       technicalWriting: true,
       academicWriting: true,
       multilingualSupport: true,

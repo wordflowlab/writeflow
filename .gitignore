@@ -10,8 +10,6 @@ dist/
 build/
 *.tsbuildinfo
 
-# Other projects directory
-# other/
 
 # Environment variables
 .env
@@ -77,10 +75,12 @@ config/production.json
 writeflow.config.json
 CLAUDE.md
 
-# other/
+other/
 
 # Tool-specific directories that should not be committed
 web-bundles/
 .playwright-mcp/
 .claude/
 .bmad-core/
+
+AGENTS.md

@@ -389,23 +389,38 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
       const trimmedMessage = message.trim()
       let response: string
 
-      if (trimmedMessage.startsWith('/')) {
-        // 处理斜杠命令
-        response = await writeFlowApp.executeCommand(trimmedMessage)
-      } else {
-        // 处理普通文本输入 - 需要调用 handleFreeTextInput 方法
-        // 由于该方法可能不是公开的，我们先尝试通过 executeCommand 包装
-        response = await writeFlowApp.executeCommand(`/chat ${trimmedMessage}`)
+      // 预创建一个空的助手消息，用于流式增量填充
+      const streamingAssistant = createAssistantMessage('')
+      setMessages(prev => [...prev, streamingAssistant])
+
+      const onToken = (chunk: string) => {
+        setMessages(prev => prev.map(m => (
+          m.uuid === streamingAssistant.uuid
+            ? { ...m, message: (m.message || '') + chunk }
+            : m
+        )))
       }
 
-      // Add assistant response using factory function
-      const assistantMessage = createAssistantMessage(response)
-      setMessages(prev => [...prev, assistantMessage])
-    } catch (error) {
-      // 如果命令方式失败，尝试直接调用私有方法（临时解决方案）
-      try {
-        // @ts-ignore - 临时访问私有方法
-        const result = await writeFlowApp.handleFreeTextInput(message.trim())
+      if (trimmedMessage.startsWith('/')) {
+        // 处理斜杠命令
+        response = await writeFlowApp.executeCommand(trimmedMessage, { onToken })
+      } else {
+        // 普通对话直接走自由文本路径（避免 /chat 未定义导致报错）
+        // @ts-ignore - 访问类方法
+        response = await writeFlowApp.handleFreeTextInput(trimmedMessage, { onToken })
+      }
+
+      // 将最终响应写入同一个助手消息，保证无重复
+      setMessages(prev => prev.map(m => (
+        m.uuid === streamingAssistant.uuid
+          ? { ...m, message: response }
+          : m
+      )))
+      } catch (error) {
+        // 如果命令方式失败，尝试直接调用私有方法（临时解决方案）
+        try {
+          // @ts-ignore - 临时访问私有方法
+        const result = await writeFlowApp.handleFreeTextInput(message.trim(), { onToken })
 
         // 智能解析返回结果
         let responseText: string = '处理完成'
@@ -432,8 +447,12 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
           responseText = String(result)
         }
 
-        const assistantMessage = createAssistantMessage(responseText)
-        setMessages(prev => [...prev, assistantMessage])
+        // 覆盖同一条消息
+        setMessages(prev => prev.map(m => (
+          m.uuid === streamingAssistant.uuid
+            ? { ...m, message: responseText }
+            : m
+        )))
       } catch (fallbackError) {
         const errorMessage = createAssistantMessage(
           `错误: ${error instanceof Error ? error.message : '处理请求时发生错误'}`

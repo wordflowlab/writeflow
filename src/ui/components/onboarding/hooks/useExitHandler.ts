@@ -19,7 +19,7 @@ export function useExitHandler(onExit: () => void): ExitState {
   })
 
   const lastPressRef = useRef<number>(0)
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const createDoublePress = (keyName: 'Ctrl-C' | 'Ctrl-D') => {
     return () => {

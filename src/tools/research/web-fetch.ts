@@ -1,5 +1,5 @@
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
-import fetch from 'node-fetch'
+import { fetch } from 'undici'
 
 /**
  * WebFetch 工具
@@ -60,12 +60,17 @@ export class WebFetchTool implements WritingTool {
       }
 
       // 获取网页内容
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'WriteFlow Web Fetch Tool'
         },
-        timeout: 10000 // 10 seconds timeout
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
         return {
