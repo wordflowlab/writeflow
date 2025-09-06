@@ -32,6 +32,7 @@ interface ReadToolOutput {
 export class ReadTool extends ToolBase<typeof ReadToolInputSchema, ReadToolOutput> {
   name = 'Read'
   inputSchema = ReadToolInputSchema
+  category = 'file' as const
 
   async description(): Promise<string> {
     return '读取文件内容。支持文本文件、代码文件、配置文件等。可以指定读取范围（行号偏移和限制）。'
@@ -56,7 +57,7 @@ export class ReadTool extends ToolBase<typeof ReadToolInputSchema, ReadToolOutpu
   async *call(
     input: ReadToolInput,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: ReadToolOutput; resultForAssistant?: string }, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: ReadToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* () {
       // 1. 路径验证和安全检查
       const filePath = resolve(input.file_path)

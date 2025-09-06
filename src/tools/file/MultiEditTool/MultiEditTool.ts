@@ -44,6 +44,7 @@ interface MultiEditToolOutput {
 export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, MultiEditToolOutput> {
   name = 'MultiEdit'
   inputSchema = MultiEditToolInputSchema
+  category = 'file' as const
 
   async description(): Promise<string> {
     return '在单个文件上执行多个编辑操作。所有编辑按顺序执行，每个编辑都在前一个编辑的结果上进行。要么全部成功，要么全部失败。'
@@ -120,7 +121,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
   async *call(
     input: MultiEditToolInput,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: MultiEditToolOutput; resultForAssistant?: string }, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: MultiEditToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: MultiEditTool) {
       // 1. 路径处理和验证
       const filePath = resolve(input.file_path)

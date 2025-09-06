@@ -28,6 +28,7 @@ interface WriteToolOutput {
 export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOutput> {
   name = 'Write'
   inputSchema = WriteToolInputSchema
+  category = 'file' as const
 
   async description(): Promise<string> {
     return '将内容写入文件。如果文件不存在会创建新文件，如果存在会完全覆盖原内容。会自动创建所需的目录结构。'
@@ -85,7 +86,7 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
   async *call(
     input: WriteToolInput,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: WriteToolOutput; resultForAssistant?: string }, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: WriteToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* () {
       // 1. 路径处理和验证
       const filePath = resolve(input.file_path)
@@ -151,7 +152,7 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
         resultForAssistant
       }
 
-    }.bind(this), this.name)
+    }.bind(this), context)
   }
 
   renderResultForAssistant(output: WriteToolOutput): string {

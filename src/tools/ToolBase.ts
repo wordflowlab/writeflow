@@ -32,7 +32,7 @@ export abstract class ToolBase<
   abstract call(
     input: z.infer<TInput>,
     context: ToolUseContext,
-  ): AsyncGenerator<ToolCallEvent, void, unknown>
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown>
 
   // 工具版本 - 用于兼容性检查
   version: string = '1.0.0'
@@ -173,9 +173,9 @@ export abstract class ToolBase<
 
   // 工具执行包装器 - 提供完整的生命周期管理
   protected async *executeWithErrorHandling(
-    operation: () => AsyncGenerator<ToolCallEvent, void, unknown>,
+    operation: () => AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown>,
     context: ToolUseContext,
-  ): AsyncGenerator<ToolCallEvent, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     const startTime = Date.now()
     let success = true
     

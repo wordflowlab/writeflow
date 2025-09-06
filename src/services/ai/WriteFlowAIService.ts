@@ -62,7 +62,7 @@ export interface ToolCall {
   callId: string
 }
 
-export interface ToolExecutionResult {
+export interface AIToolExecutionResult {
   toolName: string
   callId: string
   result: string
@@ -1188,7 +1188,7 @@ export class WriteFlowAIService {
   /**
    * 执行 DeepSeek API 的工具调用 - 使用新的工具编排器
    */
-  private async executeDeepSeekToolCall(toolCall: any): Promise<ToolExecutionResult> {
+  private async executeDeepSeekToolCall(toolCall: any): Promise<AIToolExecutionResult> {
     const { name: toolName, arguments: argsStr } = toolCall.function
     
     // 安全的 JSON 解析
@@ -1301,7 +1301,7 @@ export class WriteFlowAIService {
       console.log(`🔧 检测到 ${toolCalls.length} 个工具调用`)
       
       // 执行工具调用
-      const toolResults: ToolExecutionResult[] = []
+      const toolResults: AIToolExecutionResult[] = []
       for (const toolCall of toolCalls) {
         const result = await this.executeToolCall(toolCall)
         toolResults.push(result)
@@ -1356,7 +1356,7 @@ export class WriteFlowAIService {
   /**
    * 执行工具调用
    */
-  private async executeToolCall(toolCall: ToolCall): Promise<ToolExecutionResult> {
+  private async executeToolCall(toolCall: ToolCall): Promise<AIToolExecutionResult> {
     try {
       const tool = getTool(toolCall.toolName)
       if (!tool) {
@@ -1409,7 +1409,7 @@ export class WriteFlowAIService {
   /**
    * 将工具结果集成到内容中
    */
-  private integrateToolResults(content: string, results: ToolExecutionResult[]): string {
+  private integrateToolResults(content: string, results: AIToolExecutionResult[]): string {
     let updatedContent = content
     
     for (const result of results) {

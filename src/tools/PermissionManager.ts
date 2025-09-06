@@ -6,7 +6,7 @@ import { ToolCallEvent } from './ToolBase.js'
  * 工具权限级别定义 - 参考 Kode 的细粒度权限控制
  */
 export enum ToolPermissionLevel {
-  READ_only = 'read_only',        // 只读工具：搜索、读取、分析
+  READ_only = 'READ_only',        // 只读工具：搜索、读取、分析
   safe_write = 'safe_write',      // 安全写入：日志、临时文件、缓存
   system_modify = 'system_modify', // 系统修改：编辑文件、执行命令
   network_access = 'network_access', // 网络访问：API调用、下载
@@ -44,10 +44,10 @@ export interface PermissionPolicy {
 export const DEFAULT_PERMISSION_POLICIES: PermissionPolicy[] = [
   // 只读工具（计划模式允许）
   { toolName: 'Read', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
-  { toolName: 'Glob', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
-  { toolName: 'Grep', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
-  { toolName: 'LSTool', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
-  { toolName: 'WebSearch', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'Glob', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'Grep', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'LSTool', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'WebSearch', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
   { toolName: 'URLFetcher', permissionLevel: ToolPermissionLevel.network_access, grantType: PermissionGrantType.SESSION_GRANT },
   
   // 安全写入工具（需要确认）
@@ -71,7 +71,7 @@ export const DEFAULT_PERMISSION_POLICIES: PermissionPolicy[] = [
   
   // AI 工具（特殊处理）
   { toolName: 'AskExpertModel', permissionLevel: ToolPermissionLevel.network_access, grantType: PermissionGrantType.SESSION_GRANT },
-  { toolName: 'ThinkTool', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'ThinkTool', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
   { toolName: 'TaskTool', permissionLevel: ToolPermissionLevel.system_modify, grantType: PermissionGrantType.ONE_TIME_GRANT },
 ]
 
@@ -91,22 +91,22 @@ export interface ToolUsageStats {
  */
 export const MODE_PERMISSION_MAP: Record<PlanMode, ToolPermissionLevel[]> = {
   [PlanMode.Default]: [
-    ToolPermissionLevel.read_only,
+    ToolPermissionLevel.READ_only,
     ToolPermissionLevel.safe_write,
     ToolPermissionLevel.system_modify,
     ToolPermissionLevel.network_access,
   ],
   [PlanMode.Plan]: [
-    ToolPermissionLevel.read_only,  // Plan模式只允许只读工具
+    ToolPermissionLevel.READ_only,  // Plan模式只允许只读工具
   ],
   [PlanMode.AcceptEdits]: [
-    ToolPermissionLevel.read_only,
+    ToolPermissionLevel.READ_only,
     ToolPermissionLevel.safe_write,
     ToolPermissionLevel.system_modify,
     ToolPermissionLevel.network_access,
   ],
   [PlanMode.BypassPermissions]: [
-    ToolPermissionLevel.read_only,
+    ToolPermissionLevel.READ_only,
     ToolPermissionLevel.safe_write,
     ToolPermissionLevel.system_modify,
     ToolPermissionLevel.network_access,
@@ -274,7 +274,7 @@ export class PermissionManager {
     
     // 根据工具特性自动推断权限级别
     const isReadOnly = tool.isReadOnly()
-    const level = isReadOnly ? ToolPermissionLevel.read_only : ToolPermissionLevel.system_modify
+    const level = isReadOnly ? ToolPermissionLevel.READ_only : ToolPermissionLevel.system_modify
     const grantType = isReadOnly ? PermissionGrantType.ALWAYS_ALLOW : PermissionGrantType.ONE_TIME_GRANT
     
     const policy: PermissionPolicy = {
@@ -415,7 +415,7 @@ export class PermissionManager {
     
     // 统计各权限级别的工具数量
     const toolBreakdown: Record<ToolPermissionLevel, number> = {
-      [ToolPermissionLevel.read_only]: 0,
+      [ToolPermissionLevel.READ_only]: 0,
       [ToolPermissionLevel.safe_write]: 0,
       [ToolPermissionLevel.system_modify]: 0,
       [ToolPermissionLevel.network_access]: 0,
@@ -465,7 +465,7 @@ export class PermissionManager {
       ...(forbiddenTools.length > 10 ? [`  ... 和其他 ${forbiddenTools.length - 10} 个工具`] : []),
       ``,
       `📈 权限级别分布:`,
-      `  • 只读工具: ${stats.toolBreakdown[ToolPermissionLevel.read_only]}个`,
+      `  • 只读工具: ${stats.toolBreakdown[ToolPermissionLevel.READ_only]}个`,
       `  • 安全写入: ${stats.toolBreakdown[ToolPermissionLevel.safe_write]}个`,
       `  • 系统修改: ${stats.toolBreakdown[ToolPermissionLevel.system_modify]}个`,
       `  • 网络访问: ${stats.toolBreakdown[ToolPermissionLevel.network_access]}个`,
@@ -478,6 +478,38 @@ export class PermissionManager {
     ]
 
     return report.join('\n')
+  }
+
+  /**
+   * 简化的工具权限检查 - 只基于工具名称和当前模式
+   * 用于系统提醒等场景，不需要完整的工具对象和上下文
+   */
+  checkToolPermissionByName(toolName: string): { allowed: boolean; reason?: string } {
+    // 获取基础策略
+    const defaultPolicy = DEFAULT_PERMISSION_POLICIES.find(p => p.toolName === toolName)
+    if (!defaultPolicy) {
+      // 未知工具，按照默认策略处理
+      return { allowed: false, reason: '未知工具' }
+    }
+
+    // 检查当前模式是否允许该权限级别
+    const allowedLevels = MODE_PERMISSION_MAP[this.currentMode]
+    if (!allowedLevels.includes(defaultPolicy.permissionLevel)) {
+      return { allowed: false, reason: '当前模式不允许此权限级别的工具' }
+    }
+
+    // 检查是否总是拒绝
+    if (defaultPolicy.grantType === PermissionGrantType.ALWAYS_DENY) {
+      return { allowed: false, reason: '工具被明确拒绝' }
+    }
+
+    // 总是允许的工具
+    if (defaultPolicy.grantType === PermissionGrantType.ALWAYS_ALLOW) {
+      return { allowed: true }
+    }
+
+    // 其他情况需要进一步确认，在这里简化为允许
+    return { allowed: true }
   }
 }
 

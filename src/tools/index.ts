@@ -26,21 +26,21 @@ import { GrepTool } from './search/GrepTool/GrepTool.js'
 import { BashTool } from './system/BashTool/BashTool.js'
 
 // 工具实例 - 延迟初始化以避免循环依赖
-let toolInstances: Map<string, WriteFlowTool> | null = null
+let toolInstances: Map<string, WriteFlowTool<any, any>> | null = null
 
 /**
  * 获取或创建工具实例
  */
-function getOrCreateToolInstances(): Map<string, WriteFlowTool> {
+function getOrCreateToolInstances(): Map<string, WriteFlowTool<any, any>> {
   if (!toolInstances) {
-    toolInstances = new Map([
-      ['Read', new ReadTool()],
-      ['Write', new WriteTool()],
-      ['Edit', new EditTool()],
-      ['MultiEdit', new MultiEditTool()],
-      ['Glob', new GlobTool()],
-      ['Grep', new GrepTool()],
-      ['Bash', new BashTool()],
+    toolInstances = new Map<string, WriteFlowTool<any, any>>([
+      ['Read', new ReadTool() as WriteFlowTool<any, any>],
+      ['Write', new WriteTool() as WriteFlowTool<any, any>],
+      ['Edit', new EditTool() as WriteFlowTool<any, any>],
+      ['MultiEdit', new MultiEditTool() as WriteFlowTool<any, any>],
+      ['Glob', new GlobTool() as WriteFlowTool<any, any>],
+      ['Grep', new GrepTool() as WriteFlowTool<any, any>],
+      ['Bash', new BashTool() as WriteFlowTool<any, any>],
     ])
     
     // 自动注册到工具编排器

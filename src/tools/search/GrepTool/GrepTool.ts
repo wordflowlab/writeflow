@@ -54,6 +54,7 @@ interface GrepToolOutput {
 export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutput> {
   name = 'Grep'
   inputSchema = GrepToolInputSchema
+  category = 'search' as const
 
   async description(): Promise<string> {
     return '在文件内容中搜索文本模式。支持正则表达式、文件过滤、多种输出格式。基于 ripgrep 功能实现，但使用纯 JavaScript。'
@@ -78,7 +79,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
   async *call(
     input: GrepToolInput,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: GrepToolOutput; resultForAssistant?: string }, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: GrepToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: GrepTool) {
       // 1. 参数处理
       const pattern = input.pattern.trim()

@@ -35,6 +35,7 @@ interface BashToolOutput {
 export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutput> {
   name = 'Bash'
   inputSchema = BashToolInputSchema
+  category = 'system' as const
 
   // 后台进程管理
   private static backgroundProcesses = new Map<string, any>()
@@ -107,7 +108,7 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
   async *call(
     input: BashToolInput,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: BashToolOutput; resultForAssistant?: string }, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: BashToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: BashTool) {
       const startTime = Date.now()
       const command = (input as BashToolInput).command.trim()
@@ -160,7 +161,7 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
         }
       }
 
-    }.bind(this), this.name)
+    }.bind(this), context)
   }
 
   renderResultForAssistant(output: BashToolOutput): string {

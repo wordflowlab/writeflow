@@ -35,6 +35,7 @@ interface GlobToolOutput {
 export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutput> {
   name = 'Glob'
   inputSchema = GlobToolInputSchema
+  category = 'search' as const
 
   async description(): Promise<string> {
     return '使用 glob 模式匹配文件和目录。支持通配符：* (匹配除 / 外的任意字符)，** (递归匹配目录)，? (匹配单个字符)，[abc] (字符类)。按修改时间排序返回结果。'
@@ -59,7 +60,7 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
   async *call(
     input: GlobToolInput,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: GlobToolOutput; resultForAssistant?: string }, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: GlobToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: GlobTool) {
       // 1. 参数处理
       const pattern = input.pattern.trim()

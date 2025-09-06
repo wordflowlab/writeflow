@@ -124,7 +124,7 @@ export class SystemPromptOptimizer {
   /**
    * 生成工具系统概述
    */
-  private async generateToolSystemOverview(): string {
+  private async generateToolSystemOverview(): Promise<string> {
     const stats = this.toolOrchestrator.getExecutionStats()
     const permissionStats = this.permissionManager.getPermissionStats()
     
@@ -145,7 +145,7 @@ WriteFlow 提供了 ${this.toolOrchestrator.getToolNames().length} 个专业工�
   /**
    * 生成可用工具列表
    */
-  private async generateAvailableToolsSection(): string {
+  private async generateAvailableToolsSection(): Promise<string> {
     const availableTools = getAvailableTools()
     let tools = availableTools
 
@@ -185,7 +185,7 @@ ${toolDescriptions.join('\n\n')}`
   /**
    * 生成最佳实践部分
    */
-  private async generateBestPracticesSection(): string {
+  private async generateBestPracticesSection(): Promise<string> {
     return `## ✨ 工具使用最佳实践
 
 ### 🎯 工具选择策略
@@ -229,7 +229,7 @@ ${toolDescriptions.join('\n\n')}`
     return `## 🔐 权限和安全说明
 
 ### 当前权限状态
-- **运行模式**: ${currentMode} (${modeDescription[currentMode as keyof typeof modeDescription] || '未知模式'})
+- **运行模式**: ${currentMode} (${modeDescription[currentMode as unknown as keyof typeof modeDescription] || '未知模式'})
 - **可用工具**: ${stats.allowedTools} 个
 - **受限工具**: ${stats.forbiddenTools} 个
 - **会话使用**: ${stats.sessionStats.totalUsage} 次调用
@@ -281,7 +281,7 @@ ${safeMode ? `⚠️ **当前处于安全模式** - 所有写入操作都将被�
   /**
    * 生成任务特定指导
    */
-  private async generateTaskSpecificGuidance(taskContext: string): string {
+  private async generateTaskSpecificGuidance(taskContext: string): Promise<string> {
     const recommendedTools = recommendToolsForTask(taskContext)
     
     if (recommendedTools.length === 0) {

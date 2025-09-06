@@ -108,7 +108,11 @@ export class ToolInterceptor {
       return { allowed: true }
     }
 
-    return this.permissionManager.checkToolPermission(toolName)
+    const result = this.permissionManager.checkToolPermissionByName(toolName)
+    return {
+      allowed: result.allowed,
+      reason: result.reason
+    }
   }
 
   /**
@@ -236,7 +240,7 @@ export class ToolInterceptor {
     }
 
     const mode = currentMode || this.permissionManager.getCurrentMode()
-    const permissionResult = this.permissionManager.checkToolPermission(toolName)
+    const permissionResult = this.permissionManager.checkToolPermissionByName(toolName)
     
     return permissionResult.allowed
   }

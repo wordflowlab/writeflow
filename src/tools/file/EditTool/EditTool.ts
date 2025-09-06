@@ -31,6 +31,7 @@ interface EditToolOutput {
 export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutput> {
   name = 'Edit'
   inputSchema = EditToolInputSchema
+  category = 'file' as const
 
   async description(): Promise<string> {
     return '通过字符串替换的方式编辑文件内容。可以精确替换指定的文本片段，支持单次替换或全部替换。'
@@ -88,7 +89,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
   async *call(
     input: EditToolInput,
     _context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: EditToolOutput; resultForAssistant?: string }, void, unknown> {
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: EditToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: EditTool) {
       // 1. 路径处理和验证
       const filePath = resolve(input.file_path)
@@ -183,7 +184,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
         resultForAssistant,
       }
 
-    }.bind(this), context)
+    }.bind(this), _context)
   }
 
   renderResultForAssistant(output: EditToolOutput): string {

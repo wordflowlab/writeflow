@@ -41,7 +41,7 @@ export class SystemReminderInjector {
     const { toolName, currentMode } = context
     
     // 检查工具权限
-    const permissionResult = this.permissionManager.checkToolPermission(toolName)
+    const permissionResult = this.permissionManager.checkToolPermissionByName(toolName)
     
     if (!permissionResult.allowed) {
       return {
@@ -335,7 +335,7 @@ export class SystemReminderInjector {
     }
 
     // 危险操作总是需要警告
-    const permissionResult = this.permissionManager.checkToolPermission(toolName)
+    const permissionResult = this.permissionManager.checkToolPermissionByName(toolName)
     if (!permissionResult.allowed) {
       return true
     }

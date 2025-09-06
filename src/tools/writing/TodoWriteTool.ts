@@ -1,4 +1,5 @@
 // JSX 渲染交由适配器处理，此处工具逻辑保持纯文本
+import React from 'react'
 import { z } from 'zod'
 import { WritingTool, ToolUseContext, ToolResult, ValidationResult } from '../../types/WritingTool.js'
 import { TodoManager } from '../TodoManager.js'
@@ -166,7 +167,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
     const currentTodos = this.cachedTodos
 
     if (currentTodos.length === 0) {
-      return '暂无任务'
+      return React.createElement('span', {}, '暂无任务')
     }
 
     // 排序: [completed, in_progress, pending] - 与 Kode 相同的逻辑
@@ -181,7 +182,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
     // 找到下一个待处理任务（排序后的第一个 pending 任务）
     const nextPendingIndex = sortedTodos.findIndex(todo => todo.status === TodoStatus.PENDING)
 
-    return 'Todo list updated.'
+    return React.createElement('span', {}, 'Todo list updated.')
 
   }
 
