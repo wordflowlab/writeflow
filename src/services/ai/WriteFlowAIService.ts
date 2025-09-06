@@ -21,6 +21,8 @@ import { AgentContext } from '../../types/agent.js'
 import { ToolUseContext } from '../../Tool.js'
 import { getStreamingService, StreamingService, StreamingRequest } from '../streaming/StreamingService.js'
 import { getResponseStateManager } from '../streaming/ResponseStateManager.js'
+import { getProviderAdapter } from './providers/index.js'
+import { emitReminderEvent } from '../SystemReminderService.js'
 import { startStreamingProgress, stopStreamingProgress } from '../streaming/ProgressIndicator.js'
 import { getOutputFormatter } from '../../ui/utils/outputFormatter.js'
 import { parseAIResponse, parseStreamingChunk, type ParsedResponse } from './ResponseParser.js'
@@ -80,6 +82,7 @@ export class WriteFlowAIService {
   private modelManager = getModelManager()
   private toolOrchestrator = getToolOrchestrator()
   private permissionManager = getPermissionManager()
+  private providerAdapter = getProviderAdapter(undefined)
   
   /**
    * 处理 AI 请求（支持流式和非流式）
@@ -91,6 +94,21 @@ export class WriteFlowAIService {
     }
     
     return this.processNonStreamingRequest(request)
+  }
+
+  /**
+   * 过滤 DeepSeek 等模型在文本中内联暴露的工具标记
+   * 清理形如 <｜tool▁calls▁begin｜> ... <｜tool▁calls▁end｜> 以及单个 <｜tool▁...｜>
+   */
+  private sanitizeLLMArtifacts(text: string | undefined): string {
+    return this.providerAdapter.sanitizeText(text || '')
+  }
+
+  /**
+   * 从文本中提取 DeepSeek 的内联工具调用，返回清理后的文本与解析出的调用
+   */
+  private extractInlineToolCalls(text: string) {
+    return this.providerAdapter.extractInlineToolCalls(text)
   }
   
   /**
@@ -127,6 +145,7 @@ export class WriteFlowAIService {
       }
       
       // 直接调用对应的 API 进行流式处理
+      this.providerAdapter = getProviderAdapter(modelProfile.provider)
       switch (modelProfile.provider) {
         case 'deepseek':
           return await this.callDeepSeekAPI(modelProfile, request)
@@ -190,6 +209,7 @@ export class WriteFlowAIService {
       if (!modelProfile) {
         throw new Error(`找不到模型配置: ${modelName}`)
       }
+      this.providerAdapter = getProviderAdapter(modelProfile.provider)
 
       // 根据提供商调用相应的 AI 服务
       let response: AIResponse
@@ -220,6 +240,8 @@ export class WriteFlowAIService {
         response = await this.processToolInteractions(response, request)
       }
 
+      // 清理可能残留的内联标记（按 provider 适配器）
+      response.content = this.providerAdapter.sanitizeText(response.content)
       return response
 
     } catch (error) {
@@ -917,13 +939,59 @@ export class WriteFlowAIService {
         data = JSON.parse(jsonStr)
       }
       const message: any = data.choices?.[0]?.message
+      // 处理 DeepSeek 内联工具标记（若存在）
+      if (message && typeof message.content === 'string' && message.content.includes('tool▁')) {
+        const inline = this.extractInlineToolCalls(message.content)
+        message.content = inline.cleaned
+        if (inline.calls.length > 0) {
+          message.tool_calls = (message.tool_calls || []).concat(
+            inline.calls.map((c: any) => ({
+              type: 'function',
+              id: `inline_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+              function: {
+                name: c.name,
+                arguments: JSON.stringify(c.args)
+              }
+            }))
+          )
+        }
+      }
       
       totalInputTokens += data.usage?.prompt_tokens || 0
       totalOutputTokens += data.usage?.completion_tokens || 0
 
       // 如果AI没有调用工具，则对话结束
       if (!message.tool_calls || message.tool_calls.length === 0) {
-        conversationHistory += message.content
+        conversationHistory += this.sanitizeLLMArtifacts(message.content)
+
+        // 若上一轮刚进行了 todo_* 更新，这一轮是正文生成：
+        // 1) 自动将当前 in_progress 置为 completed
+        // 2) 若输出文本足够完整（长度阈值），将剩余 pending 也标记为 completed（避免一次性完成的场景进度不同步）
+        if (lastRoundHadTodoUpdate) {
+          try {
+            const { TodoManager } = await import('../../tools/TodoManager.js')
+            const mgr = new TodoManager(process.env.WRITEFLOW_SESSION_ID)
+            const current = await mgr.getCurrentTask()
+            let changed = false
+            if (current) {
+              await mgr.completeTask(current.id)
+              changed = true
+            }
+            // 如果文本较长，认为本轮完成了主要工作，批量同步剩余待处理为完成
+            const substantial = (message.content || '').length >= 800 || conversationHistory.length >= 1200
+            if (substantial) {
+              const all = await mgr.getAllTodos()
+              const pendingIds = all.filter(t => t.status === 'pending').map(t => t.id)
+              if (pendingIds.length > 0) {
+                await mgr.batchUpdateStatus(pendingIds, 'completed' as any)
+                changed = true
+              }
+            }
+            if (changed) emitReminderEvent('todo:changed', { agentId: 'deepseek-ai' })
+          } catch (e) {
+            console.warn('⚠️ 自动完成当前任务失败:', (e as Error)?.message)
+          }
+        }
         
         return {
           content: conversationHistory,

@@ -149,10 +149,10 @@ export class WriteFlowApp extends EventEmitter {
 - 响应结构：主要输出应该是用户requested的内容，工具调用结果会在UI的专门区域显示
 
 TODO 管理规范：
-- TodoWrite工具只用于后台进度追踪，不在主对话中展示
-- 工具调用是隐式的：执行写作任务时可以更新进度，但主要输出仍是内容
-- 避免在主响应中包含"任务列表已更新"等工具执行信息
-- 专注输出：用户看到的应该是他们requested的故事、文章或其他内容
+- 完成一个任务后“必须”同步状态：使用 todo_write 将该任务标记为 completed
+- 若一次性完成了多个任务，应批量同步所有相关任务的状态（不要遗漏）
+- 工具调用是隐式的：执行/完成任务时更新进度，但主要输出仍是内容
+- 避免在主响应中包含“任务列表已更新”等工具执行信息；进度会显示在专门区域
 
 流式输出规范：
 - 按段落组织输出，每个段落完整后再显示，避免逐字符的打字机效果
@@ -1147,6 +1147,25 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     } else if (typeof aiResponse === 'string') {
       // 处理传统的文本响应（向后兼容）
       console.log('📝 处理传统文本响应，长度:', aiResponse.length)
+
+      // 使用 provider 适配器处理内联标记
+      try {
+        const { getProviderAdapter } = await import('../services/ai/providers/index.js')
+        const adapter = getProviderAdapter(this.config.apiProvider)
+        const extracted = adapter.extractInlineToolCalls(aiResponse)
+        aiResponse = extracted.cleaned
+        if (extracted.calls.length > 0) {
+          shouldIntercept = true
+          for (const c of extracted.calls) {
+            // 兼容大小写/历史命名
+            const name = (c.name || '').toLowerCase()
+            const mapped = name === 'todowrite' ? 'todo_write' : name === 'todoread' ? 'todo_read' : c.name
+            toolCalls.push({ toolName: mapped, input: c.args })
+          }
+        }
+        // 再兜底清理
+        aiResponse = adapter.sanitizeText(aiResponse)
+      } catch {}
 
       const thinkingMatch = aiResponse.match(/<thinking>([\s\S]*?)<\/thinking>/i)
       if (thinkingMatch) {
