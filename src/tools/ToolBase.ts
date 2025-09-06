@@ -2,8 +2,20 @@ import { z } from 'zod'
 import { WriteFlowTool, ToolUseContext, PermissionResult, ValidationResult } from '../Tool.js'
 
 /**
- * WriteFlow 工具基类
- * 提供通用的工具实现模式和默认行为
+ * 工具调用事件类型 - 参考 Kode 的设计
+ */
+export interface ToolCallEvent {
+  type: 'progress' | 'result' | 'error' | 'permission_request' | 'input_request'
+  message?: string
+  data?: any
+  progress?: number // 0-100
+  error?: Error
+  resultForAssistant?: string
+}
+
+/**
+ * WriteFlow 工具基类 - 参考 Kode 的优秀架构
+ * 提供统一的工具实现模式和完善的生命周期管理
  */
 export abstract class ToolBase<
   TInput extends z.ZodObject<any> = z.ZodObject<any>,
@@ -12,13 +24,22 @@ export abstract class ToolBase<
   abstract name: string
   abstract inputSchema: TInput
   
+  // 工具类别 - 用于组织和分类
+  abstract category: 'file' | 'system' | 'search' | 'web' | 'ai' | 'memory' | 'writing' | 'other'
+  
   // 子类必须实现的核心方法
   abstract description(): Promise<string>
   abstract call(
     input: z.infer<TInput>,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result'; data: TOutput; resultForAssistant?: string }, void, unknown>
+  ): AsyncGenerator<ToolCallEvent, void, unknown>
 
+  // 工具版本 - 用于兼容性检查
+  version: string = '1.0.0'
+  
+  // 工具标签 - 用于快速过滤和搜索  
+  tags: string[] = []
+  
   // 默认实现 - 子类可以覆盖
   async isEnabled(): Promise<boolean> {
     return true
@@ -34,6 +55,23 @@ export abstract class ToolBase<
 
   needsPermissions(input?: z.infer<TInput>): boolean {
     return !this.isReadOnly()
+  }
+
+  // 工具资源估算 - 用于性能优化
+  estimateResourceUsage(input?: z.infer<TInput>): {
+    cpu: 'low' | 'medium' | 'high'
+    memory: 'low' | 'medium' | 'high'  
+    io: 'none' | 'light' | 'heavy'
+    network: boolean
+    duration: 'fast' | 'medium' | 'slow' // <1s, 1-10s, >10s
+  } {
+    return {
+      cpu: 'low',
+      memory: 'low',
+      io: 'light',
+      network: false,
+      duration: 'fast'
+    }
   }
 
   async checkPermissions(
@@ -56,6 +94,20 @@ export abstract class ToolBase<
     return { isAllowed: true }
   }
 
+  // 工具依赖检查 - 检查运行环境是否满足要求
+  async checkDependencies(): Promise<{
+    satisfied: boolean
+    missing?: string[]
+    warnings?: string[]
+  }> {
+    return { satisfied: true }
+  }
+
+  // 工具兼容性检查 - 检查与其他工具的兼容性
+  isCompatibleWith(otherTool: WriteFlowTool): boolean {
+    return true
+  }
+
   async validateInput(
     input: z.infer<TInput>,
     context?: ToolUseContext,
@@ -75,6 +127,9 @@ export abstract class ToolBase<
     if (typeof output === 'string') {
       return output
     }
+    if (output && typeof output === 'object' && 'resultForAssistant' in output) {
+      return String(output.resultForAssistant)
+    }
     return JSON.stringify(output, null, 2)
   }
 
@@ -82,10 +137,15 @@ export abstract class ToolBase<
     input: z.infer<TInput>,
     options: { verbose: boolean },
   ): string {
+    const resourceInfo = this.estimateResourceUsage(input)
+    const resourceLabel = resourceInfo.duration === 'slow' ? '(可能需要较长时间)' : 
+                         resourceInfo.io === 'heavy' ? '(磁盘密集型)' :
+                         resourceInfo.network ? '(需要网络)' : ''
+    
     if (options.verbose) {
-      return `正在执行 ${this.name} 工具，参数: ${JSON.stringify(input, null, 2)}`
+      return `🔧 正在执行 ${this.name} 工具 ${resourceLabel}\n参数: ${JSON.stringify(input, null, 2)}`
     }
-    return `正在执行 ${this.name}...`
+    return `🔧 正在执行 ${this.name}... ${resourceLabel}`
   }
 
   userFacingName(): string {
@@ -94,26 +154,152 @@ export abstract class ToolBase<
 
   async prompt(options?: { safeMode?: boolean }): Promise<string> {
     const description = await this.description()
-    return `${description}\n\n使用此工具时请确保参数正确，并注意操作的安全性。`
+    const resourceUsage = this.estimateResourceUsage()
+    const safetyNote = this.isReadOnly() ? '这是一个只读工具，安全性高。' : '此工具可能会修改系统状态，请谨慎使用。'
+    const performanceNote = resourceUsage.duration === 'slow' ? '\n⚠️  此工具执行时间较长，请耐心等待。' : ''
+    
+    return `${description}\n\n${safetyNote}${performanceNote}\n\n请确保参数格式正确，遵循工具的使用规范。`
   }
 
-  // 输入JSON Schema生成（可选）
+  // 输入JSON Schema生成 - 从 Zod schema 转换
   get inputJSONSchema(): Record<string, unknown> | undefined {
-    // 这里可以实现 Zod 到 JSON Schema 的转换
-    return undefined
+    try {
+      return this.zodSchemaToJsonSchema(this.inputSchema)
+    } catch (error) {
+      console.warn(`[${this.name}] JSON Schema 生成失败:`, error)
+      return undefined
+    }
   }
 
-  // 工具执行包装器 - 提供错误处理和日志
-  protected async *executeWithErrorHandling<T>(
-    operation: () => AsyncGenerator<T, void, unknown>,
-    toolName: string,
-  ): AsyncGenerator<T, void, unknown> {
+  // 工具执行包装器 - 提供完整的生命周期管理
+  protected async *executeWithErrorHandling(
+    operation: () => AsyncGenerator<ToolCallEvent, void, unknown>,
+    context: ToolUseContext,
+  ): AsyncGenerator<ToolCallEvent, void, unknown> {
+    const startTime = Date.now()
+    let success = true
+    
     try {
+      // 检查中止信号
+      if (context.abortController.signal.aborted) {
+        yield { type: 'error', error: new Error('工具执行被中止'), message: '工具执行被用户中止' }
+        return
+      }
+      
       yield* operation()
     } catch (error) {
+      success = false
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[${toolName}] 执行失败:`, errorMessage)
-      throw new Error(`${toolName} 执行失败: ${errorMessage}`)
+      console.error(`[${this.name}] 执行失败:`, errorMessage)
+      
+      yield {
+        type: 'error',
+        error: error instanceof Error ? error : new Error(errorMessage),
+        message: `${this.name} 执行失败: ${errorMessage}`,
+        resultForAssistant: `工具 ${this.name} 执行失败: ${errorMessage}`
+      }
+    } finally {
+      const duration = Date.now() - startTime
+      if (context.options?.verbose) {
+        console.log(`[${this.name}] 执行${success ? '成功' : '失败'}, 耗时: ${duration}ms`)
+      }
+    }
+  }
+
+  // Zod Schema 到 JSON Schema 的转换
+  private zodSchemaToJsonSchema(zodSchema: any): Record<string, unknown> {
+    const shape = zodSchema._def?.shape
+    if (!shape) {
+      return {
+        type: 'object',
+        properties: {},
+        required: [],
+        additionalProperties: false
+      }
+    }
+
+    const properties: any = {}
+    const required: string[] = []
+
+    for (const [key, zodType] of Object.entries(shape)) {
+      const fieldSchema = this.zodTypeToJsonSchema(zodType as any)
+      properties[key] = fieldSchema
+      
+      // 检查是否是必需字段
+      if (!(zodType as any)._def?.optional) {
+        required.push(key)
+      }
+    }
+
+    return {
+      type: 'object',
+      properties,
+      required,
+      additionalProperties: false
+    }
+  }
+
+  // 将单个 Zod 类型转换为 JSON Schema 字段
+  private zodTypeToJsonSchema(zodType: any): any {
+    const typeName = zodType._def.typeName
+    
+    switch (typeName) {
+      case 'ZodString':
+        return {
+          type: 'string',
+          description: zodType.description || '',
+          ...(zodType._def.checks?.some((c: any) => c.kind === 'min') && {
+            minLength: zodType._def.checks.find((c: any) => c.kind === 'min')?.value
+          }),
+          ...(zodType._def.checks?.some((c: any) => c.kind === 'max') && {
+            maxLength: zodType._def.checks.find((c: any) => c.kind === 'max')?.value
+          })
+        }
+      case 'ZodNumber':
+        return {
+          type: 'number', 
+          description: zodType.description || '',
+          ...(zodType._def.checks?.some((c: any) => c.kind === 'min') && {
+            minimum: zodType._def.checks.find((c: any) => c.kind === 'min')?.value
+          }),
+          ...(zodType._def.checks?.some((c: any) => c.kind === 'max') && {
+            maximum: zodType._def.checks.find((c: any) => c.kind === 'max')?.value
+          })
+        }
+      case 'ZodBoolean':
+        return {
+          type: 'boolean',
+          description: zodType.description || ''
+        }
+      case 'ZodOptional':
+        return this.zodTypeToJsonSchema(zodType._def.innerType)
+      case 'ZodDefault':
+        const innerSchema = this.zodTypeToJsonSchema(zodType._def.innerType)
+        innerSchema.default = zodType._def.defaultValue()
+        return innerSchema
+      case 'ZodArray':
+        return {
+          type: 'array',
+          items: this.zodTypeToJsonSchema(zodType._def.type),
+          description: zodType.description || ''
+        }
+      case 'ZodEnum':
+        return {
+          type: 'string',
+          enum: zodType._def.values,
+          description: zodType.description || ''
+        }
+      case 'ZodLiteral':
+        return {
+          type: typeof zodType._def.value,
+          const: zodType._def.value,
+          description: zodType.description || ''
+        }
+      default:
+        return {
+          type: 'string',
+          description: zodType.description || `Unsupported Zod type: ${typeName}`
+        }
     }
   }
 

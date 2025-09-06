@@ -1,102 +1,167 @@
 import { PlanMode } from '../types/agent.js'
+import { ToolUseContext, WriteFlowTool, PermissionResult } from '../Tool.js'
+import { ToolCallEvent } from './ToolBase.js'
 
 /**
- * 工具权限级别定义
+ * 工具权限级别定义 - 参考 Kode 的细粒度权限控制
  */
 export enum ToolPermissionLevel {
-  READ_ONLY = 'read_only',        // 只读工具：搜索、读取、分析
-  SAFE_WRITE = 'safe_write',      // 安全写入：日志、临时文件
-  SYSTEM_MODIFY = 'system_modify', // 系统修改：编辑文件、执行命令
-  DANGEROUS = 'dangerous'         // 危险操作：删除、格式化、网络请求
+  READ_only = 'read_only',        // 只读工具：搜索、读取、分析
+  safe_write = 'safe_write',      // 安全写入：日志、临时文件、缓存
+  system_modify = 'system_modify', // 系统修改：编辑文件、执行命令
+  network_access = 'network_access', // 网络访问：API调用、下载
+  dangerous = 'dangerous'         // 危险操作：删除、格式化、系统重启
 }
 
 /**
- * 工具分类配置
+ * 权限授权类型
  */
-export const TOOL_PERMISSIONS: Record<string, ToolPermissionLevel> = {
-  // 只读工具（Plan模式允许）
-  'read_article': ToolPermissionLevel.READ_ONLY,
-  'search_files': ToolPermissionLevel.READ_ONLY,
-  'list_directory': ToolPermissionLevel.READ_ONLY,
-  'get_status': ToolPermissionLevel.READ_ONLY,
-  'anthropic_client': ToolPermissionLevel.READ_ONLY,
-  'deepseek_client': ToolPermissionLevel.READ_ONLY,
-  'qwen_client': ToolPermissionLevel.READ_ONLY,
-  'glm_client': ToolPermissionLevel.READ_ONLY,
-  'web_search': ToolPermissionLevel.READ_ONLY,
-  'citation_manager': ToolPermissionLevel.READ_ONLY,
-  'grammar_checker': ToolPermissionLevel.READ_ONLY,
-  'exit_plan_mode': ToolPermissionLevel.READ_ONLY, // 特殊：允许在Plan模式使用
-  
-  // 安全写入工具（Plan模式禁止）
-  'write_log': ToolPermissionLevel.SAFE_WRITE,
-  'save_memory_note': ToolPermissionLevel.SAFE_WRITE,
-  'outline_generator': ToolPermissionLevel.SAFE_WRITE,
-  
-  // 系统修改工具（Plan模式严格禁止）
-  'edit_article': ToolPermissionLevel.SYSTEM_MODIFY,
-  'write_article': ToolPermissionLevel.SYSTEM_MODIFY,
-  'content_rewriter': ToolPermissionLevel.SYSTEM_MODIFY,
-  'style_adapter': ToolPermissionLevel.SYSTEM_MODIFY,
-  'wechat_converter': ToolPermissionLevel.SYSTEM_MODIFY,
-  'execute_command': ToolPermissionLevel.SYSTEM_MODIFY,
-  'install_package': ToolPermissionLevel.SYSTEM_MODIFY,
-  'git_commit': ToolPermissionLevel.SYSTEM_MODIFY,
-  'modify_config': ToolPermissionLevel.SYSTEM_MODIFY,
-  
-  // 危险操作工具（始终需要特别权限）
-  'delete_file': ToolPermissionLevel.DANGEROUS,
-  'format_disk': ToolPermissionLevel.DANGEROUS,
-  'system_restart': ToolPermissionLevel.DANGEROUS,
+export enum PermissionGrantType {
+  ALWAYS_ALLOW = 'always_allow',     // 总是允许
+  SESSION_GRANT = 'session_grant',   // 会话内授权
+  ONE_TIME_GRANT = 'one_time_grant', // 一次性授权
+  ALWAYS_DENY = 'always_deny'        // 总是拒绝
 }
 
 /**
- * 模式权限映射
+ * 权限策略配置
+ */
+export interface PermissionPolicy {
+  toolName: string
+  permissionLevel: ToolPermissionLevel
+  grantType: PermissionGrantType
+  conditions?: {
+    maxUsagePerSession?: number
+    timeWindowMinutes?: number
+    requireConfirmation?: boolean
+    allowInSafeMode?: boolean
+  }
+}
+
+/**
+ * 默认权限策略配置 - 基于工具的实际功能分类
+ */
+export const DEFAULT_PERMISSION_POLICIES: PermissionPolicy[] = [
+  // 只读工具（计划模式允许）
+  { toolName: 'Read', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'Glob', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'Grep', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'LSTool', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'WebSearch', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'URLFetcher', permissionLevel: ToolPermissionLevel.network_access, grantType: PermissionGrantType.SESSION_GRANT },
+  
+  // 安全写入工具（需要确认）
+  { toolName: 'Write', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.ONE_TIME_GRANT, 
+    conditions: { requireConfirmation: true, maxUsagePerSession: 10 } },
+  { toolName: 'MemoryWrite', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.SESSION_GRANT },
+  { toolName: 'TodoWrite', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  
+  // 系统修改工具（需要明确授权）
+  { toolName: 'Edit', permissionLevel: ToolPermissionLevel.system_modify, grantType: PermissionGrantType.ONE_TIME_GRANT,
+    conditions: { requireConfirmation: true } },
+  { toolName: 'MultiEdit', permissionLevel: ToolPermissionLevel.system_modify, grantType: PermissionGrantType.ONE_TIME_GRANT,
+    conditions: { requireConfirmation: true } },
+  { toolName: 'Bash', permissionLevel: ToolPermissionLevel.system_modify, grantType: PermissionGrantType.ONE_TIME_GRANT,
+    conditions: { requireConfirmation: true } },
+  { toolName: 'NotebookEdit', permissionLevel: ToolPermissionLevel.system_modify, grantType: PermissionGrantType.ONE_TIME_GRANT },
+  
+  // 网络访问工具（需要会话授权）
+  { toolName: 'WebFetch', permissionLevel: ToolPermissionLevel.network_access, grantType: PermissionGrantType.SESSION_GRANT,
+    conditions: { maxUsagePerSession: 20, timeWindowMinutes: 60 } },
+  
+  // AI 工具（特殊处理）
+  { toolName: 'AskExpertModel', permissionLevel: ToolPermissionLevel.network_access, grantType: PermissionGrantType.SESSION_GRANT },
+  { toolName: 'ThinkTool', permissionLevel: ToolPermissionLevel.read_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'TaskTool', permissionLevel: ToolPermissionLevel.system_modify, grantType: PermissionGrantType.ONE_TIME_GRANT },
+]
+
+/**
+ * 工具使用统计
+ */
+export interface ToolUsageStats {
+  toolName: string
+  usageCount: number
+  lastUsedAt: Date
+  sessionUsageCount: number
+  deniedCount: number
+}
+
+/**
+ * 模式权限映射 - 更新枚举值
  */
 export const MODE_PERMISSION_MAP: Record<PlanMode, ToolPermissionLevel[]> = {
   [PlanMode.Default]: [
-    ToolPermissionLevel.READ_ONLY,
-    ToolPermissionLevel.SAFE_WRITE,
-    ToolPermissionLevel.SYSTEM_MODIFY,
+    ToolPermissionLevel.read_only,
+    ToolPermissionLevel.safe_write,
+    ToolPermissionLevel.system_modify,
+    ToolPermissionLevel.network_access,
   ],
   [PlanMode.Plan]: [
-    ToolPermissionLevel.READ_ONLY,  // Plan模式只允许只读工具
+    ToolPermissionLevel.read_only,  // Plan模式只允许只读工具
   ],
   [PlanMode.AcceptEdits]: [
-    ToolPermissionLevel.READ_ONLY,
-    ToolPermissionLevel.SAFE_WRITE,
-    ToolPermissionLevel.SYSTEM_MODIFY,
+    ToolPermissionLevel.read_only,
+    ToolPermissionLevel.safe_write,
+    ToolPermissionLevel.system_modify,
+    ToolPermissionLevel.network_access,
   ],
   [PlanMode.BypassPermissions]: [
-    ToolPermissionLevel.READ_ONLY,
-    ToolPermissionLevel.SAFE_WRITE,
-    ToolPermissionLevel.SYSTEM_MODIFY,
-    ToolPermissionLevel.DANGEROUS,  // 绕过权限模式允许危险操作
+    ToolPermissionLevel.read_only,
+    ToolPermissionLevel.safe_write,
+    ToolPermissionLevel.system_modify,
+    ToolPermissionLevel.network_access,
+    ToolPermissionLevel.dangerous,  // 绕过权限模式允许危险操作
   ],
 }
 
 /**
- * 权限检查结果
+ * 权限检查结果 - 增强版
  */
 export interface PermissionCheckResult {
   allowed: boolean
   reason?: string
   suggestion?: string
   alternativeTools?: string[]
+  needsUserConfirmation?: boolean
+  grantType?: PermissionGrantType
+  remainingUsage?: number
 }
 
 /**
- * 工具权限管理器
- * 基于 Claude Code 的权限控制机制
+ * 增强的工具权限管理器 - 参考 Kode 的权限架构
+ * 提供细粒度权限控制、使用统计和智能授权决策
  */
 export class PermissionManager {
   private currentMode: PlanMode = PlanMode.Default
+  private permissionPolicies = new Map<string, PermissionPolicy>()
+  private toolUsageStats = new Map<string, ToolUsageStats>()
+  private sessionGrants = new Set<string>()
+  private oneTimeGrants = new Set<string>()
+  private sessionStartTime = Date.now()
+
+  constructor() {
+    // 初始化默认权限策略
+    DEFAULT_PERMISSION_POLICIES.forEach(policy => {
+      this.permissionPolicies.set(policy.toolName, policy)
+    })
+  }
 
   /**
    * 设置当前模式
    */
   setCurrentMode(mode: PlanMode): void {
+    const previousMode = this.currentMode
     this.currentMode = mode
+    
+    // 模式切换时清理一次性授权
+    if (previousMode !== mode) {
+      this.oneTimeGrants.clear()
+      
+      // Plan 模式切换时清理会话授权（更严格）
+      if (mode === PlanMode.Plan) {
+        this.sessionGrants.clear()
+      }
+    }
   }
 
   /**
@@ -107,104 +172,163 @@ export class PermissionManager {
   }
 
   /**
-   * 检查工具是否有执行权限
+   * 检查工具权限 - 完整的权限检查逻辑
    */
-  checkToolPermission(toolName: string): PermissionCheckResult {
-    const toolPermissionLevel = TOOL_PERMISSIONS[toolName]
+  async checkToolPermission(
+    tool: WriteFlowTool, 
+    input: any, 
+    context: ToolUseContext
+  ): Promise<PermissionResult> {
+    const toolName = tool.name
     
-    // 工具未定义，默认为危险操作
-    if (!toolPermissionLevel) {
-      return {
-        allowed: false,
-        reason: `工具 "${toolName}" 未在权限表中定义`,
-        suggestion: '请联系管理员添加此工具的权限配置',
+    // 获取或创建权限策略
+    const policy = this.getOrCreatePolicy(tool)
+    
+    // 更新使用统计
+    this.updateUsageStats(toolName, 'attempt')
+    
+    // 检查基本权限级别
+    const allowedLevels = MODE_PERMISSION_MAP[this.currentMode]
+    if (!allowedLevels.includes(policy.permissionLevel)) {
+      this.updateUsageStats(toolName, 'denied')
+      return this.createDeniedResult(toolName, policy, '当前模式不允许此权限级别的工具')
+    }
+    
+    // 检查工具是否被明确拒绝
+    if (policy.grantType === PermissionGrantType.ALWAYS_DENY) {
+      this.updateUsageStats(toolName, 'denied')
+      return this.createDeniedResult(toolName, policy, '此工具已被管理策略禁用')
+    }
+    
+    // 检查是否总是允许
+    if (policy.grantType === PermissionGrantType.ALWAYS_ALLOW) {
+      return { isAllowed: true }
+    }
+    
+    // 检查会话限制
+    if (policy.conditions?.maxUsagePerSession) {
+      const usage = this.toolUsageStats.get(toolName)?.sessionUsageCount || 0
+      if (usage >= policy.conditions.maxUsagePerSession) {
+        this.updateUsageStats(toolName, 'denied')
+        return this.createDeniedResult(toolName, policy, '已达到会话使用次数限制')
       }
     }
-
-    const allowedLevels = MODE_PERMISSION_MAP[this.currentMode]
-    const allowed = allowedLevels.includes(toolPermissionLevel)
-
-    if (!allowed) {
-      return this.generatePermissionDeniedResult(toolName, toolPermissionLevel)
+    
+    // 检查一次性授权
+    if (policy.grantType === PermissionGrantType.ONE_TIME_GRANT) {
+      if (this.oneTimeGrants.has(toolName)) {
+        this.oneTimeGrants.delete(toolName) // 消费授权
+        return { isAllowed: true }
+      }
+      
+      // 需要用户确认
+      return {
+        isAllowed: false,
+        denialReason: '需要用户确认授权',
+        behavior: 'ask'
+      }
     }
-
-    return { allowed: true }
+    
+    // 检查会话授权
+    if (policy.grantType === PermissionGrantType.SESSION_GRANT) {
+      if (this.sessionGrants.has(toolName)) {
+        return { isAllowed: true }
+      }
+      
+      // 需要用户确认
+      return {
+        isAllowed: false,
+        denialReason: '需要会话授权',
+        behavior: 'ask'
+      }
+    }
+    
+    return { isAllowed: true }
   }
 
   /**
-   * 生成权限拒绝结果
+   * 授予权限
    */
-  private generatePermissionDeniedResult(
-    toolName: string, 
-    toolLevel: ToolPermissionLevel,
-  ): PermissionCheckResult {
-    const result: PermissionCheckResult = {
-      allowed: false,
-    }
-
-    switch (this.currentMode) {
-      case PlanMode.Plan:
-        result.reason = `Plan模式下禁止使用 "${toolName}" 工具（权限级别：${toolLevel}）`
-        result.suggestion = this.getPlanModeSuggestion(toolName, toolLevel)
-        result.alternativeTools = this.getAlternativeTools(toolName, toolLevel)
+  grantPermission(toolName: string, grantType: PermissionGrantType): void {
+    switch (grantType) {
+      case PermissionGrantType.ONE_TIME_GRANT:
+        this.oneTimeGrants.add(toolName)
         break
-        
-      case PlanMode.Default:
-      case PlanMode.AcceptEdits:
-        if (toolLevel === ToolPermissionLevel.DANGEROUS) {
-          result.reason = `工具 "${toolName}" 需要危险操作权限`
-          result.suggestion = '请切换到 bypassPermissions 模式或联系管理员'
-        }
+      case PermissionGrantType.SESSION_GRANT:
+        this.sessionGrants.add(toolName)
         break
-        
       default:
-        result.reason = `当前模式 "${this.currentMode}" 不支持权限级别 "${toolLevel}" 的工具`
-    }
-
-    return result
-  }
-
-  /**
-   * 获取Plan模式的建议
-   */
-  private getPlanModeSuggestion(toolName: string, toolLevel: ToolPermissionLevel): string {
-    switch (toolLevel) {
-      case ToolPermissionLevel.SAFE_WRITE:
-        return '请在计划中说明需要进行的写入操作，使用 exit_plan_mode 工具获得确认后再执行'
-        
-      case ToolPermissionLevel.SYSTEM_MODIFY:
-        return `请制定详细的修改计划，包含 "${toolName}" 的具体使用方式，然后使用 exit_plan_mode 工具退出Plan模式`
-        
-      case ToolPermissionLevel.DANGEROUS:
-        return `"${toolName}" 是危险操作，请在计划中详细说明必要性和风险控制措施`
-        
-      default:
-        return '请使用只读工具进行分析，制定完整计划后退出Plan模式'
+        // 其他类型不需要手动授权
+        break
     }
   }
 
   /**
-   * 获取替代工具建议
+   * 获取或创建工具权限策略
    */
-  private getAlternativeTools(toolName: string, toolLevel: ToolPermissionLevel): string[] {
-    const alternatives: string[] = []
-    
-    // 根据工具功能提供替代建议
-    if (toolName.includes('edit') || toolName.includes('write')) {
-      alternatives.push('read_article', 'search_files')
+  private getOrCreatePolicy(tool: WriteFlowTool): PermissionPolicy {
+    const existing = this.permissionPolicies.get(tool.name)
+    if (existing) {
+      return existing
     }
     
-    if (toolName.includes('execute') || toolName.includes('command')) {
-      alternatives.push('get_status', 'list_directory')
+    // 根据工具特性自动推断权限级别
+    const isReadOnly = tool.isReadOnly()
+    const level = isReadOnly ? ToolPermissionLevel.read_only : ToolPermissionLevel.system_modify
+    const grantType = isReadOnly ? PermissionGrantType.ALWAYS_ALLOW : PermissionGrantType.ONE_TIME_GRANT
+    
+    const policy: PermissionPolicy = {
+      toolName: tool.name,
+      permissionLevel: level,
+      grantType: grantType,
+      conditions: isReadOnly ? undefined : { requireConfirmation: true }
     }
     
-    if (toolName.includes('git')) {
-      alternatives.push('read_article') // 可以读取git状态文件
-    }
+    this.permissionPolicies.set(tool.name, policy)
+    return policy
+  }
 
-    return alternatives.filter(alt => 
-      TOOL_PERMISSIONS[alt] === ToolPermissionLevel.READ_ONLY,
-    )
+  /**
+   * 创建拒绝结果
+   */
+  private createDeniedResult(toolName: string, policy: PermissionPolicy, reason: string): PermissionResult {
+    return {
+      isAllowed: false,
+      denialReason: reason,
+      behavior: 'deny'
+    }
+  }
+
+  /**
+   * 更新使用统计
+   */
+  private updateUsageStats(toolName: string, action: 'attempt' | 'success' | 'denied'): void {
+    let stats = this.toolUsageStats.get(toolName)
+    if (!stats) {
+      stats = {
+        toolName,
+        usageCount: 0,
+        sessionUsageCount: 0,
+        deniedCount: 0,
+        lastUsedAt: new Date()
+      }
+      this.toolUsageStats.set(toolName, stats)
+    }
+    
+    switch (action) {
+      case 'attempt':
+        // 记录尝试使用
+        stats.lastUsedAt = new Date()
+        break
+      case 'success':
+        stats.usageCount++
+        stats.sessionUsageCount++
+        stats.lastUsedAt = new Date()
+        break
+      case 'denied':
+        stats.deniedCount++
+        break
+    }
   }
 
   /**
@@ -212,10 +336,15 @@ export class PermissionManager {
    */
   getAllowedTools(): string[] {
     const allowedLevels = MODE_PERMISSION_MAP[this.currentMode]
+    const allowedTools: string[] = []
     
-    return Object.entries(TOOL_PERMISSIONS)
-      .filter(([, level]) => allowedLevels.includes(level))
-      .map(([toolName]) => toolName)
+    for (const [toolName, policy] of this.permissionPolicies) {
+      if (allowedLevels.includes(policy.permissionLevel)) {
+        allowedTools.push(toolName)
+      }
+    }
+    
+    return allowedTools
   }
 
   /**
@@ -223,27 +352,48 @@ export class PermissionManager {
    */
   getForbiddenTools(): string[] {
     const allowedLevels = MODE_PERMISSION_MAP[this.currentMode]
+    const forbiddenTools: string[] = []
     
-    return Object.entries(TOOL_PERMISSIONS)
-      .filter(([, level]) => !allowedLevels.includes(level))
-      .map(([toolName]) => toolName)
+    for (const [toolName, policy] of this.permissionPolicies) {
+      if (!allowedLevels.includes(policy.permissionLevel)) {
+        forbiddenTools.push(toolName)
+      }
+    }
+    
+    return forbiddenTools
   }
 
   /**
-   * 验证模式切换权限
+   * 获取工具使用统计
    */
-  canSwitchToMode(targetMode: PlanMode): PermissionCheckResult {
-    // 基本的模式切换权限检查
-    switch (targetMode) {
-      case PlanMode.BypassPermissions:
-        return {
-          allowed: true, // 在我们的实现中，暂时允许切换到绕过权限模式
-          reason: '切换到绕过权限模式将允许执行危险操作',
-        }
-        
-      default:
-        return { allowed: true }
+  getToolStats(toolName?: string): ToolUsageStats[] {
+    if (toolName) {
+      const stats = this.toolUsageStats.get(toolName)
+      return stats ? [stats] : []
     }
+    
+    return Array.from(this.toolUsageStats.values())
+  }
+
+  /**
+   * 清理会话数据
+   */
+  clearSession(): void {
+    this.sessionGrants.clear()
+    this.oneTimeGrants.clear()
+    this.sessionStartTime = Date.now()
+    
+    // 重置会话使用计数
+    for (const stats of this.toolUsageStats.values()) {
+      stats.sessionUsageCount = 0
+    }
+  }
+
+  /**
+   * 添加或更新权限策略
+   */
+  setPermissionPolicy(policy: PermissionPolicy): void {
+    this.permissionPolicies.set(policy.toolName, policy)
   }
 
   /**
@@ -254,27 +404,41 @@ export class PermissionManager {
     allowedTools: number
     forbiddenTools: number
     toolBreakdown: Record<ToolPermissionLevel, number>
+    sessionStats: {
+      totalUsage: number
+      grantedPermissions: number
+      deniedRequests: number
+    }
   } {
     const allowedTools = this.getAllowedTools()
     const forbiddenTools = this.getForbiddenTools()
     
     // 统计各权限级别的工具数量
     const toolBreakdown: Record<ToolPermissionLevel, number> = {
-      [ToolPermissionLevel.READ_ONLY]: 0,
-      [ToolPermissionLevel.SAFE_WRITE]: 0,
-      [ToolPermissionLevel.SYSTEM_MODIFY]: 0,
-      [ToolPermissionLevel.DANGEROUS]: 0,
+      [ToolPermissionLevel.read_only]: 0,
+      [ToolPermissionLevel.safe_write]: 0,
+      [ToolPermissionLevel.system_modify]: 0,
+      [ToolPermissionLevel.network_access]: 0,
+      [ToolPermissionLevel.dangerous]: 0,
     }
 
-    Object.values(TOOL_PERMISSIONS).forEach(level => {
-      toolBreakdown[level]++
+    Array.from(this.permissionPolicies.values()).forEach(policy => {
+      toolBreakdown[policy.permissionLevel]++
     })
+
+    // 会话统计
+    const sessionStats = {
+      totalUsage: Array.from(this.toolUsageStats.values()).reduce((sum, stats) => sum + stats.sessionUsageCount, 0),
+      grantedPermissions: this.sessionGrants.size + this.oneTimeGrants.size,
+      deniedRequests: Array.from(this.toolUsageStats.values()).reduce((sum, stats) => sum + stats.deniedCount, 0)
+    }
 
     return {
       currentMode: this.currentMode,
       allowedTools: allowedTools.length,
       forbiddenTools: forbiddenTools.length,
       toolBreakdown,
+      sessionStats
     }
   }
 
@@ -290,18 +454,42 @@ export class PermissionManager {
       `📊 工具权限报告 - 当前模式: ${this.currentMode}`,
       ``,
       `✅ 允许的工具 (${stats.allowedTools}个):`,
-      ...allowedTools.map(tool => `  • ${tool}`),
+      ...allowedTools.slice(0, 10).map(tool => `  • ${tool}`),
+      ...(allowedTools.length > 10 ? [`  ... 和其他 ${allowedTools.length - 10} 个工具`] : []),
       ``,
       `❌ 禁止的工具 (${stats.forbiddenTools}个):`,
-      ...forbiddenTools.map(tool => `  • ${tool} (${TOOL_PERMISSIONS[tool]})`),
+      ...forbiddenTools.slice(0, 10).map(tool => {
+        const policy = this.permissionPolicies.get(tool)
+        return `  • ${tool} (${policy?.permissionLevel || 'unknown'})`
+      }),
+      ...(forbiddenTools.length > 10 ? [`  ... 和其他 ${forbiddenTools.length - 10} 个工具`] : []),
       ``,
       `📈 权限级别分布:`,
-      `  • 只读工具: ${stats.toolBreakdown[ToolPermissionLevel.READ_ONLY]}个`,
-      `  • 安全写入: ${stats.toolBreakdown[ToolPermissionLevel.SAFE_WRITE]}个`,
-      `  • 系统修改: ${stats.toolBreakdown[ToolPermissionLevel.SYSTEM_MODIFY]}个`,
-      `  • 危险操作: ${stats.toolBreakdown[ToolPermissionLevel.DANGEROUS]}个`,
+      `  • 只读工具: ${stats.toolBreakdown[ToolPermissionLevel.read_only]}个`,
+      `  • 安全写入: ${stats.toolBreakdown[ToolPermissionLevel.safe_write]}个`,
+      `  • 系统修改: ${stats.toolBreakdown[ToolPermissionLevel.system_modify]}个`,
+      `  • 网络访问: ${stats.toolBreakdown[ToolPermissionLevel.network_access]}个`,
+      `  • 危险操作: ${stats.toolBreakdown[ToolPermissionLevel.dangerous]}个`,
+      ``,
+      `📊 会话统计:`,
+      `  • 工具使用次数: ${stats.sessionStats.totalUsage}`,
+      `  • 已授予权限: ${stats.sessionStats.grantedPermissions}`,
+      `  • 拒绝请求数: ${stats.sessionStats.deniedRequests}`,
     ]
 
     return report.join('\n')
   }
+}
+
+// 全局权限管理器实例
+let globalPermissionManager: PermissionManager | null = null
+
+/**
+ * 获取全局权限管理器实例
+ */
+export function getPermissionManager(): PermissionManager {
+  if (!globalPermissionManager) {
+    globalPermissionManager = new PermissionManager()
+  }
+  return globalPermissionManager
 }

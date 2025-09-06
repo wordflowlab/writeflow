@@ -75,7 +75,7 @@ config/production.json
 writeflow.config.json
 CLAUDE.md
 
-other/
+# other/
 
 # Tool-specific directories that should not be committed
 web-bundles/

@@ -1,12 +1,16 @@
-// WriteFlow 工具系统 - 统一导出
-// 兼容原有系统并添加新的核心工具
+/**
+ * WriteFlow 工具系统 - 增强的工具注册和发现系统
+ * 参考 Kode 的工具架构，提供统一的工具管理和调用接口
+ */
 
-// 原有系统导出
+// 原有系统导出（向后兼容）
 export { ToolManager } from './tool-manager.js'
 export * from '../types/tool.js'
 
-// 新的核心工具系统
+// 核心工具系统
 import { WriteFlowTool } from '../Tool.js'
+import { ToolOrchestrator, getToolOrchestrator } from './ToolOrchestrator.js'
+import { PermissionManager, getPermissionManager } from './PermissionManager.js'
 
 // 文件操作工具
 import { ReadTool } from './file/ReadTool/ReadTool.js'
@@ -21,52 +25,69 @@ import { GrepTool } from './search/GrepTool/GrepTool.js'
 // 系统工具
 import { BashTool } from './system/BashTool/BashTool.js'
 
-// 工具实例
-export const readTool = new ReadTool()
-export const writeTool = new WriteTool()
-export const editTool = new EditTool()
-export const multiEditTool = new MultiEditTool()
-export const globTool = new GlobTool()
-export const grepTool = new GrepTool()
-export const bashTool = new BashTool()
+// 工具实例 - 延迟初始化以避免循环依赖
+let toolInstances: Map<string, WriteFlowTool> | null = null
 
-// 核心工具数组
-export const coreTools: WriteFlowTool[] = [
-  readTool,
-  writeTool,
-  editTool,
-  multiEditTool,
-  globTool,
-  grepTool,
-  bashTool,
-]
-
-// 按类别分组的工具
-export const toolsByCategory = {
-  file: [readTool, writeTool, editTool, multiEditTool],
-  search: [globTool, grepTool],
-  system: [bashTool],
-} as const
-
-// 工具名称到工具实例的映射
-export const toolsByName = new Map<string, WriteFlowTool>([
-  ['Read', readTool],
-  ['Write', writeTool],
-  ['Edit', editTool],
-  ['MultiEdit', multiEditTool],
-  ['Glob', globTool],
-  ['Grep', grepTool],
-  ['Bash', bashTool],
-])
-
-// 获取工具实例
-export function getTool(name: string): WriteFlowTool | undefined {
-  return toolsByName.get(name)
+/**
+ * 获取或创建工具实例
+ */
+function getOrCreateToolInstances(): Map<string, WriteFlowTool> {
+  if (!toolInstances) {
+    toolInstances = new Map([
+      ['Read', new ReadTool()],
+      ['Write', new WriteTool()],
+      ['Edit', new EditTool()],
+      ['MultiEdit', new MultiEditTool()],
+      ['Glob', new GlobTool()],
+      ['Grep', new GrepTool()],
+      ['Bash', new BashTool()],
+    ])
+    
+    // 自动注册到工具编排器
+    const orchestrator = getToolOrchestrator()
+    for (const tool of toolInstances.values()) {
+      orchestrator.registerTool(tool)
+    }
+  }
+  
+  return toolInstances
 }
 
-// 获取所有工具名称
+// 导出工具实例（兼容旧接口）
+export const readTool = () => getOrCreateToolInstances().get('Read')!
+export const writeTool = () => getOrCreateToolInstances().get('Write')!
+export const editTool = () => getOrCreateToolInstances().get('Edit')!
+export const multiEditTool = () => getOrCreateToolInstances().get('MultiEdit')!
+export const globTool = () => getOrCreateToolInstances().get('Glob')!
+export const grepTool = () => getOrCreateToolInstances().get('Grep')!
+export const bashTool = () => getOrCreateToolInstances().get('Bash')!
+
+// 核心工具数组
+export const coreTools: WriteFlowTool[] = Array.from(getOrCreateToolInstances().values())
+
+// 按类别分组的工具 - 动态生成
+export const toolsByCategory = {
+  get file() { return [readTool(), writeTool(), editTool(), multiEditTool()] },
+  get search() { return [globTool(), grepTool()] },
+  get system() { return [bashTool()] },
+} as const
+
+// 工具名称到工具实例的映射 - 使用编排器作为唯一数据源
+export const toolsByName = getOrCreateToolInstances()
+
+// 获取工具实例 - 统一接口
+export function getTool(name: string): WriteFlowTool | undefined {
+  return getToolOrchestrator().getTool(name)
+}
+
+// 获取所有工具名称 - 使用编排器
 export function getToolNames(): string[] {
-  return Array.from(toolsByName.keys())
+  return getToolOrchestrator().getToolNames()
+}
+
+// 获取可用工具（考虑权限）
+export function getAvailableTools(): WriteFlowTool[] {
+  return getToolOrchestrator().getAvailableTools()
 }
 
 // 获取只读工具
@@ -86,7 +107,7 @@ export function getConcurrencySafeTools(): WriteFlowTool[] {
 
 // 检查工具是否存在
 export function hasTools(names: string[]): boolean {
-  return names.every(name => toolsByName.has(name))
+  return names.every(name => getTool(name) !== undefined)
 }
 
 // 获取多个工具
@@ -142,6 +163,133 @@ export enum ToolCategory {
   SEARCH = 'search',
   SYSTEM = 'system',
 }
+
+// ==================== 新增的工具系统组件导出 ====================
+
+// 工具系统核心组件
+export { ToolOrchestrator, getToolOrchestrator, executeToolQuick } from './ToolOrchestrator.js'
+export { PermissionManager, getPermissionManager } from './PermissionManager.js'
+export { 
+  SystemPromptOptimizer, 
+  getSystemPromptOptimizer, 
+  generateOptimizedSystemPrompt 
+} from './SystemPromptOptimizer.js'
+export type { ToolCallEvent } from './ToolBase.js'
+
+// 权限和执行相关类型
+export type { 
+  ToolExecutionRequest, 
+  ToolExecutionResult, 
+  ToolExecutionStatus,
+  OrchestratorConfig 
+} from './ToolOrchestrator.js'
+
+export type {
+  PermissionPolicy,
+  ToolPermissionLevel,
+  PermissionGrantType,
+  ToolUsageStats
+} from './PermissionManager.js'
+
+// ==================== 工具发现和智能推荐 ====================
+
+/**
+ * 根据任务描述智能推荐工具
+ */
+export function recommendToolsForTask(taskDescription: string): WriteFlowTool[] {
+  const availableTools = getAvailableTools()
+  const recommendations: Array<{tool: WriteFlowTool, score: number}> = []
+  
+  const keywords = taskDescription.toLowerCase()
+  
+  // 基于关键字匹配推荐工具
+  for (const tool of availableTools) {
+    let score = 0
+    
+    // 文件操作关键字
+    if (keywords.includes('read') || keywords.includes('查看') || keywords.includes('读取')) {
+      if (tool.name === 'Read') score += 10
+      if (tool.name === 'Glob') score += 5
+    }
+    
+    if (keywords.includes('write') || keywords.includes('写入') || keywords.includes('创建文件')) {
+      if (tool.name === 'Write') score += 10
+    }
+    
+    if (keywords.includes('edit') || keywords.includes('修改') || keywords.includes('编辑')) {
+      if (tool.name === 'Edit') score += 10
+      if (tool.name === 'MultiEdit') score += 8
+    }
+    
+    // 搜索关键字
+    if (keywords.includes('search') || keywords.includes('find') || keywords.includes('搜索') || keywords.includes('查找')) {
+      if (tool.name === 'Grep') score += 10
+      if (tool.name === 'Glob') score += 8
+    }
+    
+    // 系统操作关键字
+    if (keywords.includes('command') || keywords.includes('execute') || keywords.includes('命令') || keywords.includes('执行')) {
+      if (tool.name === 'Bash') score += 10
+    }
+    
+    if (score > 0) {
+      recommendations.push({ tool, score })
+    }
+  }
+  
+  // 按得分排序并返回前5个
+  return recommendations
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(rec => rec.tool)
+}
+
+/**
+ * 获取工具使用统计和推荐
+ */
+export function getToolRecommendations(): {
+  mostUsed: WriteFlowTool[]
+  leastUsed: WriteFlowTool[]
+  recommended: WriteFlowTool[]
+} {
+  const orchestrator = getToolOrchestrator()
+  const stats = orchestrator.getExecutionStats()
+  
+  const sortedByUsage = Object.entries(stats.toolUsageStats)
+    .sort(([,a], [,b]) => b - a)
+    .map(([toolName]) => getTool(toolName))
+    .filter((tool): tool is WriteFlowTool => tool !== undefined)
+  
+  return {
+    mostUsed: sortedByUsage.slice(0, 3),
+    leastUsed: sortedByUsage.slice(-3).reverse(),
+    recommended: getReadOnlyTools().slice(0, 3) // 推荐安全的只读工具
+  }
+}
+
+/**
+ * 生成工具系统状态报告
+ */
+export function generateSystemReport(): string {
+  const orchestrator = getToolOrchestrator()
+  const permissionManager = getPermissionManager()
+  
+  const orchestratorReport = orchestrator.generateUsageReport()
+  const permissionReport = permissionManager.generatePermissionReport()
+  
+  return [
+    `# WriteFlow 工具系统状态报告`,
+    `生成时间: ${new Date().toISOString()}`,
+    ``,
+    orchestratorReport,
+    ``,
+    `---`,
+    ``,
+    permissionReport
+  ].join('\n')
+}
+
+// ==================== 向后兼容导出 ====================
 
 // 导出类型和基类
 export type { WriteFlowTool } from '../Tool.js'

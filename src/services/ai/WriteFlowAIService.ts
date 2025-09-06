@@ -7,7 +7,16 @@ import { getGlobalConfig, ModelProfile } from '../../utils/config.js'
 import { getModelManager } from '../models/ModelManager.js'
 import { getModelCapabilities } from '../models/modelCapabilities.js'
 import { logError } from '../../utils/log.js'
-import { getTool } from '../../tools/index.js'
+import { 
+  getTool, 
+  getToolOrchestrator, 
+  getPermissionManager,
+  getAvailableTools,
+  executeToolQuick,
+  ToolExecutionStatus,
+  type ToolExecutionResult,
+  type WriteFlowTool
+} from '../../tools/index.js'
 import { AgentContext } from '../../types/agent.js'
 import { ToolUseContext } from '../../Tool.js'
 import { getStreamingService, StreamingService, StreamingRequest } from '../streaming/StreamingService.js'
@@ -62,10 +71,12 @@ export interface ToolExecutionResult {
 }
 
 /**
- * WriteFlow AI 服务类
+ * WriteFlow AI 服务类 - 集成增强工具系统
  */
 export class WriteFlowAIService {
   private modelManager = getModelManager()
+  private toolOrchestrator = getToolOrchestrator()
+  private permissionManager = getPermissionManager()
   
   /**
    * 处理 AI 请求（支持流式和非流式）
@@ -975,8 +986,8 @@ export class WriteFlowAIService {
   }
 
   /**
-   * 转换工具定义为 DeepSeek API 格式
-   * 使用工具的 prompt() 方法获取详细描述和参数 schema
+   * 转换工具定义为 DeepSeek API 格式 - 使用新的工具系统
+   * 优先考虑权限和可用性检查
    */
   private async convertToolsToDeepSeekFormat(allowedTools: string[]): Promise<any[]> {
     const tools = []
@@ -986,43 +997,71 @@ export class WriteFlowAIService {
       return []
     }
     
+    // 获取当前可用的工具（考虑权限）
+    const availableTools = this.toolOrchestrator.getAvailableTools()
+    const availableToolNames = new Set(availableTools.map(t => t.name))
+    
     for (const toolName of allowedTools) {
-      const tool = getTool(toolName)
+      // 检查工具是否在允许的工具列表中
+      if (!availableToolNames.has(toolName)) {
+        console.warn(`工具 ${toolName} 不在可用工具列表中，跳过`)
+        continue
+      }
+      
+      const tool = this.toolOrchestrator.getTool(toolName)
       if (!tool) continue
 
       try {
         // 获取工具的完整描述
         const description = await tool.prompt?.({ safeMode: false }) || await tool.description()
         
-        // 从 Zod schema 生成 JSON schema
-        const parameters = this.zodSchemaToJsonSchema(tool.inputSchema)
+        // 生成 JSON schema - 使用工具的内置方法
+        let parameters: any
+        if (tool.inputJSONSchema) {
+          parameters = tool.inputJSONSchema
+        } else {
+          // 回退到传统转换方法
+          parameters = this.zodSchemaToJsonSchema(tool.inputSchema)
+        }
 
         tools.push({
           type: 'function',
           function: {
             name: tool.name,
-            description,
+            description: `${description}\n\n权限级别: ${tool.isReadOnly() ? '只读' : '可写'}\n并发安全: ${tool.isConcurrencySafe() ? '是' : '否'}`,
             parameters
           }
         })
+        
+        console.log(`✅ 工具 ${toolName} 已添加到 API 调用中`)
       } catch (error) {
-        console.warn(`Failed to convert tool ${toolName} to DeepSeek format:`, error)
+        console.warn(`转换工具 ${toolName} 到 DeepSeek 格式失败:`, error)
+        
         // 使用基础描述作为后备
-        const basicDescription = await tool.description()
-        tools.push({
-          type: 'function',
-          function: {
-            name: tool.name,
-            description: basicDescription,
-            parameters: {
-              type: 'object',
-              properties: {},
-              required: [],
-              additionalProperties: true
+        try {
+          const basicDescription = await tool.description()
+          tools.push({
+            type: 'function',
+            function: {
+              name: tool.name,
+              description: basicDescription,
+              parameters: {
+                type: 'object',
+                properties: {},
+                required: [],
+                additionalProperties: true
+              }
             }
-          }
-        })
+          })
+          console.log(`⚠️  工具 ${toolName} 使用基础格式添加`)
+        } catch (fallbackError) {
+          console.error(`工具 ${toolName} 完全转换失败:`, fallbackError)
+        }
       }
+    }
+
+    if (tools.length > 0) {
+      console.log(`🔧 共转换 ${tools.length} 个工具供 AI 使用`)
     }
 
     return tools
@@ -1147,7 +1186,7 @@ export class WriteFlowAIService {
   }
 
   /**
-   * 执行 DeepSeek API 的工具调用
+   * 执行 DeepSeek API 的工具调用 - 使用新的工具编排器
    */
   private async executeDeepSeekToolCall(toolCall: any): Promise<ToolExecutionResult> {
     const { name: toolName, arguments: argsStr } = toolCall.function
@@ -1168,37 +1207,8 @@ export class WriteFlowAIService {
       }
     }
 
-    const tool = getTool(toolName)
-    if (!tool) {
-      return {
-        toolName,
-        callId: toolCall.id,
-        result: '',
-        success: false,
-        error: `工具 ${toolName} 不存在`
-      }
-    }
-
-    // 验证工具参数
     try {
-      if (tool.validateInput) {
-        const validationResult = await tool.validateInput(args)
-        if (!validationResult.result) {
-          return {
-            toolName,
-            callId: toolCall.id,
-            result: '',
-            success: false,
-            error: `工具参数验证失败: ${validationResult.message}`
-          }
-        }
-      }
-    } catch (validationError) {
-      console.warn(`[${toolName}] 参数验证失败:`, validationError)
-      // 继续执行，但记录警告
-    }
-
-    try {
+      // 创建工具执行上下文
       const toolContext: ToolUseContext = {
         messageId: `deepseek-${toolCall.id}`,
         agentId: 'deepseek-ai',
@@ -1212,15 +1222,30 @@ export class WriteFlowAIService {
         }
       }
 
-      const generator = tool.call(args, toolContext)
-      const { value } = await generator.next()
-      const result = value?.data || value
-
-      return {
+      // 使用工具编排器执行工具调用
+      const executionResult = await this.toolOrchestrator.executeTool({
         toolName,
-        callId: toolCall.id,
-        result: this.formatToolResult(result, toolName),
-        success: true
+        input: args,
+        context: toolContext,
+        priority: 5 // 中等优先级
+      })
+
+      // 转换为旧格式的结果（兼容性）
+      if (executionResult.status === ToolExecutionStatus.COMPLETED) {
+        return {
+          toolName,
+          callId: toolCall.id,
+          result: this.formatToolResult(executionResult.result, toolName),
+          success: true
+        }
+      } else {
+        return {
+          toolName,
+          callId: toolCall.id,
+          result: '',
+          success: false,
+          error: executionResult.error?.message || '工具执行失败'
+        }
       }
     } catch (error) {
       return {

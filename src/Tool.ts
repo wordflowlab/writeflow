@@ -50,12 +50,12 @@ export interface WriteFlowTool<
   checkPermissions: (input: any, context: ToolUseContext) => Promise<PermissionResult>
   validateInput?: (input: any, context?: ToolUseContext) => Promise<ValidationResult>
   
-  // 执行和渲染
+  // 执行和渲染 - 兼容新的事件系统
   call: (
     input: any,
     context: ToolUseContext,
   ) => AsyncGenerator<
-    { type: 'result'; data: TOutput; resultForAssistant?: string },
+    { type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string },
     void,
     unknown
   >
