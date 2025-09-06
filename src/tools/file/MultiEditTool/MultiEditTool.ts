@@ -219,7 +219,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
         resultForAssistant,
       }
 
-    }.bind(this), this.name)
+    }.bind(this), context)
   }
 
   renderResultForAssistant(output: MultiEditToolOutput): string {

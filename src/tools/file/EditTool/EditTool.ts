@@ -183,7 +183,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
         resultForAssistant,
       }
 
-    }.bind(this), this.name)
+    }.bind(this), context)
   }
 
   renderResultForAssistant(output: EditToolOutput): string {

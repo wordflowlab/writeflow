@@ -120,7 +120,7 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
         resultForAssistant,
       }
 
-    }.bind(this), this.name)
+    }.bind(this), context)
   }
 
   renderResultForAssistant(output: GlobToolOutput): string {

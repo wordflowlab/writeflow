@@ -170,7 +170,7 @@ export class ReadTool extends ToolBase<typeof ReadToolInputSchema, ReadToolOutpu
         resultForAssistant
       }
 
-    }.bind(this), this.name)
+    }.bind(this), context)
   }
 
   renderResultForAssistant(output: ReadToolOutput): string {

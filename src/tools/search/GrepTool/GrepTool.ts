@@ -151,7 +151,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
         resultForAssistant,
       }
 
-    }.bind(this), this.name)
+    }.bind(this), context)
   }
 
   renderResultForAssistant(output: GrepToolOutput): string {
