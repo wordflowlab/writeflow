@@ -166,7 +166,7 @@ export class AIConfigLoader {
 - Function calling（OpenAI/DeepSeek 兼容）: 严格使用工具名和 JSON 参数
 - 传统回退格式（不支持 function calling 的提供商使用）：
   <function_calls>
-    <invoke name="TodoWrite">
+    <invoke name="todo_write">
       <parameter name="todos">[{"id":"1","content":"写开篇","activeForm":"正在写开篇","status":"in_progress"}]</parameter>
     </invoke>
   </function_calls>

@@ -1,394 +1,155 @@
-import { Box, Text, Static } from 'ink'
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { randomUUID } from 'crypto'
+/**
+ * WriteFlow REPL - 重构版本
+ * 完全采用 Kode 架构，使用新的消息类型系统和渲染组件
+ */
+
+import { Box, Text } from 'ink'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
-import { useTerminalSize } from '../hooks/useTerminalSize.js'
-import { RichTextRenderer } from './components/RichTextRenderer.js'
-import { ModelConfig } from './components/ModelConfig.js'
-import { getSessionState } from '../utils/state.js'
 import { PromptInput } from './components/PromptInput.js'
+import { TodoPanel } from './components/TodoPanel.js'
+import { useTodoShortcuts } from '../hooks/useKeyboardShortcuts.js'
+import { Todo, TodoStats, TodoStatus } from '../types/Todo.js'
+
+// 导入新的消息系统
+import type { 
+  UIMessage, 
+  UserMessage, 
+  AssistantMessage,
+  NormalizedMessage,
+  ContentBlock
+} from '../types/UIMessage.js'
+import { 
+  createUserMessage, 
+  createAssistantMessage,
+  createTextBlock,
+  isUserMessage,
+  isAssistantMessage
+} from '../types/UIMessage.js'
+import { Message } from './components/messages/Message.js'
+
+// 导入工具系统
+import { getAvailableTools } from '../tools/index.js'
+import { systemReminderService } from '../services/SystemReminderService.js'
+import type { Tool } from '../Tool.js'
 
 const PRODUCT_NAME = 'WriteFlow'
 
-// 消息渲染类型 - 分层渲染系统
-type MessageRenderType = 'static' | 'transient' | 'message'
-
-// 消息JSX结构 - 统一的消息渲染模式
-interface MessageJSX {
-  type: MessageRenderType
-  jsx: React.ReactNode
-}
-
-// 消息类型定义 - WriteFlow 消息结构
-interface WriteFlowMessage {
-  uuid: string
-  id: string
-  type: 'user' | 'assistant' | 'system'
-  message: string
-  timestamp: Date
-  costUSD?: number
-  durationMs?: number
-}
-
-// WriteFlow 消息工厂函数
-function createUserMessage(content: string): WriteFlowMessage {
-  return {
-    uuid: randomUUID(),
-    id: randomUUID(),
-    type: 'user',
-    message: content,
-    timestamp: new Date(),
-  }
-}
-
-function createAssistantMessage(content: string, extra?: Partial<WriteFlowMessage>): WriteFlowMessage {
-  return {
-    uuid: randomUUID(),
-    id: randomUUID(),
-    type: 'assistant',
-    message: content,
-    timestamp: new Date(),
-    costUSD: 0,
-    durationMs: 0,
-    ...extra,
-  }
-}
-
-function createSystemMessage(content: string): WriteFlowMessage {
-  return {
-    uuid: randomUUID(),
-    id: randomUUID(),
-    type: 'system',
-    message: content,
-    timestamp: new Date(),
-  }
-}
-
-// 消息过滤函数 - 过滤空消息
-function isNotEmptyMessage(message: WriteFlowMessage): boolean {
-  return Boolean(message.message && message.message.trim().length > 0)
-}
-
-// 动态状态消息数组 - 中文状态提示
-const DYNAMIC_MESSAGES = [
-  '思考中',
-  '构思中',
-  '分析中',
-  '写作中',
-  '创作中',
-  '计算中',
-  '理解中',
-  '整理中',
-  '编写中',
-  '汇总中',
-  '推理中',
-  '处理中',
-  '生成中',
-  '考虑中',
-  '制作中',
-  '精炼中',
-  '创建中',
-  '运算中',
-  '深思中',
-  '判断中',
-  '工作中',
-  '实现中',
-  '调整中',
-  '铸造中',
-  '形成中',
-  '产生中',
-  '酝酿中',
-  '组织中',
-  '努力中',
-  '忙碌中',
-  '构想中',
-  '推断中',
-  '实现中',
-  '酝酿中',
-  '漫步中',
-  '思索中',
-  '集结中',
-  '沉思中',
-  '琢磨中',
-  '渗透中',
-  '沉淀中',
-  '加工中',
-  '修补中',
-  '网格化中',
-  '反刍中',
-  '奔波中',
-  '剥离中',
-  '炖煮中',
-  '捏合中',
-  '旋转中',
-  '炖制中',
-  '合成中',
-  '思考中',
-  '转换中',
-  '感受中',
-  '工作中',
-  '完成中',
-  '执行中',
-  '实际化中',
-  '烘焙中',
-  '酝酿中',
-  '计算中',
-  '思考中',
-  '搅拌中',
-  '编码中',
-  '融合中',
-  '认知中',
-  '计算中',
-  '变魔术中',
-  '考虑中',
-  '烹饪中',
-  '制作中'
-]
-
-// 动画字符 - 跨平台兼容配置
-const SPINNER_CHARACTERS =
-  process.platform === 'darwin'
-    ? ['·', '✢', '✳', '∗', '✻', '✽']
-    : ['·', '✢', '*', '∗', '✻', '✽']
-
-// 增强的 Spinner 组件 - 动态状态指示器（支持“滚动安全”模式）
-function Spinner() {
-  // 若设置 WRITEFLOW_SCROLL_SAFE=1，则禁用高速动画，避免频繁重绘导致滚动条回弹
-  const SCROLL_SAFE = process.env.WRITEFLOW_SCROLL_SAFE === '1'
-
-  // 双向动画帧序列 - 创造更流畅的动画效果
-  const frames = [...SPINNER_CHARACTERS, ...[...SPINNER_CHARACTERS].reverse()]
-  const [frame, setFrame] = useState(0)
-  const [elapsedTime, setElapsedTime] = useState(0)
-
-  // 随机选择一个动态消息并保持稳定
-  const message = useRef(DYNAMIC_MESSAGES[Math.floor(Math.random() * DYNAMIC_MESSAGES.length)])
-  const startTime = useRef(Date.now())
-
-  // 动画帧更新（滚动安全模式下关闭，仅每秒更新一次由 elapsedTime 驱动）
-  useEffect(() => {
-    if (SCROLL_SAFE) return
-    const timer = setInterval(() => {
-      setFrame(f => (f + 1) % frames.length)
-    }, 120)
-    return () => clearInterval(timer)
-  }, [frames.length, SCROLL_SAFE])
-
-  // 时间计数器更新（1s一次，影响小）
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsedTime(Math.floor((Date.now() - startTime.current) / 1000))
-      // 在滚动安全模式下，顺便每秒驱动一帧，提供轻微反馈且不致频闪
-      if (SCROLL_SAFE) {
-        setFrame(f => (f + 1) % frames.length)
-      }
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [SCROLL_SAFE])
-
-  const theme = getTheme()
-  const currentError = getSessionState('currentError', '')
-
-  return (
-    <Box flexDirection="row" marginTop={1}>
-      <Box flexWrap="nowrap" height={1} width={2}>
-        <Text color={theme.thinking}>{frames[frame]}</Text>
-      </Box>
-      <Text color={theme.thinking}>{message.current}… </Text>
-      <Text color={theme.dimText}>
-        ({elapsedTime}s · <Text bold color={theme.warning}>esc</Text> 中断)
-      </Text>
-      {currentError && (
-        <Text color={theme.error}>
-          · {currentError}
-        </Text>
-      )}
-    </Box>
-  )
-}
-
-// Professional status indicator for WriteFlow - 无边框版本
-function WriteFlowStatusIndicator({
-  isThinking,
-  status
-}: {
-  isThinking: boolean
-  status?: string
-}) {
-  const theme = getTheme()
-
-  if (!isThinking && !status) {
-    return null
-  }
-
-  return (
-    <Box marginTop={1} marginBottom={1}>
-      {isThinking ? (
-        // 使用增强的 Spinner，移除边框
-        <Spinner />
-      ) : status ? (
-        <Text color={theme.ready}>{status}</Text>
-      ) : null}
-    </Box>
-  )
-}
-
-// Professional Logo for WriteFlow
-function WriteFlowLogo() {
-  const theme = getTheme()
-  const { columns } = useTerminalSize()
-  const width = Math.max(50, Math.min(columns - 4, 80))
-
-  return (
-    <Box flexDirection="column" marginBottom={2}>
-      <Box
-        borderColor={theme.claude}
-        borderStyle="round"
-        flexDirection="column"
-        paddingLeft={2}
-        paddingRight={2}
-        paddingY={1}
-        width={width}
-      >
-        <Text>
-          <Text color={theme.claude}>✎</Text> 欢迎使用{' '}
-          <Text bold color={theme.claude}>{PRODUCT_NAME}</Text>
-          <Text> AI 写作助手</Text>
-        </Text>
-
-        <Box marginTop={1} flexDirection="column">
-          <Text color={theme.secondaryText} italic>
-            专为技术型作家设计的智能写作工具
-          </Text>
-          <Text color={theme.secondaryText}>
-            输入 /help 获取帮助 · 开始您的创作之旅
-          </Text>
-        </Box>
-
-        <Box
-          borderColor={theme.secondaryBorder}
-          borderStyle="single"
-          borderBottom={false}
-          borderLeft={false}
-          borderRight={false}
-          borderTop={true}
-          marginTop={1}
-          paddingTop={1}
-        >
-          <Text color={theme.secondaryText}>
-            💡 支持技术文档、创意写作、学术论文等多种写作模式
-          </Text>
-        </Box>
-      </Box>
-    </Box>
-  )
-}
-
-// Professional message display
-function WriterMessage({
-  message,
-  type
-}: {
-  message: string
-  type: 'user' | 'assistant' | 'system'
-}) {
-  const theme = getTheme()
-  const { columns } = useTerminalSize()
-
-  // 使用主题中定义的消息专用颜色
-  const getMessageColor = () => {
-    switch (type) {
-      case 'user': return theme.userMessage
-      case 'system': return theme.systemMessage
-      case 'assistant': 
-        // 检查是否是错误消息
-        if (message.startsWith('错误:') || message.includes('Error')) {
-          return theme.error
-        }
-        // 检查是否是处理中消息
-        if (message.includes('处理中') || message.includes('生成中')) {
-          return theme.processing
-        }
-        return theme.assistantMessage
-      default: return theme.text
-    }
-  }
-
-  const getIndicatorColor = () => {
-    switch (type) {
-      case 'user': return theme.dimText
-      case 'system': return theme.warning
-      case 'assistant': return theme.claude
-      default: return theme.text
-    }
-  }
-
-  const getIndicator = () => {
-    switch (type) {
-      case 'user': return ' > '
-      case 'system': return ' ! '
-      case 'assistant': return '   '
-      default: return '   '
-    }
-  }
-
-  return (
-    <Box flexDirection="row" marginBottom={1} width="100%">
-      <Box minWidth={3}>
-        <Text color={getIndicatorColor()}>
-          {getIndicator()}
-        </Text>
-      </Box>
-      <Box flexDirection="column" width={columns - 4}>
-        <Box width="100%">
-          <RichTextRenderer 
-            content={message}
-            wrap={true}
-            preserveWhitespace={true}
-          />
-        </Box>
-      </Box>
-    </Box>
-  )
-}
-
-// WriterInput 组件已被 PromptInput 替代，支持智能命令补全
-
 interface WriteFlowREPLProps {
   writeFlowApp: WriteFlowApp
+  onExit?: () => void
 }
 
-export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
+export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
+  const theme = getTheme()
+  
+  // 消息状态 - 使用新的 UIMessage 类型
+  const [messages, setMessages] = useState<UIMessage[]>([])
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<WriteFlowMessage[]>([])
   const [isThinking, setIsThinking] = useState(false)
   const [showModelConfig, setShowModelConfig] = useState(false)
-  const [cursorOffset, setCursorOffset] = useState(0)
-  const [mode, setMode] = useState<'writing' | 'editing' | 'reviewing'>('writing')
   
-  // 获取所有可用命令用于补全
-  const commands = useMemo(() => {
-    return writeFlowApp.getAllCommands()
-  }, [writeFlowApp])
-  
-  // 永久显示Logo的静态消息模式
+  // TODO 状态
+  const [todos, setTodos] = useState<Todo[]>([])
+  const [todoStats, setTodoStats] = useState<TodoStats>({
+    total: 0,
+    pending: 0,
+    inProgress: 0,
+    completed: 0,
+    completionRate: 0
+  })
 
-  // 监听模型配置启动事件
+  // 工具调用状态管理
+  const [erroredToolUseIDs, setErroredToolUseIDs] = useState<Set<string>>(new Set())
+  const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState<Set<string>>(new Set())
+  const [unresolvedToolUseIDs, setUnresolvedToolUseIDs] = useState<Set<string>>(new Set())
+  
+  // 获取可用工具
+  const tools = useMemo(() => getAvailableTools(), [])
+
+  // TODO 面板是否展开
+  const [showTodos, setShowTodos] = useState<boolean>(false)
+
+  // 键盘快捷键：Ctrl+T 切换 TODO 面板
+  useTodoShortcuts({
+    onToggleTodos: () => setShowTodos(v => !v)
+  })
+
+  // 获取 TODOs
+  const fetchTodos = useCallback(async () => {
+    try {
+      const todoManager = (writeFlowApp as any).getTodoManager?.()
+      console.log('🔍 TODO Manager:', todoManager ? 'found' : 'not found')
+      if (todoManager) {
+        const todosData = await (todoManager.getAllTodos?.() || todoManager.getTodos?.() || [])
+        const list = Array.isArray(todosData) ? todosData : []
+        console.log('📝 TODOs loaded:', list.length, 'items')
+        setTodos(list)
+        updateTodoStats(list)
+        setShowTodos(prev => prev || list.length > 0)
+      } else {
+        // 兜底：直接用共享会话ID创建一个 TodoManager 读取
+        try {
+          const { TodoManager } = await import('../tools/TodoManager.js')
+          const manager = new TodoManager(process.env.WRITEFLOW_SESSION_ID)
+          const list = await manager.getAllTodos()
+          console.log('📝 Fallback TODOs loaded:', list.length, 'items')
+          setTodos(list)
+          updateTodoStats(list)
+          setShowTodos(prev => prev || list.length > 0)
+        } catch (e) {
+          console.log('📝 TODO Manager 未找到，使用空数组')
+          setTodos([])
+        }
+      }
+    } catch (error) {
+      console.warn('获取 TODOs 失败:', error)
+      setTodos([])
+    }
+  }, [writeFlowApp])
+
+  // 更新 TODO 统计
+  const updateTodoStats = useCallback((todosData: Todo[]) => {
+    const stats = {
+      total: todosData.length,
+      pending: todosData.filter(t => t.status === TodoStatus.PENDING).length,
+      inProgress: todosData.filter(t => t.status === TodoStatus.IN_PROGRESS).length,
+      completed: todosData.filter(t => t.status === TodoStatus.COMPLETED).length,
+      completionRate: todosData.length === 0 ? 0 : Math.round(
+        (todosData.filter(t => t.status === TodoStatus.COMPLETED).length / todosData.length) * 100
+      )
+    }
+    setTodoStats(stats)
+  }, [])
+
+  useEffect(() => {
+    console.log('🚀 WriteFlowREPL 组件初始化')
+    fetchTodos()
+    // 初始：若已有任务则展开显示
+    setShowTodos((prev) => prev || todos.length > 0)
+    // 订阅 todo:changed，全局任何地方更新都会刷新此面板
+    const onTodoChanged = () => fetchTodos()
+    systemReminderService.addEventListener('todo:changed', onTodoChanged)
+    return () => {
+      // 没有 remove 接口，允许会话结束后由服务重置
+    }
+  }, [fetchTodos])
+
+  // 事件监听器
   useEffect(() => {
     const handleLaunchModelConfig = () => {
       setShowModelConfig(true)
-      setIsThinking(false)
+    }
+
+    const handleThinking = (thinkingText: string) => {
+      if (thinkingText && thinkingText.trim()) {
+        // 创建思考消息，但不显示在主对话中
+        console.log('💭 AI 思考:', thinkingText)
+      }
     }
 
     writeFlowApp.on('launch-model-config', handleLaunchModelConfig)
-
-    // 展示 AI 的思维片段（<thinking> 内容），作为可见但轻量的提示
-    const handleThinking = (content: string) => {
-      const thinkingMsg = createSystemMessage(`🧠 思考片段\n${content}`)
-      // 插入“思考片段”但不影响后续输出
-      setMessages(prev => [...prev, thinkingMsg])
-    }
     writeFlowApp.on('ai-thinking', handleThinking)
 
     return () => {
@@ -397,172 +158,273 @@ export function WriteFlowREPL({ writeFlowApp }: WriteFlowREPLProps) {
     }
   }, [writeFlowApp])
 
-  // 消息过滤 - 只过滤空消息
-  const validMessages = useMemo(() => {
-    return messages.filter(isNotEmptyMessage)
-  }, [messages])
-
-
-  const messagesJSX = useMemo((): MessageJSX[] => {
-    // 仅保留动态消息项，避免主题切换时 Static 内容无法更新
-    return validMessages.map((msg) => ({
-      type: 'message',
-      jsx: (
-        <WriterMessage
-          key={msg.uuid}
-          message={msg.message}
-          type={msg.type}
-        />
-      ),
-    }))
-  }, [validMessages])
-
+  // 处理消息提交
   const handleSubmit = useCallback(async (message: string) => {
     if (!message.trim()) return
 
-    // Add user message using factory function
+    // 添加用户消息
     const userMessage = createUserMessage(message.trim())
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsThinking(true)
-    // Logo永久显示
 
     try {
       const trimmedMessage = message.trim()
-      let response: string
+      
+      // 预创建流式助手消息
+      let streamingMessage = createAssistantMessage([])
+      setMessages(prev => [...prev, streamingMessage])
+      
+      // 智能文本缓冲器，用于处理 JSON 和纯文本混合
+      let accumulatedText = ''
+      let pendingTodoUpdate: any = null
 
-      // 预创建一个空的助手消息用于流式增量输出
-      const streamingAssistant = createAssistantMessage('')
-      setMessages(prev => [...prev, streamingAssistant])
-
+      // 流式处理回调
       const onToken = (chunk: string) => {
-        setMessages(prev => prev.map(m => (
-          m.uuid === streamingAssistant.uuid
-            ? { ...m, message: (m.message || '') + chunk }
-            : m
-        )))
-      }
-
-      if (trimmedMessage.startsWith('/')) {
-        // 处理斜杠命令
-        response = await writeFlowApp.executeCommand(trimmedMessage, { onToken })
-      } else {
-        // 普通对话直接走自由文本路径
-        // @ts-ignore - 访问类方法
-        response = await writeFlowApp.handleFreeTextInput(trimmedMessage, { onToken })
-      }
-
-      // 将最终响应写入同一条消息，避免重复
-      setMessages(prev => prev.map(m => (
-        m.uuid === streamingAssistant.uuid
-          ? { ...m, message: response }
-          : m
-      )))
-    } catch (error) {
-      // 如果命令方式失败，尝试直接调用私有方法（临时解决方案）
-      try {
-        // @ts-ignore - 临时访问私有方法
-        const streamingAssistant = createAssistantMessage('')
-        setMessages(prev => [...prev, streamingAssistant])
-        const onToken = (chunk: string) => {
-          setMessages(prev => prev.map(m => (
-            m.uuid === streamingAssistant.uuid
-              ? { ...m, message: (m.message || '') + chunk }
-              : m
-          )))
-        }
-        const result = await writeFlowApp.handleFreeTextInput(message.trim(), { onToken })
-
-        // 智能解析返回结果
-        let responseText: string = '处理完成'
-
-        if (typeof result === 'string') {
-          responseText = result
-        } else if (typeof result === 'object' && result !== null) {
-          // 尝试不同的属性名
-          if ((result as any).content) {
-            responseText = String((result as any).content)
-          } else if ((result as any).text) {
-            responseText = String((result as any).text)
-          } else if ((result as any).message) {
-            responseText = String((result as any).message)
-          } else if ((result as any).response) {
-            responseText = String((result as any).response)
-          } else {
-            // 如果都没有，转换为字符串或使用默认消息
-            responseText = JSON.stringify(result).length > 200
-              ? '收到了复杂的回复，请查看日志获取详细信息'
-              : JSON.stringify(result)
+        accumulatedText += chunk
+        
+        // 检查是否包含完整的 JSON TODO 更新
+        const todoJsonMatch = accumulatedText.match(/\{[\s\S]*?"todos"\s*:\s*\[[\s\S]*?\][\s\S]*?\}/)
+        if (todoJsonMatch) {
+          try {
+            const todoData = JSON.parse(todoJsonMatch[0])
+            if (todoData.todos && Array.isArray(todoData.todos)) {
+              pendingTodoUpdate = todoData.todos
+              // 从显示文本中移除 JSON
+              accumulatedText = accumulatedText.replace(todoJsonMatch[0], '').trim()
+            }
+          } catch (e) {
+            // JSON 解析失败，继续处理为文本
           }
-        } else {
-          responseText = String(result)
+        }
+        
+        // 过滤工具调用相关信息
+        accumulatedText = accumulatedText
+          .replace(/AI: \[调用 todo_write 工具\] 正在执行\.\.\.\n/g, '')
+          .replace(/todo_write工具: [^\n]*\n/g, '')
+          .replace(/🎯 \*\*任务列表已更新\*\*[\s\S]*?(?=\n\n[^⎿]|$)/g, '')
+          .replace(/⎿.*?\n/g, '')
+          .trim()
+        
+        // 更新消息显示（仅显示非 JSON 内容）
+        if (accumulatedText) {
+          setMessages(prev => {
+            const newMessages = [...prev]
+            const lastMessage = newMessages[newMessages.length - 1]
+            
+            if (isAssistantMessage(lastMessage)) {
+              newMessages[newMessages.length - 1] = {
+                ...lastMessage,
+                message: {
+                  ...lastMessage.message,
+                  content: [createTextBlock(accumulatedText)]
+                }
+              }
+            }
+            
+            return newMessages
+          })
+        }
+      }
+
+      // 调用 WriteFlowApp 的 handleFreeTextInput 方法
+      const finalText = await writeFlowApp.handleFreeTextInput(trimmedMessage, {
+        onToken
+      })
+      
+      // 用最终文本替换流式占位消息（如"思考中..."）
+      if (finalText && finalText.trim()) {
+        // 过滤最终文本中的工具调用信息
+        const cleanedFinalText = finalText
+          .replace(/AI: \[调用 todo_write 工具\] 正在执行\.\.\.\n/g, '')
+          .replace(/todo_write工具: [^\n]*\n/g, '')
+          .replace(/🎯 \*\*任务列表已更新\*\*[\s\S]*?(?=\n\n[^⎿]|$)/g, '')
+          .replace(/⎿.*?\n/g, '')
+          .trim()
+        
+        if (cleanedFinalText) {
+          setMessages(prev => {
+            const newMessages = [...prev]
+            const last = newMessages[newMessages.length - 1]
+            if (isAssistantMessage(last)) {
+              newMessages[newMessages.length - 1] = {
+                ...last,
+                message: {
+                  ...last.message,
+                  content: [createTextBlock(cleanedFinalText)]
+                }
+              }
+            }
+            return newMessages
+          })
         }
 
-        setMessages(prev => prev.map(m => (
-          m.uuid === streamingAssistant.uuid
-            ? { ...m, message: responseText }
-            : m
-        )))
-      } catch (fallbackError) {
-        const errorMessage = createAssistantMessage(
-          `错误: ${error instanceof Error ? error.message : '处理请求时发生错误'}`
-        )
-        setMessages(prev => [...prev, errorMessage])
+        // 若文本包含 TODO 更新的信号，则刷新面板
+        if (/Todos have been modified|任务列表已更新|"todos"\s*:\s*\[/.test(finalText)) {
+          await fetchTodos()
+        }
       }
+      
+      // 处理待处理的 TODO 更新
+      if (pendingTodoUpdate) {
+        try {
+          const todoManager = (writeFlowApp as any).getTodoManager?.()
+          if (todoManager) {
+            await todoManager.saveTodos(pendingTodoUpdate)
+            await fetchTodos()
+          } else {
+            setTodos(pendingTodoUpdate)
+            updateTodoStats(pendingTodoUpdate)
+          }
+        } catch (error) {
+          console.error('处理 TODO 更新失败:', error)
+        }
+      }
+
+    } catch (error) {
+      console.error('处理消息失败:', error)
+      
+      // 添加错误消息
+      const errorMessage = createAssistantMessage([
+        createTextBlock(`处理请求时发生错误: ${error instanceof Error ? error.message : '未知错误'}`)
+      ])
+      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsThinking(false)
     }
-  }, [writeFlowApp])
+  }, [writeFlowApp, fetchTodos, updateTodoStats])
 
-  // 如果显示模型配置界面，则渲染 ModelConfig 组件
-  if (showModelConfig) {
-    return (
-      <ModelConfig
-        onClose={() => {
-          setShowModelConfig(false)
-          // 添加配置完成消息
-          const configCompleteMessage = createAssistantMessage(
-            '模型配置已完成，可以开始使用 WriteFlow AI 写作助手了！'
-          )
-          setMessages(prev => [...prev, configCompleteMessage])
-        }}
-      />
-    )
-  }
 
+  // 规范化消息用于渲染
+  const normalizedMessages = useMemo((): NormalizedMessage[] => {
+    return messages.filter(msg => {
+      if (isUserMessage(msg)) {
+        return typeof msg.message.content === 'string' && msg.message.content.trim().length > 0
+      }
+      if (isAssistantMessage(msg)) {
+        return msg.message.content.length > 0 && msg.message.content.some(block => {
+          return block.type === 'text' ? block.text.trim().length > 0 : true
+        })
+      }
+      return true
+    })
+  }, [messages])
+
+  // console.log('🎨 WriteFlowREPL 渲染中，todos.length:', todos.length, 'messages.length:', messages.length)
+  
+  // 计算动态状态文案
+  const activityStatus: 'idle' | 'working' | 'thinking' | 'executing' =
+    inProgressToolUseIDs.size > 0 ? 'executing' : (isThinking ? 'working' : 'idle')
+
+  // 运行计时（用于 working/executing 状态显示秒数）
+  const [statusStart, setStatusStart] = useState<number | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
+
+  useEffect(() => {
+    if (activityStatus === 'idle') {
+      setStatusStart(null)
+      setElapsedSeconds(0)
+      return
+    }
+
+    // 开始计时（仅首次进入活动状态时）
+    const start = statusStart ?? Date.now()
+    if (!statusStart) setStatusStart(start)
+
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - start) / 1000)))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [activityStatus])
+  
   return (
-    <Box flexDirection="column" width="100%">
-
-      {/* 顶部欢迎与品牌区（非 Static，主题切换可立即反映） */}
-      <Box flexDirection="column">
-        <WriteFlowLogo />
+    <Box flexDirection="column" width="100%" minHeight={3}>
+      {/* Header */}
+      <Box flexDirection="row" alignItems="center" marginBottom={1}>
+        <Text color="cyan" bold>
+          ✨ {PRODUCT_NAME}
+        </Text>
+        <Box marginLeft={2}>
+          <Text color={theme.dimText}>
+            AI 写作助手
+          </Text>
+        </Box>
       </Box>
 
-      {/* 消息内容渲染 - 回退为原先一次性渲染列表，避免重复输入出现 */}
-      {messagesJSX.filter(_ => _.type === 'message').map(_ => _.jsx)}
+      {/* Messages */}
+      <Box flexDirection="column" flexGrow={1}>
+        {normalizedMessages.map((message, index) => {
+          // 只渲染用户和助手消息
+          if (message.type === 'user' || message.type === 'assistant') {
+            return (
+              <Message
+                key={`${message.type}-${message.uuid}`}
+                message={message}
+                messages={normalizedMessages}
+                addMargin={index > 0}
+                tools={tools as any}
+                verbose={false}
+                debug={false}
+                erroredToolUseIDs={erroredToolUseIDs}
+                inProgressToolUseIDs={inProgressToolUseIDs}
+                unresolvedToolUseIDs={unresolvedToolUseIDs}
+                shouldAnimate={isThinking && index === normalizedMessages.length - 1}
+                shouldShowDot={message.type === 'assistant' && index === normalizedMessages.length - 1}
+              />
+            )
+          }
+          return null
+        })}
+      </Box>
 
-      {/* 动态状态和输入区域 */}
-      <WriteFlowStatusIndicator isThinking={isThinking} />
+      {/* Todo Panel — 紧贴输入框上方，减少间距 */}
+      <Box marginTop={0} marginBottom={0}>
+        <TodoPanel
+          todos={todos}
+          stats={todoStats}
+          isVisible={showTodos}
+          compact={true}
+          onToggle={() => setShowTodos(v => !v)}
+          status={activityStatus}
+          elapsedSeconds={elapsedSeconds}
+        />
+      </Box>
 
-      <PromptInput
-        input={input}
-        onInputChange={setInput}
-        onSubmit={handleSubmit}
-        commands={commands}
-        isLoading={isThinking}
-        isDisabled={isThinking}
-        placeholder={validMessages.length === 0 ? "描述您想要写作的内容..." : "继续您的写作..."}
-        enableCompletion={true}
-        mode={mode}
-        onModeChange={setMode}
-        messages={validMessages
-          .filter(msg => msg.type === 'user' || msg.type === 'assistant')
-          .map(msg => ({
-            id: msg.id,
-            type: msg.type as 'user' | 'assistant',
-            content: msg.message
-          }))}
-      />
+      {/* Input */}
+      <Box marginTop={0}>
+        <PromptInput
+          input={input}
+          onInputChange={setInput}
+          onSubmit={handleSubmit}
+          isLoading={isThinking}
+          isDisabled={isThinking}
+          mode="writing"
+          onModeChange={() => {}}
+          messages={[]}
+          placeholder={isThinking ? '思考中...' : '输入消息...'}
+        />
+      </Box>
+
+      {/* Model Config Modal */}
+      {showModelConfig && (
+        <Box
+          justifyContent="center"
+          alignItems="center"
+          marginTop={2}
+        >
+          <Box
+            borderStyle="round"
+            borderColor={theme.claude}
+            padding={1}
+            width={60}
+          >
+            {/* ModelConfig component would go here */}
+            <Text>模型配置界面</Text>
+            <Text color={theme.dimText}>按 Ctrl+C 关闭</Text>
+          </Box>
+        </Box>
+      )}
     </Box>
   )
 }

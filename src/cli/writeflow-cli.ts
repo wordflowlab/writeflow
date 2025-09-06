@@ -11,6 +11,7 @@ import { getVersion } from '../utils/version.js'
 import { getGlobalConfig, shouldShowOnboarding } from '../utils/config.js'
 import { WriteFlowOnboarding } from '../ui/components/onboarding/WriteFlowOnboarding.js'
 import { WriteFlowREPL } from '../ui/WriteFlowREPL.js'
+import { displayWelcomeBanner } from '../utils/welcome.js'
 
 /**
  * WriteFlow CLI 主入口
@@ -95,6 +96,10 @@ export class WriteFlowCLI {
 
       // 初始化应用
       await this.app.initialize(options)
+      
+      // 启动提示：在进入 UI 前输出一次欢迎横幅
+      // 这样可以与 \"WriteFlow 初始化完成\" 串联，恢复旧版的欢迎框体验
+      displayWelcomeBanner()
       
       // 启动 React UI
       this.startReactUI()

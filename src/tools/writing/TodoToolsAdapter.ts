@@ -2,6 +2,7 @@ import { WritingTool as LegacyWritingTool, ToolInput, ToolResult } from '../../t
 import { WritingTool as ModernWritingTool, ToolUseContext } from '../../types/WritingTool.js'
 import { TodoWriteTool } from './TodoWriteTool.js'
 import { TodoReadTool } from './TodoReadTool.js'
+import { TodoManager } from '../TodoManager.js'
 import { Todo, TodoStatus } from '../../types/Todo.js'
 import { z } from 'zod'
 
@@ -15,6 +16,8 @@ class TodoToolAdapter implements LegacyWritingTool {
   name: string
   description: string
   securityLevel: 'safe' | 'ai-powered' | 'restricted' = 'safe'
+  // 暴露底层 TodoManager（供 UI 获取 todos 数据）
+  public todoManager?: any
 
   constructor(
     private modernTool: ModernWritingTool,
@@ -24,6 +27,12 @@ class TodoToolAdapter implements LegacyWritingTool {
     this.description = typeof modernTool.description === 'string' 
       ? modernTool.description 
       : '更新任务列表工具'
+
+    // 若为 TodoWriteTool，则暴露其内部 todoManager，便于 UI 获取/保存任务
+    if (modernTool instanceof TodoWriteTool) {
+      // 访问私有字段（运行时存在）
+      this.todoManager = (modernTool as any).todoManager
+    }
   }
 
   async execute(input: ToolInput): Promise<ToolResult> {
@@ -156,7 +165,8 @@ class TodoToolAdapter implements LegacyWritingTool {
  * 创建 TodoWrite 工具适配器
  */
 export function createTodoWriteToolAdapter(sessionId?: string): LegacyWritingTool {
-  const todoWriteTool = new TodoWriteTool()
+  const manager = new TodoManager(sessionId || process.env.WRITEFLOW_SESSION_ID)
+  const todoWriteTool = new TodoWriteTool(manager)
   return new TodoToolAdapter(todoWriteTool, sessionId)
 }
 
@@ -164,7 +174,8 @@ export function createTodoWriteToolAdapter(sessionId?: string): LegacyWritingToo
  * 创建 TodoRead 工具适配器  
  */
 export function createTodoReadToolAdapter(sessionId?: string): LegacyWritingTool {
-  const todoReadTool = new TodoReadTool()
+  const manager = new TodoManager(sessionId || process.env.WRITEFLOW_SESSION_ID)
+  const todoReadTool = new TodoReadTool(manager)
   return new TodoToolAdapter(todoReadTool, sessionId)
 }
 

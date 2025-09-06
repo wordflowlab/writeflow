@@ -54,7 +54,7 @@ export const DEFAULT_PERMISSION_POLICIES: PermissionPolicy[] = [
   { toolName: 'Write', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.ONE_TIME_GRANT, 
     conditions: { requireConfirmation: true, maxUsagePerSession: 10 } },
   { toolName: 'MemoryWrite', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.SESSION_GRANT },
-  { toolName: 'TodoWrite', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.ALWAYS_ALLOW },
+  { toolName: 'todo_write', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.ALWAYS_ALLOW },
   
   // 系统修改工具（需要明确授权）
   { toolName: 'Edit', permissionLevel: ToolPermissionLevel.system_modify, grantType: PermissionGrantType.ONE_TIME_GRANT,

@@ -15,7 +15,14 @@ export enum MessageType {
   SystemNotification = 'system_notification',
   TaskAssignment = 'task_assignment',
   SlashCommand = 'slash_command',
-  ContextUpdate = 'context_update'
+  ContextUpdate = 'context_update',
+  
+  // TODO Queue 相关消息类型
+  TodoPlan = 'todo_plan',           // 任务规划阶段
+  TodoExecute = 'todo_execute',     // 任务执行请求
+  TodoUpdate = 'todo_update',       // 任务状态更新
+  TodoComplete = 'todo_complete',   // 任务完成通知
+  TodoSummary = 'todo_summary'      // 任务总结生成
 }
 
 export enum MessagePriority {

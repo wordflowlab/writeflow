@@ -135,9 +135,9 @@ export class NOMainAgentEngine {
   /**
    * 消息路由处理
    */
-  private async *routeMessage(
+  protected async *routeMessage(
     message: Message,
-    planState: PlanMode
+    planState?: PlanMode
   ): AsyncGenerator<AgentResponse> {
     switch (planState) {
       case PlanMode.Default:

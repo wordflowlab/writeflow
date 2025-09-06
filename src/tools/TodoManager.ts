@@ -260,4 +260,151 @@ export class TodoManager {
       storagePath: this.storage.getStoragePath(),
     }
   }
+
+  // ========== 队列执行支持 ==========
+
+  /**
+   * 获取下一个待执行任务
+   * 按优先级和创建时间排序
+   */
+  async getNextPendingTask(): Promise<Todo | null> {
+    const pendingTodos = await this.getTodosByStatus(TodoStatus.PENDING)
+    return pendingTodos.length > 0 ? pendingTodos[0] : null
+  }
+
+  /**
+   * 自动推进到下一个任务
+   * 将当前进行中的任务设为 pending，并开始下一个任务
+   */
+  async advanceToNextTask(): Promise<{
+    previousTask: Todo | null
+    nextTask: Todo | null
+    success: boolean
+  }> {
+    const currentTask = await this.getCurrentTask()
+    const nextTask = await this.getNextPendingTask()
+
+    // 如果当前任务存在，将其重置为 pending
+    if (currentTask) {
+      await this.updateTodoStatus(currentTask.id, TodoStatus.PENDING)
+    }
+
+    // 开始下一个任务
+    let startedTask: Todo | null = null
+    if (nextTask) {
+      startedTask = await this.startTask(nextTask.id)
+    }
+
+    return {
+      previousTask: currentTask,
+      nextTask: startedTask,
+      success: !nextTask || !!startedTask
+    }
+  }
+
+  /**
+   * 队列执行统计
+   */
+  async getQueueStats(): Promise<{
+    totalTasks: number
+    pendingTasks: number
+    inProgressTasks: number
+    completedTasks: number
+    completionRate: number
+    estimatedTimeRemaining: number // 分钟
+  }> {
+    const stats = await this.getStats()
+    const pendingTasks = stats.pending
+    const inProgressTasks = stats.inProgress
+    const completedTasks = stats.completed
+    const totalTasks = pendingTasks + inProgressTasks + completedTasks
+
+    return {
+      totalTasks,
+      pendingTasks,
+      inProgressTasks,
+      completedTasks,
+      completionRate: totalTasks > 0 ? completedTasks / totalTasks : 0,
+      estimatedTimeRemaining: pendingTasks * 2 // 简单估算：每任务 2 分钟
+    }
+  }
+
+  /**
+   * 检查是否所有任务都已完成
+   */
+  async isQueueComplete(): Promise<boolean> {
+    const pendingTodos = await this.getTodosByStatus(TodoStatus.PENDING)
+    const inProgressTodos = await this.getTodosByStatus(TodoStatus.IN_PROGRESS)
+    return pendingTodos.length === 0 && inProgressTodos.length === 0
+  }
+
+  /**
+   * 为队列执行准备任务（按优先级排序）
+   */
+  async prepareTaskQueue(): Promise<Todo[]> {
+    const pendingTodos = await this.getTodosByStatus(TodoStatus.PENDING)
+    
+    // 按优先级和创建时间排序
+    return pendingTodos.sort((a, b) => {
+      // 先按优先级
+      const priorityOrder = { 
+        [TodoPriority.HIGH]: 3, 
+        [TodoPriority.MEDIUM]: 2, 
+        [TodoPriority.LOW]: 1 
+      }
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
+      if (priorityDiff !== 0) return priorityDiff
+      
+      // 再按创建时间（早的优先）
+      return a.createdAt.getTime() - b.createdAt.getTime()
+    })
+  }
+
+  /**
+   * 开始队列执行模式
+   * 确保只有一个任务处于进行中状态
+   */
+  async startQueueExecution(): Promise<{
+    success: boolean
+    startedTask: Todo | null
+    message: string
+  }> {
+    try {
+      // 检查当前是否有进行中的任务
+      const currentTask = await this.getCurrentTask()
+      if (currentTask) {
+        return {
+          success: true,
+          startedTask: currentTask,
+          message: `队列执行继续，当前任务: ${currentTask.content}`
+        }
+      }
+
+      // 获取下一个待处理任务
+      const nextTask = await this.getNextPendingTask()
+      if (!nextTask) {
+        return {
+          success: false,
+          startedTask: null,
+          message: '没有待处理的任务'
+        }
+      }
+
+      // 开始执行第一个任务
+      const startedTask = await this.startTask(nextTask.id)
+      return {
+        success: !!startedTask,
+        startedTask,
+        message: startedTask 
+          ? `开始执行任务: ${startedTask.content}`
+          : '启动任务失败'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        startedTask: null,
+        message: `启动队列执行失败: ${error instanceof Error ? error.message : '未知错误'}`
+      }
+    }
+  }
 }

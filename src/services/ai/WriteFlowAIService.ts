@@ -23,6 +23,8 @@ import { getStreamingService, StreamingService, StreamingRequest } from '../stre
 import { getResponseStateManager } from '../streaming/ResponseStateManager.js'
 import { startStreamingProgress, stopStreamingProgress } from '../streaming/ProgressIndicator.js'
 import { getOutputFormatter } from '../../ui/utils/outputFormatter.js'
+import { parseAIResponse, parseStreamingChunk, type ParsedResponse } from './ResponseParser.js'
+import type { ContentBlock } from '../../types/UIMessage.js'
 
 export interface AIRequest {
   prompt: string
@@ -38,6 +40,7 @@ export interface AIRequest {
 
 export interface AIResponse {
   content: string
+  contentBlocks?: ContentBlock[]  // 新增：结构化内容块
   usage: {
     inputTokens: number
     outputTokens: number
@@ -166,8 +169,10 @@ export class WriteFlowAIService {
       // 离线/降级模式（本地无网或无 Key 时可用）
       if (process.env.WRITEFLOW_AI_OFFLINE === 'true') {
         const content = `【离线模式】无法访问外部模型，已返回模拟回复。\n\n要点: ${request.prompt.slice(0, 120)}${request.prompt.length > 120 ? '...' : ''}`
+        const parsedResponse = parseAIResponse(content)
         return {
           content,
+          contentBlocks: parsedResponse.content,
           usage: { inputTokens: 0, outputTokens: content.length },
           cost: 0,
           duration: Date.now() - startTime,
@@ -280,8 +285,12 @@ export class WriteFlowAIService {
 
     const data = await response.json()
     
+    const rawContent = data.content?.[0]?.text || '无响应内容'
+    const parsedResponse = parseAIResponse(rawContent)
+    
     return {
-      content: data.content?.[0]?.text || '无响应内容',
+      content: rawContent,
+      contentBlocks: parsedResponse.content,
       usage: {
         inputTokens: data.usage?.input_tokens || 0,
         outputTokens: data.usage?.output_tokens || 0
@@ -352,9 +361,11 @@ export class WriteFlowAIService {
 
     const finalTokens = Math.ceil(content.length / 4)
     const stats = responseManager.completeStreaming(streamId, finalTokens)
+    const parsedResponse = parseAIResponse(content)
 
     return {
       content,
+      contentBlocks: parsedResponse.content,
       usage: { inputTokens: 0, outputTokens: finalTokens },
       cost: 0,
       duration: stats.duration,
@@ -415,8 +426,12 @@ export class WriteFlowAIService {
     // 非流式处理
     const data = await response.json()
     
+    const rawContent = data.choices?.[0]?.message?.content || '无响应内容'
+    const parsedResponse = parseAIResponse(rawContent)
+    
     return {
-      content: data.choices?.[0]?.message?.content || '无响应内容',
+      content: rawContent,
+      contentBlocks: parsedResponse.content,
       usage: {
         inputTokens: data.usage?.prompt_tokens || 0,
         outputTokens: data.usage?.completion_tokens || 0
@@ -507,6 +522,7 @@ export class WriteFlowAIService {
     // 完成流式响应并获取统计信息
     const finalTokenCount = usage.outputTokens || Math.ceil(content.length / 4)
     const streamingStats = responseManager.completeStreaming(streamId, finalTokenCount)
+    const parsedResponse = parseAIResponse(content)
     
     // 停止进度指示器（仅控制台模式）
     if (useConsoleProgress) {
@@ -531,6 +547,7 @@ export class WriteFlowAIService {
     
     return {
       content,
+      contentBlocks: parsedResponse.content,
       usage,
       cost: this.calculateCost({
         prompt_tokens: usage.inputTokens,
@@ -593,8 +610,12 @@ export class WriteFlowAIService {
 
     const data = await response.json()
     
+    const rawContent = data.choices?.[0]?.message?.content || '无响应内容'
+    const parsedResponse = parseAIResponse(rawContent)
+    
     return {
-      content: data.choices?.[0]?.message?.content || '无响应内容',
+      content: rawContent,
+      contentBlocks: parsedResponse.content,
       usage: {
         inputTokens: data.usage?.prompt_tokens || 0,
         outputTokens: data.usage?.completion_tokens || 0
@@ -649,8 +670,12 @@ export class WriteFlowAIService {
 
     const data = await response.json()
     
+    const rawContent = data.choices?.[0]?.message?.content || '无响应内容'
+    const parsedResponse = parseAIResponse(rawContent)
+    
     return {
-      content: data.choices?.[0]?.message?.content || '无响应内容',
+      content: rawContent,
+      contentBlocks: parsedResponse.content,
       usage: {
         inputTokens: data.usage?.prompt_tokens || 0,
         outputTokens: data.usage?.completion_tokens || 0
@@ -848,6 +873,7 @@ export class WriteFlowAIService {
     let iteration = 0
     let consecutiveFailures = 0
     const maxConsecutiveFailures = 2
+    let lastRoundHadTodoUpdate = false
 
     while (iteration < maxIterations) {
       console.log(`🔄 AI 正在思考和执行...`)
@@ -855,11 +881,13 @@ export class WriteFlowAIService {
       const payload: any = {
         model: profile.modelName,
         messages,
-        tools,
-        tool_choice: 'auto',
+        tools: lastRoundHadTodoUpdate ? [] : tools,
+        tool_choice: lastRoundHadTodoUpdate ? 'none' : 'auto',
         max_tokens: request.maxTokens || profile.maxTokens,
         temperature: request.temperature || 0.3,
-        stream: request.stream || false
+        // 注意：带工具调用的流式响应是 SSE，包含 `data:` 前缀，
+        // 这里统一关闭流式，改为一次性 JSON，避免解析报错。
+        stream: false
       }
 
       const response: any = await fetch(url, {
@@ -877,13 +905,16 @@ export class WriteFlowAIService {
       }
 
       let data: any
-      // 如果是流式请求且是第一轮（用户消息），直接处理流式响应
-      if (request.stream && iteration === 0 && !tools.length) {
-        // 对于带工具的流式请求，我们暂时回退到非流式处理
-        // 因为工具调用需要完整的响应来解析tool_calls
+      try {
         data = await response.json()
-      } else {
-        data = await response.json()
+      } catch (e) {
+        // 某些网关可能仍返回 SSE，这里兜底读取文本并尝试提取最后一个 data: JSON
+        const text = await response.text()
+        const lines = text.split(/\n/).map((l: string) => l.trim()).filter(Boolean)
+        const lastData = [...lines].reverse().find((l: string) => l.startsWith('data:'))
+        if (!lastData) throw e
+        const jsonStr = lastData.replace(/^data:\s*/, '')
+        data = JSON.parse(jsonStr)
       }
       const message: any = data.choices?.[0]?.message
       
@@ -912,20 +943,33 @@ export class WriteFlowAIService {
       
       // 执行工具调用
       let currentRoundHasFailures = false
+      let currentRoundHasTodoUpdate = false
       for (const toolCall of message.tool_calls) {
         console.log(`🔧 [${toolCall.function.name}] 正在执行...`)
-        conversationHistory += `\nAI: [调用 ${toolCall.function.name} 工具] 正在执行...\n`
+        // 过滤TODO工具的执行信息，不添加到conversation history中
+        if (!toolCall.function.name.includes('todo')) {
+          conversationHistory += `\nAI: [调用 ${toolCall.function.name} 工具] 正在执行...\n`
+        }
         
         try {
           const toolResult = await this.executeDeepSeekToolCall(toolCall)
           
           if (toolResult.success) {
             console.log(`✅ [${toolCall.function.name}] ${toolResult.result}`)
-            conversationHistory += `${toolCall.function.name}工具: ${toolResult.result}\n`
+            // 过滤TODO工具结果，不添加到conversation history中
+            if (!toolCall.function.name.includes('todo')) {
+              conversationHistory += `${toolCall.function.name}工具: ${toolResult.result}\n`
+            }
             consecutiveFailures = 0 // 重置连续失败计数
+            if (toolCall.function.name.startsWith('todo_')) {
+              currentRoundHasTodoUpdate = true
+            }
           } else {
             console.log(`❌ [${toolCall.function.name}] ${toolResult.error}`)
-            conversationHistory += `${toolCall.function.name}工具: ${toolResult.error}\n`
+            // TODO工具的错误也不添加到conversation history中
+            if (!toolCall.function.name.includes('todo')) {
+              conversationHistory += `${toolCall.function.name}工具: ${toolResult.error}\n`
+            }
             currentRoundHasFailures = true
           }
           
@@ -967,13 +1011,23 @@ export class WriteFlowAIService {
           }
         }
       }
-      
+      // 若本轮成功更新了 todo_*，下一轮禁用工具并强制正文生成
+      if (currentRoundHasTodoUpdate) {
+        lastRoundHadTodoUpdate = true
+        messages.push({
+          role: 'user',
+          content: '已更新任务列表。现在请根据当前任务直接生成正文内容，不要再调用任何工具。请开始写作。'
+        })
+      } else {
+        lastRoundHadTodoUpdate = false
+      }
+
       iteration++
     }
 
     // 超过最大迭代次数
     return {
-      content: conversationHistory + '\n[系统] 对话已达到最大轮次限制',
+      content: conversationHistory + '\n[系统] 对话达到轮次上限。请继续直接生成正文内容。',
       usage: {
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens
@@ -1003,7 +1057,61 @@ export class WriteFlowAIService {
     
     for (const toolName of allowedTools) {
       // 检查工具是否在允许的工具列表中
+      // 内置兼容: 一些写作域工具（如 todo_*、exit_plan_mode）未接入编排器
+      // 这里直接提供最小 JSON-Schema 描述，避免控制台出现噪音日志并允许模型原生函数调用。
       if (!availableToolNames.has(toolName)) {
+        if (toolName === 'todo_write') {
+          tools.push({
+            type: 'function',
+            function: {
+              name: 'todo_write',
+              description: '仅用于进度追踪的后台工具，更新任务状态。重要：调用此工具后必须继续执行用户请求的主要任务（如写故事、文章等）。此工具不替代实际内容生成。',
+              parameters: {
+                type: 'object',
+                properties: {
+                  todos: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string' },
+                        content: { type: 'string' },
+                        activeForm: { type: 'string' },
+                        status: { type: 'string', enum: ['pending','in_progress','completed'] },
+                        priority: { type: 'string', enum: ['high','medium','low'] }
+                      },
+                      required: ['id','content','activeForm','status']
+                    }
+                  }
+                },
+                required: ['todos']
+              }
+            }
+          })
+          continue
+        }
+        if (toolName === 'todo_read') {
+          tools.push({
+            type: 'function',
+            function: {
+              name: 'todo_read',
+              description: '读取当前任务列表并返回 JSON。',
+              parameters: { type: 'object', properties: {}, additionalProperties: false }
+            }
+          })
+          continue
+        }
+        if (toolName === 'exit_plan_mode') {
+          tools.push({
+            type: 'function',
+            function: {
+              name: 'exit_plan_mode',
+              description: '退出计划模式，恢复正常对话。',
+              parameters: { type: 'object', properties: { plan: { type: 'string' } }, required: [] }
+            }
+          })
+          continue
+        }
         console.warn(`工具 ${toolName} 不在可用工具列表中，跳过`)
         continue
       }
@@ -1222,6 +1330,20 @@ export class WriteFlowAIService {
         }
       }
 
+      // 若编排器没有注册该工具，直接走旧域工具执行
+      if (!this.toolOrchestrator.getTool(toolName)) {
+        const legacy = await this.executeLegacyTool(toolName, args)
+        if (legacy) {
+          return {
+            toolName,
+            callId: toolCall.id,
+            result: legacy.result,
+            success: legacy.success,
+            error: legacy.error
+          }
+        }
+      }
+
       // 使用工具编排器执行工具调用
       const executionResult = await this.toolOrchestrator.executeTool({
         toolName,
@@ -1239,6 +1361,19 @@ export class WriteFlowAIService {
           success: true
         }
       } else {
+        // 如果是未找到之类的错误，退回旧域工具执行
+        if (executionResult.error?.message?.includes('未找到') || executionResult.error?.message?.includes('not found')) {
+          const legacy = await this.executeLegacyTool(toolName, args)
+          if (legacy) {
+            return {
+              toolName,
+              callId: toolCall.id,
+              result: legacy.result,
+              success: legacy.success,
+              error: legacy.error
+            }
+          }
+        }
         return {
           toolName,
           callId: toolCall.id,
@@ -1360,6 +1495,10 @@ export class WriteFlowAIService {
     try {
       const tool = getTool(toolCall.toolName)
       if (!tool) {
+        // 兼容旧域写作工具（todo_* 等）——直接调用工具实现
+        const legacy = await this.executeLegacyTool(toolCall.toolName, toolCall.parameters)
+        if (legacy) return { toolName: toolCall.toolName, callId: toolCall.callId, ...legacy }
+
         return {
           toolName: toolCall.toolName,
           callId: toolCall.callId,
@@ -1403,6 +1542,38 @@ export class WriteFlowAIService {
         success: false,
         error: error instanceof Error ? error.message : '未知错误'
       }
+    }
+  }
+
+  /**
+   * 直接执行旧域工具（未注册到编排器）
+   */
+  private async executeLegacyTool(toolName: string, params: any): Promise<{ result: string; success: boolean; error?: string } | null> {
+    try {
+      // 统一会话 ID，确保与 UI/CLI 使用同一个 Todo 存储
+      const sessionId = process.env.WRITEFLOW_SESSION_ID
+      const { TodoManager } = await import('../../tools/TodoManager.js')
+      const sharedManager = new TodoManager(sessionId)
+
+      if (toolName === 'todo_write') {
+        const { TodoWriteTool } = await import('../../tools/writing/TodoWriteTool.js')
+        const tool = new TodoWriteTool(sharedManager)
+        const res = await tool.execute(params, { agentId: 'ai-service', abortController: new AbortController(), options: { verbose: false } })
+        return { result: res.content || '', success: res.success, error: res.success ? undefined : (res as any).error }
+      }
+      if (toolName === 'todo_read') {
+        const { TodoReadTool } = await import('../../tools/writing/TodoReadTool.js')
+        const tool = new TodoReadTool(sharedManager)
+        const res = await tool.execute(params, { agentId: 'ai-service', abortController: new AbortController(), options: { verbose: false } })
+        return { result: res.content || '', success: res.success, error: res.success ? undefined : (res as any).error }
+      }
+      if (toolName === 'exit_plan_mode') {
+        // 简化处理：返回固定消息，交由上层解析
+        return { result: '已退出计划模式', success: true }
+      }
+      return null
+    } catch (error) {
+      return { result: '', success: false, error: (error as Error).message }
     }
   }
 

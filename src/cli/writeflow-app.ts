@@ -25,6 +25,7 @@ import { SlashCommand } from '../types/command.js'
 
 // 工具系统
 import { ToolManager } from '../tools/tool-manager.js'
+import { TodoWriteTool } from '../tools/writing/TodoWriteTool.js'
 import {
   OutlineGeneratorTool,
   ContentRewriterTool,
@@ -140,6 +141,24 @@ export class WriteFlowApp extends EventEmitter {
 - 响应会使用等宽字体渲染，遵循 CommonMark 规范
 - 充分使用 Markdown 语法来增强可读性：
   * 使用 \`\`\`语言 代码块来显示代码，会自动进行语法高亮
+
+内容生成优先原则：
+- 核心任务：当用户请求内容创作时，你的主要职责是生成高质量的内容
+- TODO工具仅用于进度追踪，不是主要任务：使用TodoWrite工具跟踪写作进度，但这只是辅助功能
+- 内容优先：先专注于创作用户requested的实际内容，TODO管理是后台进度显示
+- 响应结构：主要输出应该是用户requested的内容，工具调用结果会在UI的专门区域显示
+
+TODO 管理规范：
+- TodoWrite工具只用于后台进度追踪，不在主对话中展示
+- 工具调用是隐式的：执行写作任务时可以更新进度，但主要输出仍是内容
+- 避免在主响应中包含"任务列表已更新"等工具执行信息
+- 专注输出：用户看到的应该是他们requested的故事、文章或其他内容
+
+流式输出规范：
+- 按段落组织输出，每个段落完整后再显示，避免逐字符的打字机效果
+- 代码块必须完整输出，不要分片传输
+- 重要内容应该在完整的行或段落中一次性显示
+- 避免在响应中混入不完整的 JSON 片段
   * 使用 # ## ### 标题来组织内容层次
   * 使用 \`行内代码\` 来突出显示关键词和变量名
   * 使用 **粗体** 和 *斜体* 来强调重点
@@ -218,11 +237,11 @@ export class WriteFlowApp extends EventEmitter {
       // 初始化核心组件
       await this.initializeCoreComponents()
 
+      // 初始化记忆系统（需最先完成，以便暴露全局会话ID给 Todo 存储等模块）
+      await this.initializeMemorySystem()
+
       // 初始化CLI组件
       await this.initializeCLIComponents()
-
-      // 初始化记忆系统
-      await this.initializeMemorySystem()
 
       // 加载项目写作配置
       await this.loadProjectWritingConfig()
@@ -394,6 +413,12 @@ export class WriteFlowApp extends EventEmitter {
       maxShortTermMessages: 50,
       enableKnowledgeExtraction: true,
     })
+
+    // 将会话ID暴露为环境变量，供 TodoStorage/旧域工具共享
+    try {
+      const sid = this.memoryManager.getSessionId()
+      process.env.WRITEFLOW_SESSION_ID = sid
+    } catch {}
   }
 
   /**
@@ -609,8 +634,22 @@ ${this.projectWritingConfig}`
           this.emit('ai-thinking', intercept.thinkingContent)
         }
         if (intercept.shouldIntercept && intercept.toolCalls?.length) {
+          let toolResults = ''
           for (const call of intercept.toolCalls) {
-            await this.executeToolWithEvents(call.toolName, call.input)
+            const result = await this.executeToolWithEvents(call.toolName, call.input)
+            // 过滤TODO工具的结果，不添加到主响应中
+            if (result && result.success && result.content && 
+                !call.toolName.includes('todo') && 
+                !call.toolName.includes('Todo')) {
+              toolResults += result.content + '\n'
+            }
+          }
+          
+          // 如果有非TODO工具执行结果，将其添加到响应中
+          if (toolResults.trim()) {
+            const cleanedResponse = intercept.processedResponse || ''
+            const finalResponse = cleanedResponse.trim() + (cleanedResponse.trim() ? '\n\n' : '') + toolResults.trim()
+            return finalResponse
           }
         }
         // 若拦截返回了清理后的正文，优先返回它
@@ -621,11 +660,13 @@ ${this.projectWritingConfig}`
         console.warn('[AI] 拦截/解析工具调用失败，使用原始响应:', (e as Error)?.message)
       }
 
+      // 直接返回响应内容，TODO 显示由 TodoPanel 处理
       return response.content
     } catch (error) {
       throw new Error(`AI查询失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
+
 
   /**
    * 处理自由文本输入 - 使用 WriteFlowAIService
@@ -916,6 +957,18 @@ Create a detailed plan for the user's request.`
   }
 
   /**
+   * 获取 TodoManager 实例
+   */
+  getTodoManager() {
+    // 统一命名: 仅支持 'todo_write'
+    const tool = this.toolManager?.getToolInfo('todo_write') as any
+    if (tool && (tool.todoManager || tool.getTodoManager)) {
+      return tool.todoManager || tool.getTodoManager?.()
+    }
+    return null
+  }
+
+  /**
    * 获取所有可用的命令（用于命令补全）
    */
   getAllCommands(): SlashCommand[] {
@@ -1081,10 +1134,10 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
             toolCalls.push({ toolName: 'exit_plan_mode', input })
             console.log('📋 ExitPlanMode 计划内容长度:', input.plan.length)
             this.emit('exit-plan-mode', input.plan)
-          } else if (toolName === 'TodoWrite' || toolName === 'todo_write') {
+          } else if (toolName === 'todo_write') {
             // TodoWrite 更新任务列表
             toolCalls.push({ toolName: 'todo_write', input })
-            console.log('🗒️  TodoWrite 调用已拦截，转交 todo_write 工具执行')
+            console.log('🗒️  todo_write 调用已拦截，转交 todo_write 工具执行')
           } else if (toolName === 'TodoRead' || toolName === 'todo_read') {
             toolCalls.push({ toolName: 'todo_read', input })
             console.log('📖  TodoRead 调用已拦截，转交 todo_read 工具执行')
@@ -1103,7 +1156,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       // 检测传统工具调用格式
       const patterns = [
         /<function_calls>[\s\S]*?<invoke name="ExitPlanMode">[\s\S]*?<parameter name="plan">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi,
-        /<function_calls>[\s\S]*?<invoke name="TodoWrite">[\s\S]*?<parameter name="todos">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi,
+        /<function_calls>[\s\S]*?<invoke name="todo_write">[\s\S]*?<parameter name="todos">([\s\S]*?)<\/antml:parameter>[\s\S]*?<\/antml:invoke>[\s\S]*?<\/antml:function_calls>/gi,
       ]
 
       for (const pattern of patterns) {
@@ -1118,7 +1171,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
             this.emit('exit-plan-mode', planContent)
             processedResponse = aiResponse.replace(match[0], '')
           } else {
-            // 传统 TodoWrite 调用：尝试解析 todos JSON
+            // 传统 todo_write 调用：尝试解析 todos JSON
             const rawTodos = match[1].trim()
             let parsed: any = null
             try {
@@ -1129,7 +1182,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
             }
             const input = parsed ? { todos: parsed } : { todos: rawTodos }
             toolCalls.push({ toolName: 'todo_write', input })
-            console.log('🎯 检测到传统 TodoWrite 工具调用')
+            console.log('🎯 检测到传统 todo_write 工具调用')
             processedResponse = aiResponse.replace(match[0], '')
           }
         }

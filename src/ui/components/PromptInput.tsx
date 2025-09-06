@@ -58,11 +58,11 @@ export function PromptInput({
   const theme = getTheme()
   const { columns } = useTerminalSize()
   const [exitMessage, setExitMessage] = useState<{ show: boolean; key?: string }>({ show: false })
-  const [cursorOffset, setCursorOffset] = useState<number>(input.length)
+  const [cursorOffset, setCursorOffset] = useState<number>(input?.length || 0)
   
   // 保持 cursorOffset 与 input.length 同步
   useEffect(() => {
-    setCursorOffset(input.length)
+    setCursorOffset(input?.length || 0)
   }, [input])
   
   // 使用命令补全 Hook

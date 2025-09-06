@@ -27,7 +27,9 @@ export class TodoStorage {
   private sessionId: string
 
   constructor(sessionId?: string) {
-    this.sessionId = sessionId || this.generateSessionId()
+    // 优先使用全局会话ID，确保 CLI、AI 服务、UI 共用同一份 Todo 存储
+    const globalSession = process.env.WRITEFLOW_SESSION_ID
+    this.sessionId = sessionId || globalSession || this.generateSessionId()
     this.todosDir = this.getTodosDirectory()
     this.sessionFile = path.join(this.todosDir, `${this.sessionId}-todos.json`)
     // 确保目录同步创建

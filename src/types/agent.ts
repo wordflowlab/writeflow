@@ -18,7 +18,7 @@ export enum PlanMode {
 }
 
 export interface AgentResponse {
-  type: 'success' | 'error' | 'prompt' | 'component' | 'progress' | 'plan'
+  type: 'success' | 'error' | 'prompt' | 'component' | 'progress' | 'plan' | 'status' | 'result' | 'summary'
   content?: string
   jsx?: React.ReactElement
   allowedTools?: string[]

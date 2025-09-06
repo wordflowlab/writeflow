@@ -73,7 +73,6 @@ export function RichTextRenderer({
 
     // 应用样式属性，使用增强的颜色
     const textProps = {
-      key: index,
       color: getTypeColor(),
       bold: style.bold || type === 'strong',
       italic: style.italic || type === 'em',
@@ -142,7 +141,7 @@ export function RichTextRenderer({
       case 'image':
         // 图像占位符
         return (
-          <Text {...textProps}>
+          <Text key={index} {...textProps}>
             {text}
           </Text>
         )
@@ -150,7 +149,7 @@ export function RichTextRenderer({
       case 'link':
         // 链接
         return (
-          <Text {...textProps}>
+          <Text key={index} {...textProps}>
             {text}
           </Text>
         )
@@ -162,7 +161,7 @@ export function RichTextRenderer({
       default:
         // 普通文本、段落、强调等
         return (
-          <Text {...textProps}>
+          <Text key={index} {...textProps}>
             {text}
           </Text>
         )
