@@ -20,8 +20,13 @@ export default {
     '^@/(.*)\\.js$': '<rootDir>/src/$1.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     // 第三方 ESM 在 Jest 下的简易 mock
-    '^chalk$': '<rootDir>/tests/mocks/chalk.ts'
+    '^chalk$': '<rootDir>/tests/mocks/chalk.ts',
+    '^marked$': '<rootDir>/tests/mocks/marked.ts',
+    '^figures$': '<rootDir>/tests/mocks/figures.ts'
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(marked|chalk)/)'
+  ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',

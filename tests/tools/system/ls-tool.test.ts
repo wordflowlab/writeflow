@@ -10,7 +10,7 @@ describe('LsTool', () => {
     await fs.mkdir(dir, { recursive: true })
     await fs.writeFile(path.join(dir, 'x.txt'), 'x', 'utf-8')
 
-    const res = await tool.execute({ dir })
+    const res = await tool.execute({ path: dir })
     expect(res.success).toBe(true)
     expect(String(res.content || '')).toContain('x.txt')
   })

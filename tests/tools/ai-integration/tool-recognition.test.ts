@@ -183,10 +183,10 @@ describe('AI Tool Recognition Tests', () => {
       const systemPrompt = await generateOptimizedSystemPrompt()
       
       // 验证包含使用指导
-      expect(systemPrompt).toContain('使用原则')
-      expect(systemPrompt).toContain('执行流程')
+      expect(systemPrompt).toContain('工具使用最佳实践')
+      expect(systemPrompt).toContain('执行流程规范')
       expect(systemPrompt).toContain('工具组合技巧')
-      expect(systemPrompt).toContain('错误处理')
+      expect(systemPrompt).toContain('错误处理指南')
     })
 
     test('should include tool-specific usage scenarios', async () => {

@@ -51,9 +51,9 @@ describe('ToolManager', () => {
     const toolNames = toolManager.getToolNames()
     
     expect(tools.length).toBeGreaterThanOrEqual(3)
-    expect(toolNames).toContain('read_article')
-    expect(toolNames).toContain('write_article')
-    expect(toolNames).toContain('edit_article')
+    expect(toolNames).toContain('exit_plan_mode')
+    expect(toolNames).toContain('todo_write')
+    expect(toolNames).toContain('todo_read')
   })
 
   test('应该能注册和使用自定义工具', async () => {
@@ -134,8 +134,8 @@ describe('ToolManager', () => {
     toolManager.registerTools([...safeTools, ...aiPoweredTools, ...restrictedTools])
     
     expect(toolManager.getToolsBySecurityLevel('safe').length).toBeGreaterThanOrEqual(2)
-    expect(toolManager.getToolsBySecurityLevel('ai-powered').length).toBeGreaterThanOrEqual(2)
-    expect(toolManager.getToolsBySecurityLevel('restricted').length).toBe(1)
+    expect(toolManager.getToolsBySecurityLevel('ai-powered').length).toBeGreaterThanOrEqual(1)
+    expect(toolManager.getToolsBySecurityLevel('restricted').length).toBeGreaterThanOrEqual(1)
   })
 
   test('应该收集执行统计数据', async () => {

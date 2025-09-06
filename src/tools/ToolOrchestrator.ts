@@ -158,7 +158,19 @@ export class ToolOrchestrator {
     // 获取工具实例
     const tool = this.tools.get(request.toolName)
     if (!tool) {
-      throw new Error(`工具 '${request.toolName}' 未找到`)
+      // 返回失败结果而不是抛出异常
+      return {
+        toolName: request.toolName,
+        executionId,
+        status: ToolExecutionStatus.FAILED,
+        startTime: Date.now(),
+        endTime: Date.now(),
+        error: new Error(`工具 '${request.toolName}' 未找到`),
+        logs: [`工具 '${request.toolName}' 未找到`],
+        metrics: {
+          duration: 0
+        }
+      }
     }
 
     // 创建执行结果对象

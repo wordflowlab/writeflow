@@ -176,20 +176,21 @@ export {
 } from './SystemPromptOptimizer.js'
 export type { ToolCallEvent } from './ToolBase.js'
 
-// 权限和执行相关类型
+// 权限和执行相关类型和枚举
 export type { 
   ToolExecutionRequest, 
   ToolExecutionResult, 
-  ToolExecutionStatus,
   OrchestratorConfig 
 } from './ToolOrchestrator.js'
 
+export { ToolExecutionStatus } from './ToolOrchestrator.js'
+
 export type {
   PermissionPolicy,
-  ToolPermissionLevel,
-  PermissionGrantType,
   ToolUsageStats
 } from './PermissionManager.js'
+
+export { ToolPermissionLevel, PermissionGrantType } from './PermissionManager.js'
 
 // ==================== 工具发现和智能推荐 ====================
 
