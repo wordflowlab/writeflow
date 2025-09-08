@@ -855,6 +855,8 @@ export class StreamingService extends EventEmitter {
       case 'deepseek':
         return modelProfile.baseURL || 'https://api.deepseek.com/chat/completions'
       case 'openai':
+      case 'custom-openai':
+      case 'custom':
         return modelProfile.baseURL || 'https://api.openai.com/v1/chat/completions'
       case 'kimi':
         return modelProfile.baseURL || 'https://api.moonshot.cn/v1/chat/completions'

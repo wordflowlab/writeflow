@@ -153,6 +153,8 @@ export class WriteFlowAIService {
         case 'bigdream':
           return await this.callAnthropicAPI(modelProfile, request)
         case 'openai':
+        case "custom-openai":
+        case "custom":
           return await this.callOpenAIAPI(modelProfile, request)
         case 'kimi':
           return await this.callKimiAPI(modelProfile, request)
@@ -223,6 +225,12 @@ export class WriteFlowAIService {
           response = await this.callDeepSeekAPI(modelProfile, request)
           break
         case 'openai':
+        case 'custom-openai':
+          response = await this.callOpenAIAPI(modelProfile, request)
+          break
+        case 'custom':
+          // 对于完全自定义提供商，暂时回退到 OpenAI兼容格式
+          // 未来可以扩展支持完全自定义的API格式
           response = await this.callOpenAIAPI(modelProfile, request)
           break
         case 'kimi':
