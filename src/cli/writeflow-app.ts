@@ -19,7 +19,7 @@ import { getWriteFlowAIService, AIRequest } from '../services/ai/WriteFlowAIServ
 
 // CLI 组件
 import { CommandExecutor } from './executor/command-executor.js'
-import { coreCommands } from './commands/core-commands.js'
+import { coreCommands } from './commands/core/index.js'
 import { slideCommands } from './commands/slide-commands.js'
 import { SlashCommand } from '../types/command.js'
 

@@ -67,6 +67,16 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   
   // 获取可用工具
   const tools = useMemo(() => getAvailableTools(), [])
+  
+  // 获取可用命令
+  const commands = useMemo(() => {
+    try {
+      return writeFlowApp.getAllCommands()
+    } catch (error) {
+      console.warn('Failed to get commands:', error)
+      return []
+    }
+  }, [writeFlowApp])
 
   // TODO 面板是否展开
   const [showTodos, setShowTodos] = useState<boolean>(false)
@@ -402,6 +412,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           mode="writing"
           onModeChange={() => {}}
           messages={[]}
+          commands={commands}
           placeholder={isThinking ? '思考中...' : '输入消息...'}
         />
       </Box>

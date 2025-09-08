@@ -11,6 +11,7 @@ docs/
 │   ├── quick-start.md     # 快速开始
 │   ├── ai-providers-setup.md  # AI 配置
 │   ├── slash-commands.md  # 命令指南
+│   ├── deep-research-guide.md # 智能调研指南
 │   └── slidev-ppt-guide.md # PPT 指南
 │
 ├── architecture/          # 🏗️ 架构文档
@@ -19,7 +20,8 @@ docs/
 │   └── writing-tools.md  # 工具系统
 │
 ├── features/              # 🎯 功能文档
-│   └── slidev-ppt-feature.md # Slidev 功能
+│   ├── slidev-ppt-feature.md # Slidev 功能
+│   └── intelligent-research-system.md # 智能调研系统
 │
 ├── epics/                 # 📋 史诗任务
 ├── stories/               # 📝 用户故事
@@ -34,6 +36,7 @@ docs/
 - [斜杠命令指南](./guides/slash-commands.md) - 掌握所有命令
 
 ### 热门功能
+- 🆕 [智能调研系统](./guides/deep-research-guide.md) - AI 深度调研报告生成
 - 🆕 [Slidev PPT 使用手册](./guides/slidev-ppt-guide.md) - AI 创建演示文稿
 - [系统架构设计](./architecture/system-architecture.md) - 了解技术架构
 - [写作工具集](./architecture/writing-tools.md) - 探索工具能力

@@ -73,9 +73,9 @@ config/production.json
 # CLI specific
 .writeflow/
 writeflow.config.json
-CLAUDE.md
+# CLAUDE.md
 
-other/
+# other/
 
 # Tool-specific directories that should not be committed
 web-bundles/
@@ -84,3 +84,4 @@ web-bundles/
 .bmad-core/
 
 AGENTS.md
+.codebuddy

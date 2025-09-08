@@ -1,7 +1,7 @@
 import { SlashCommand, ParsedCommand, CommandResult, CommandExecutorConfig } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
 import { SlashCommandParser } from '../parser/slash-parser.js'
-import { coreCommands } from '../commands/core-commands.js'
+import { coreCommands } from '../commands/core/index.js'
 import { systemCommands } from '../commands/system-commands.js'
 import { fileCommands } from '../commands/file-commands.js'
 import { publishCommands } from '../commands/publish-commands.js'
