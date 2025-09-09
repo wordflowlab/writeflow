@@ -55,7 +55,7 @@
     "figures": "^6.1.0",
     "gray-matter": "^4.0.3",
     "highlight.js": "^11.11.1",
-    "ink": "^6.2.3",
+    "ink": "^4.4.1",
     "marked": "^16.2.1",
     "node-fetch": "^2.7.0",
     "node-html-parser": "^7.0.1",
