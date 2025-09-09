@@ -277,6 +277,13 @@ export class WriteFlowCLI {
    */
   async run(): Promise<void> {
     try {
+      // 如果没有提供任何参数，直接启动交互模式
+      if (process.argv.length <= 2) {
+        console.log(chalk.gray('🚀 正在启动 WriteFlow 交互模式...'))
+        await this.startInteractiveMode({})
+        return
+      }
+      
       await this.program.parseAsync()
     } catch (error) {
       console.error(chalk.red(`WriteFlow CLI 错误: ${(error as Error).message}`))
