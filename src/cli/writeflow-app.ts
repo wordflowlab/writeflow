@@ -466,8 +466,8 @@ TODO 管理规范：
         },
         onSystemReminder: (reminder) => {
           this.emit('system-reminder', reminder)
-        }
-      }
+        },
+      },
     )
   }
 
@@ -585,7 +585,7 @@ TODO 管理规范：
             result.allowedTools, 
             options.signal, 
             true, 
-            options.onToken
+            options.onToken,
           )
         } else {
           return await this.processAIQuery(result.messages, result.allowedTools, options.signal, true, options.onToken)
@@ -710,7 +710,7 @@ ${this.projectWritingConfig}`
             if (result && result.success && result.content && 
                 !call.toolName.includes('todo') && 
                 !call.toolName.includes('Todo')) {
-              toolResults += result.content + '\n'
+              toolResults += `${result.content  }\n`
             }
           }
           
@@ -1383,7 +1383,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     // 通知UI更新状态
     this.emit('plan-mode-changed', {
       isActive: true,
-      reminders
+      reminders,
     })
   }
 
@@ -1401,7 +1401,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     this.emit('plan-mode-changed', {
       isActive: !result.approved,
       approved: result.approved,
-      reminders: result.reminders
+      reminders: result.reminders,
     })
     
     return result.approved

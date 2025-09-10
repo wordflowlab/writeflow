@@ -30,7 +30,7 @@ export class ToolManager {
   }> = []
   private defaultContext: ToolContext = {
     safeMode: false,
-    options: {}
+    options: {},
   }
 
   constructor() {
@@ -109,7 +109,7 @@ export class ToolManager {
           return {
             success: false,
             error: `权限验证失败: ${permissionResult.reason}`,
-            warnings: permissionResult.warningMessage ? [permissionResult.warningMessage] : undefined
+            warnings: permissionResult.warningMessage ? [permissionResult.warningMessage] : undefined,
           }
         }
       }
@@ -150,7 +150,7 @@ export class ToolManager {
   async* executeToolStream(
     toolName: string, 
     input: ToolInput, 
-    context?: ToolContext
+    context?: ToolContext,
   ): AsyncGenerator<ToolResult, void, unknown> {
     const effectiveContext = { ...this.defaultContext, ...context }
     
@@ -178,7 +178,7 @@ export class ToolManager {
           yield {
             success: false,
             error: `权限验证失败: ${permissionResult.reason}`,
-            warnings: permissionResult.warningMessage ? [permissionResult.warningMessage] : undefined
+            warnings: permissionResult.warningMessage ? [permissionResult.warningMessage] : undefined,
           }
           return
         }

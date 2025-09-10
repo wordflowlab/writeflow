@@ -8,7 +8,7 @@ export {
   StreamingText,
   StreamingMarkdown,
   StreamingCodeBlock,
-  StreamingOutputManager
+  StreamingOutputManager,
 } from './components/streaming/index.js'
 
 export type {
@@ -16,43 +16,43 @@ export type {
   StreamingMarkdownProps,
   StreamingCodeBlockProps,
   StreamingOutputManagerProps,
-  StreamState
+  StreamState,
 } from './components/streaming/index.js'
 
 // 流式管道系统
 export {
   StreamingPipeline,
   getStreamingPipeline,
-  createStreamProcessor
+  createStreamProcessor,
 } from './utils/streamingPipeline.js'
 
 export type {
   StreamChunk,
   RenderBuffer,
-  StreamingPipelineOptions
+  StreamingPipelineOptions,
 } from './utils/streamingPipeline.js'
 
 // React Hooks
 export {
   useStreamingOutput,
-  useSimpleStreaming
+  useSimpleStreaming,
 } from './hooks/useStreamingOutput.js'
 
 export type {
   StreamingOutputOptions,
   StreamingOutputState,
-  StreamingOutputControls
+  StreamingOutputControls,
 } from './hooks/useStreamingOutput.js'
 
 export {
   useAIStreaming,
   useAIChat,
-  useAICodeGen
+  useAICodeGen,
 } from './hooks/useAIStreaming.js'
 
 export type {
   AIStreamingOptions,
-  AIStreamingState
+  AIStreamingState,
 } from './hooks/useAIStreaming.js'
 
 // AI 服务集成
@@ -60,12 +60,12 @@ export {
   StreamingAIService,
   getStreamingAIService,
   streamAI,
-  askAIWithStreaming
+  askAIWithStreaming,
 } from '../services/ai/StreamingAIService.js'
 
 export type {
   StreamingAIRequest,
-  StreamingAIResponse
+  StreamingAIResponse,
 } from '../services/ai/StreamingAIService.js'
 
 // 性能优化
@@ -73,22 +73,22 @@ export {
   PerformanceOptimizer,
   RenderFrequencyController,
   ContentIntegrityValidator,
-  getPerformanceOptimizer
+  getPerformanceOptimizer,
 } from './utils/performanceOptimizer.js'
 
 export type {
   PerformanceMetrics,
   RenderControlOptions,
-  ContentIntegrityOptions
+  ContentIntegrityOptions,
 } from './utils/performanceOptimizer.js'
 
 // AI 聊天组件
 export {
-  StreamingAIChat
+  StreamingAIChat,
 } from './components/ai/StreamingAIChat.js'
 
 export type {
-  StreamingAIChatProps
+  StreamingAIChatProps,
 } from './components/ai/StreamingAIChat.js'
 
 // 演示和工具
@@ -98,18 +98,18 @@ export type {
 // } from './demo/streamingDemo.js'
 
 export {
-  runFormatDemo
+  runFormatDemo,
 } from './demo/formatDemo.js'
 
 // 现有的格式化工具
 export {
   getOutputFormatter,
-  OutputFormatter
+  OutputFormatter,
 } from './utils/outputFormatter.js'
 
 export type {
   OutputFormatOptions,
-  FormattedOutput
+  FormattedOutput,
 } from './utils/outputFormatter.js'
 
 // 主题管理
@@ -117,11 +117,11 @@ export {
   getThemeManager,
   getThemeColors,
   isDarkTheme,
-  ThemeManager
+  ThemeManager,
 } from './theme/themeManager.js'
 
 export type {
   ThemeName,
   ThemeColors,
-  Theme
+  Theme,
 } from './theme/themeManager.js'

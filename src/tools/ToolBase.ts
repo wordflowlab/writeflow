@@ -70,7 +70,7 @@ export abstract class ToolBase<
       memory: 'low',
       io: 'light',
       network: false,
-      duration: 'fast'
+      duration: 'fast',
     }
   }
 
@@ -196,7 +196,7 @@ export abstract class ToolBase<
         type: 'error',
         error: error instanceof Error ? error : new Error(errorMessage),
         message: `${this.name} 执行失败: ${errorMessage}`,
-        resultForAssistant: `工具 ${this.name} 执行失败: ${errorMessage}`
+        resultForAssistant: `工具 ${this.name} 执行失败: ${errorMessage}`,
       }
     } finally {
       const duration = Date.now() - startTime
@@ -214,7 +214,7 @@ export abstract class ToolBase<
         type: 'object',
         properties: {},
         required: [],
-        additionalProperties: false
+        additionalProperties: false,
       }
     }
 
@@ -235,7 +235,7 @@ export abstract class ToolBase<
       type: 'object',
       properties,
       required,
-      additionalProperties: false
+      additionalProperties: false,
     }
   }
 
@@ -249,27 +249,27 @@ export abstract class ToolBase<
           type: 'string',
           description: zodType.description || '',
           ...(zodType._def.checks?.some((c: any) => c.kind === 'min') && {
-            minLength: zodType._def.checks.find((c: any) => c.kind === 'min')?.value
+            minLength: zodType._def.checks.find((c: any) => c.kind === 'min')?.value,
           }),
           ...(zodType._def.checks?.some((c: any) => c.kind === 'max') && {
-            maxLength: zodType._def.checks.find((c: any) => c.kind === 'max')?.value
-          })
+            maxLength: zodType._def.checks.find((c: any) => c.kind === 'max')?.value,
+          }),
         }
       case 'ZodNumber':
         return {
           type: 'number', 
           description: zodType.description || '',
           ...(zodType._def.checks?.some((c: any) => c.kind === 'min') && {
-            minimum: zodType._def.checks.find((c: any) => c.kind === 'min')?.value
+            minimum: zodType._def.checks.find((c: any) => c.kind === 'min')?.value,
           }),
           ...(zodType._def.checks?.some((c: any) => c.kind === 'max') && {
-            maximum: zodType._def.checks.find((c: any) => c.kind === 'max')?.value
-          })
+            maximum: zodType._def.checks.find((c: any) => c.kind === 'max')?.value,
+          }),
         }
       case 'ZodBoolean':
         return {
           type: 'boolean',
-          description: zodType.description || ''
+          description: zodType.description || '',
         }
       case 'ZodOptional':
         return this.zodTypeToJsonSchema(zodType._def.innerType)
@@ -281,24 +281,24 @@ export abstract class ToolBase<
         return {
           type: 'array',
           items: this.zodTypeToJsonSchema(zodType._def.type),
-          description: zodType.description || ''
+          description: zodType.description || '',
         }
       case 'ZodEnum':
         return {
           type: 'string',
           enum: zodType._def.values,
-          description: zodType.description || ''
+          description: zodType.description || '',
         }
       case 'ZodLiteral':
         return {
           type: typeof zodType._def.value,
           const: zodType._def.value,
-          description: zodType.description || ''
+          description: zodType.description || '',
         }
       default:
         return {
           type: 'string',
-          description: zodType.description || `Unsupported Zod type: ${typeName}`
+          description: zodType.description || `Unsupported Zod type: ${typeName}`,
         }
     }
   }

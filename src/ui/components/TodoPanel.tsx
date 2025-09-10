@@ -2,6 +2,8 @@ import React from 'react'
 import { Box, Text } from 'ink'
 import { Todo, TodoStatus } from '../../types/Todo.js'
 import type { TodoStats } from '../../types/Todo.js'
+import { AnimatedTaskIcon } from './AnimatedTaskIcon.js'
+import { AnimatedText } from './AnimatedText.js'
 
 interface TodoPanelProps {
   todos: Todo[]
@@ -64,7 +66,14 @@ function CollapsedView({ stats }: { stats: TodoStats }) {
 }
 
 // 展开状态显示 - Claude Code 风格
-function ExpandedView({ todos, stats }: { todos: Todo[], stats: TodoStats }) {
+function ExpandedView({ todos, stats, status, elapsedSeconds }: { 
+  todos: Todo[], 
+  stats: TodoStats,
+  status?: 'idle' | 'working' | 'thinking' | 'executing',
+  elapsedSeconds?: number
+}) {
+  const [currentColor, setCurrentColor] = React.useState('yellow')
+  
   if (todos.length === 0) {
     return (
       <Box flexDirection="column">
@@ -83,15 +92,32 @@ function ExpandedView({ todos, stats }: { todos: Todo[], stats: TodoStats }) {
   // 找到当前进行中的任务作为主标题
   const inProgressTask = todos.find(t => t.status === TodoStatus.IN_PROGRESS)
   const headerText = inProgressTask 
-    ? `正在创建 ${inProgressTask.content}... (esc to interrupt • ctrl+t to hide todos)`
+    ? `正在创建 ${inProgressTask.content}...`
     : `Todos (${stats.completed}/${stats.total}) • ctrl+t to hide`
+
+  // 模拟 token 计数（实际应该从外部传入）
+  const tokenCount = Math.floor(Math.random() * 500) + 100
 
   return (
     <Box flexDirection="column">
-      {/* 头部 */}
-      <Text color="yellow">
-        ✱ {headerText}
-      </Text>
+      {/* 头部 - 统一星星 + 随机文字颜色 */}
+      <Box flexDirection="row">
+        {inProgressTask && (
+          <AnimatedTaskIcon 
+            isActive={true} 
+            color={currentColor}
+          />
+        )}
+        <Box marginLeft={inProgressTask ? 1 : 0}>
+          <AnimatedText
+            text={headerText}
+            isAnimated={!!inProgressTask}
+            onColorChange={setCurrentColor}
+            elapsedSeconds={elapsedSeconds || 0}
+            tokenCount={inProgressTask ? tokenCount : 0}
+          />
+        </Box>
+      </Box>
       
       {/* TODO 树状列表 */}
       <Box flexDirection="column">
@@ -110,7 +136,10 @@ export function TodoPanel({
   status = 'idle', 
   elapsedSeconds = 0 
 }: TodoPanelProps) {
-  // 移除空状态完全隐藏的逻辑，让空状态也能正常显示
+  // Claude Code 风格：无 TODO 时完全不显示
+  if (stats.total === 0) {
+    return null
+  }
 
   if (!isVisible) {
     return <CollapsedView stats={stats} />
@@ -120,6 +149,8 @@ export function TodoPanel({
     <ExpandedView 
       todos={todos} 
       stats={stats}
+      status={status}
+      elapsedSeconds={elapsedSeconds}
     />
   )
 }

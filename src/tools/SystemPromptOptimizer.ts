@@ -9,7 +9,7 @@ import {
   getAvailableTools,
   recommendToolsForTask,
   type WriteFlowTool,
-  type ToolInfo
+  type ToolInfo,
 } from './index.js'
 
 /**
@@ -53,7 +53,7 @@ export class SystemPromptOptimizer {
       includeSecurityWarnings: true,
       maxToolsInPrompt: 20,
       prioritizeReadOnlyTools: true,
-      ...config
+      ...config,
     }
   }
 
@@ -156,7 +156,7 @@ WriteFlow 提供了 ${this.toolOrchestrator.getToolNames().length} 个专业工�
         const writeTools = tools.filter(t => !t.isReadOnly())
         tools = [
           ...readOnlyTools.slice(0, Math.floor(this.config.maxToolsInPrompt * 0.6)),
-          ...writeTools.slice(0, Math.floor(this.config.maxToolsInPrompt * 0.4))
+          ...writeTools.slice(0, Math.floor(this.config.maxToolsInPrompt * 0.4)),
         ]
       } else {
         tools = tools.slice(0, this.config.maxToolsInPrompt)
@@ -174,7 +174,7 @@ ${description}
 
 **使用场景**: ${this.getToolUsageScenarios(tool.name)}
 **注意事项**: ${this.getToolPrecautions(tool)}`
-      })
+      }),
     )
 
     return `## 📋 可用工具详情
@@ -223,7 +223,7 @@ ${toolDescriptions.join('\n\n')}`
       Default: '标准模式 - 允许大部分操作，需要确认写入',
       Plan: '计划模式 - 仅允许只读操作，用于分析和规划',
       AcceptEdits: '编辑模式 - 允许文件修改操作',
-      BypassPermissions: '管理员模式 - 允许所有操作'
+      BypassPermissions: '管理员模式 - 允许所有操作',
     }
 
     return `## 🔐 权限和安全说明
@@ -296,7 +296,7 @@ ${safeMode ? `⚠️ **当前处于安全模式** - 所有写入操作都将被�
       recommendedTools.slice(0, 5).map(async (tool) => {
         const description = await tool.description()
         return `• **${tool.name}**: ${description}`
-      })
+      }),
     )
 
     return `## 🎯 任务特定工具推荐
@@ -357,7 +357,7 @@ ${this.config.customInstructions!.map((instruction, index) => `${index + 1}. ${i
       MultiEdit: '批量修改、重构代码、统一格式',
       Glob: '查找文件、模式匹配、文件筛选',
       Grep: '搜索内容、日志分析、代码定位',
-      Bash: '系统操作、脚本执行、环境配置'
+      Bash: '系统操作、脚本执行、环境配置',
     }
     
     return scenarios[toolName] || '通用工具操作'
@@ -441,6 +441,6 @@ export async function generateOptimizedSystemPrompt(config?: {
 
   return optimizer.generateSystemPrompt({
     taskContext: config?.taskContext,
-    safeMode: config?.safeMode
+    safeMode: config?.safeMode,
   })
 }

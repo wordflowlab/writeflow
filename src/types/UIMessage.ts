@@ -94,60 +94,60 @@ export function createUserMessage(content: string): UserMessage {
     uuid: crypto.randomUUID() as UUID,
     message: {
       role: 'user',
-      content
+      content,
     },
-    timestamp: new Date()
+    timestamp: new Date(),
   }
 }
 
 export function createAssistantMessage(
   content: ContentBlock[],
   costUSD: number = 0,
-  durationMs: number = 0
+  durationMs: number = 0,
 ): AssistantMessage {
   return {
     type: 'assistant',
     uuid: crypto.randomUUID() as UUID,
     message: {
       role: 'assistant',
-      content
+      content,
     },
     costUSD,
     durationMs,
-    timestamp: new Date()
+    timestamp: new Date(),
   }
 }
 
 export function createTextBlock(text: string): TextBlock {
   return {
     type: 'text',
-    text
+    text,
   }
 }
 
 export function createToolUseBlock(
   id: string,
   name: string,
-  input: any
+  input: any,
 ): ToolUseBlock {
   return {
     type: 'tool_use',
     id,
     name,
-    input
+    input,
   }
 }
 
 export function createToolResultBlock(
   tool_use_id: string,
   content: string | any[],
-  is_error: boolean = false
+  is_error: boolean = false,
 ): ToolResultBlock {
   return {
     type: 'tool_result',
     tool_use_id,
     content,
-    is_error
+    is_error,
   }
 }
 
@@ -235,9 +235,9 @@ export function convertLegacyMessage(legacyMessage: {
       uuid: legacyMessage.uuid as UUID,
       message: {
         role: 'user',
-        content: legacyMessage.message
+        content: legacyMessage.message,
       },
-      timestamp: legacyMessage.timestamp
+      timestamp: legacyMessage.timestamp,
     }
   } else {
     return {
@@ -245,11 +245,11 @@ export function convertLegacyMessage(legacyMessage: {
       uuid: legacyMessage.uuid as UUID,
       message: {
         role: 'assistant',
-        content: [createTextBlock(legacyMessage.message)]
+        content: [createTextBlock(legacyMessage.message)],
       },
       costUSD: legacyMessage.costUSD || 0,
       durationMs: legacyMessage.durationMs || 0,
-      timestamp: legacyMessage.timestamp
+      timestamp: legacyMessage.timestamp,
     }
   }
 }

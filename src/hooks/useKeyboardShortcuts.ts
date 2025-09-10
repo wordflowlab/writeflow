@@ -21,7 +21,7 @@ interface UseKeyboardShortcutsOptions {
  */
 export function useKeyboardShortcuts(
   shortcuts: KeyboardShortcuts,
-  options: UseKeyboardShortcutsOptions = {}
+  options: UseKeyboardShortcutsOptions = {},
 ) {
   const { enabled = true, preventDefault = true } = options
 
@@ -67,16 +67,16 @@ export function useKeyboardShortcuts(
  */
 export function useTodoShortcuts({
   onToggleTodos,
-  enabled = true
+  enabled = true,
 }: {
   onToggleTodos: () => void
   enabled?: boolean
 }) {
   useKeyboardShortcuts(
     {
-      'ctrl+t': onToggleTodos
+      'ctrl+t': onToggleTodos,
     },
-    { enabled }
+    { enabled },
   )
 }
 
@@ -86,14 +86,14 @@ export function useTodoShortcuts({
 export function useModeShortcuts({
   onModeCycle,
   onExitPlanMode,
-  enabled = true
+  enabled = true,
 }: {
   onModeCycle: () => void
   onExitPlanMode?: () => void
   enabled?: boolean
 }) {
   const shortcuts: KeyboardShortcuts = {
-    'shift+tab': onModeCycle
+    'shift+tab': onModeCycle,
   }
   
   if (onExitPlanMode) {

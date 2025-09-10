@@ -96,7 +96,7 @@ export class ToolOrchestrator {
       enableMetrics: true,
       enableLogging: true,
       retryFailedTools: true,
-      ...config
+      ...config,
     }
   }
 
@@ -168,8 +168,8 @@ export class ToolOrchestrator {
         error: new Error(`工具 '${request.toolName}' 未找到`),
         logs: [`工具 '${request.toolName}' 未找到`],
         metrics: {
-          duration: 0
-        }
+          duration: 0,
+        },
       }
     }
 
@@ -180,7 +180,7 @@ export class ToolOrchestrator {
       status: ToolExecutionStatus.PENDING,
       startTime: Date.now(),
       logs: [],
-      metrics: {}
+      metrics: {},
     }
 
     try {
@@ -189,7 +189,7 @@ export class ToolOrchestrator {
         const permissionResult = await this.permissionManager.checkToolPermission(
           tool, 
           request.input, 
-          request.context
+          request.context,
         )
         
         if (!permissionResult.isAllowed) {
@@ -315,7 +315,7 @@ export class ToolOrchestrator {
             endTime: Date.now(),
             error: settledResult.reason,
             logs: [],
-            metrics: { duration: 0 }
+            metrics: { duration: 0 },
           }
           results.push(failedResult)
         }
@@ -326,7 +326,7 @@ export class ToolOrchestrator {
     for (const request of dependentRequests) {
       // 检查依赖是否已完成
       const dependencyResults = results.filter(r => 
-        request.dependencies!.includes(r.toolName) && r.status === ToolExecutionStatus.COMPLETED
+        request.dependencies!.includes(r.toolName) && r.status === ToolExecutionStatus.COMPLETED,
       )
       
       if (dependencyResults.length === request.dependencies!.length) {
@@ -343,7 +343,7 @@ export class ToolOrchestrator {
           endTime: Date.now(),
           error: new Error(`依赖工具未成功执行: ${request.dependencies!.join(', ')}`),
           logs: [],
-          metrics: { duration: 0 }
+          metrics: { duration: 0 },
         }
         results.push(skippedResult)
       }
@@ -394,7 +394,7 @@ export class ToolOrchestrator {
       successfulExecutions: successful.length,
       failedExecutions: failed.length,
       averageExecutionTime: allResults.length > 0 ? totalDuration / allResults.length : 0,
-      toolUsageStats
+      toolUsageStats,
     }
   }
 
@@ -485,13 +485,13 @@ export function getToolOrchestrator(): ToolOrchestrator {
 export async function executeToolQuick(
   toolName: string, 
   input: any, 
-  context: ToolUseContext
+  context: ToolUseContext,
 ): Promise<any> {
   const orchestrator = getToolOrchestrator()
   const result = await orchestrator.executeTool({
     toolName,
     input,
-    context
+    context,
   })
   
   if (result.status === ToolExecutionStatus.COMPLETED) {

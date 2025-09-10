@@ -102,8 +102,8 @@ export function displayWelcomeBanner(): void {
   }
 
   const borderColor = chalk.hex('#3ea6ff')
-  const top = borderColor('┌' + '─'.repeat(width + 2) + '┐')
-  const bottom = borderColor('└' + '─'.repeat(width + 2) + '┘')
+  const top = borderColor(`┌${  '─'.repeat(width + 2)  }┐`)
+  const bottom = borderColor(`└${  '─'.repeat(width + 2)  }┘`)
   const left = borderColor('│ ')
   const right = borderColor(' │')
 

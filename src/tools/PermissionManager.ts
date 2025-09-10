@@ -177,7 +177,7 @@ export class PermissionManager {
   async checkToolPermission(
     tool: WriteFlowTool, 
     input: any, 
-    context: ToolUseContext
+    context: ToolUseContext,
   ): Promise<PermissionResult> {
     const toolName = tool.name
     
@@ -225,7 +225,7 @@ export class PermissionManager {
       return {
         isAllowed: false,
         denialReason: '需要用户确认授权',
-        behavior: 'ask'
+        behavior: 'ask',
       }
     }
     
@@ -239,7 +239,7 @@ export class PermissionManager {
       return {
         isAllowed: false,
         denialReason: '需要会话授权',
-        behavior: 'ask'
+        behavior: 'ask',
       }
     }
     
@@ -281,7 +281,7 @@ export class PermissionManager {
       toolName: tool.name,
       permissionLevel: level,
       grantType: grantType,
-      conditions: isReadOnly ? undefined : { requireConfirmation: true }
+      conditions: isReadOnly ? undefined : { requireConfirmation: true },
     }
     
     this.permissionPolicies.set(tool.name, policy)
@@ -295,7 +295,7 @@ export class PermissionManager {
     return {
       isAllowed: false,
       denialReason: reason,
-      behavior: 'deny'
+      behavior: 'deny',
     }
   }
 
@@ -310,7 +310,7 @@ export class PermissionManager {
         usageCount: 0,
         sessionUsageCount: 0,
         deniedCount: 0,
-        lastUsedAt: new Date()
+        lastUsedAt: new Date(),
       }
       this.toolUsageStats.set(toolName, stats)
     }
@@ -430,7 +430,7 @@ export class PermissionManager {
     const sessionStats = {
       totalUsage: Array.from(this.toolUsageStats.values()).reduce((sum, stats) => sum + stats.sessionUsageCount, 0),
       grantedPermissions: this.sessionGrants.size + this.oneTimeGrants.size,
-      deniedRequests: Array.from(this.toolUsageStats.values()).reduce((sum, stats) => sum + stats.deniedCount, 0)
+      deniedRequests: Array.from(this.toolUsageStats.values()).reduce((sum, stats) => sum + stats.deniedCount, 0),
     }
 
     return {
@@ -438,7 +438,7 @@ export class PermissionManager {
       allowedTools: allowedTools.length,
       forbiddenTools: forbiddenTools.length,
       toolBreakdown,
-      sessionStats
+      sessionStats,
     }
   }
 

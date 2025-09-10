@@ -111,7 +111,7 @@ export class ToolInterceptor {
     const result = this.permissionManager.checkToolPermissionByName(toolName)
     return {
       allowed: result.allowed,
-      reason: result.reason
+      reason: result.reason,
     }
   }
 

@@ -125,6 +125,13 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const handleModeCycle = useCallback(async () => {
     if (isThinking) return // 在处理中时不允许切换模式
 
+    // 调试日志：显示切换前的状态
+    console.log('🔄 模式切换开始:', {
+      currentMode,
+      appInPlanMode: writeFlowApp.isInPlanMode(),
+      hasCurrentPlan: !!writeFlowApp.getCurrentPlan?.()
+    })
+
     try {
       let nextMode: PlanMode
       
@@ -135,12 +142,36 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           break
         case PlanMode.Plan:
           nextMode = PlanMode.AcceptEdits
-          // 需要调用应用层退出Plan模式，而不是直接设置UI状态
-          const currentPlan = writeFlowApp.getCurrentPlan?.() || '计划内容为空'
-          const exitResult = await writeFlowApp.exitPlanMode(currentPlan)
-          if (!exitResult) {
-            // 如果退出失败，保持当前模式
-            return
+          try {
+            const currentPlan = writeFlowApp.getCurrentPlan?.() || ''
+            
+            if (currentPlan.trim()) {
+              // 有计划内容，正常退出
+              const exitResult = await writeFlowApp.exitPlanMode(currentPlan)
+              if (!exitResult) {
+                // 退出失败，但仍允许强制切换到AcceptEdits模式
+                console.warn('Plan模式退出被拒绝，但允许强制切换')
+                // 直接设置应用层状态为非Plan模式
+                const planManager = writeFlowApp.getPlanModeManager()
+                if (planManager) {
+                  planManager.reset() // 强制重置Plan模式
+                }
+              }
+            } else {
+              // 没有计划内容，直接强制退出
+              console.log('没有计划内容，强制退出Plan模式')
+              const planManager = writeFlowApp.getPlanModeManager()
+              if (planManager) {
+                planManager.reset()
+              }
+            }
+          } catch (error) {
+            console.error('退出Plan模式异常，强制重置:', error)
+            // 异常情况下强制重置
+            const planManager = writeFlowApp.getPlanModeManager()
+            if (planManager) {
+              planManager.reset()
+            }
           }
           break
         case PlanMode.AcceptEdits:
@@ -155,6 +186,18 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       
     } catch (error) {
       console.error('模式切换失败:', error)
+      
+      // 状态恢复逻辑：确保UI状态与应用层一致
+      const actualPlanMode = writeFlowApp.isInPlanMode()
+      if (actualPlanMode) {
+        setCurrentMode(PlanMode.Plan)
+      } else {
+        setCurrentMode(PlanMode.Default)
+        setPlanModeStartTime(0)
+      }
+      
+      // 通知用户
+      console.warn('模式切换失败，已恢复到正确状态')
     }
   }, [currentMode, isThinking, writeFlowApp, pendingPlan])
 
@@ -163,12 +206,22 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     onModeCycle: handleModeCycle,
     onExitPlanMode: currentMode === PlanMode.Plan ? async () => {
       try {
-        // 调用应用层退出Plan模式
-        await writeFlowApp.exitPlanMode('用户通过ESC键退出')
-        // UI状态会通过事件处理器自动更新
+        console.log('ESC键强制退出Plan模式')
+        
+        // 直接强制重置，不管是否有计划内容
+        const planManager = writeFlowApp.getPlanModeManager()
+        if (planManager) {
+          planManager.reset()
+        }
+        
+        // 强制更新UI状态
+        setCurrentMode(PlanMode.Default)
+        setPlanModeStartTime(0)
+        
+        console.log('Plan模式已强制退出')
       } catch (error) {
-        console.error('ESC退出Plan模式失败:', error)
-        // 强制重置UI状态作为降级处理
+        console.error('ESC强制退出失败:', error)
+        // 即使出错也要重置UI状态
         setCurrentMode(PlanMode.Default)
         setPlanModeStartTime(0)
       }
@@ -293,30 +346,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     }
   }, [writeFlowApp])
 
-  // 状态一致性监控 - 仅在组件挂载时检查一次
-  useEffect(() => {
-    const checkConsistency = () => {
-      const appInPlanMode = writeFlowApp.isInPlanMode()
-      const uiInPlanMode = currentMode === PlanMode.Plan
-
-      if (appInPlanMode !== uiInPlanMode) {
-        console.warn(`⚠️ Plan模式状态不一致: App=${appInPlanMode}, UI=${uiInPlanMode}`)
-        // 以应用层状态为准进行修复
-        if (appInPlanMode && !uiInPlanMode) {
-          console.log('🔄 修复UI状态：进入Plan模式')
-          setCurrentMode(PlanMode.Plan)
-          setPlanModeStartTime(Date.now())
-        } else if (!appInPlanMode && uiInPlanMode) {
-          console.log('🔄 修复UI状态：退出Plan模式')
-          setCurrentMode(PlanMode.Default)
-          setPlanModeStartTime(0)
-        }
-      }
-    }
-
-    // 仅在初始加载时检查一次，避免定期检查干扰
-    checkConsistency()
-  }, []) // 空依赖数组，只在组件挂载时运行一次
+  // 移除状态监控，避免干扰消息渲染
 
   // 处理消息提交
   const handleSubmit = useCallback(async (message: string) => {
@@ -343,28 +373,44 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       const onToken = (chunk: string) => {
         accumulatedText += chunk
         
-        // 检查是否包含完整的 JSON TODO 更新
-        const todoJsonMatch = accumulatedText.match(/\{[\s\S]*?"todos"\s*:\s*\[[\s\S]*?\][\s\S]*?\}/)
-        if (todoJsonMatch) {
-          try {
-            const todoData = JSON.parse(todoJsonMatch[0])
-            if (todoData.todos && Array.isArray(todoData.todos)) {
-              pendingTodoUpdate = todoData.todos
-              // 从显示文本中移除 JSON
-              accumulatedText = accumulatedText.replace(todoJsonMatch[0], '').trim()
+        // 检查是否包含完整的 JSON TODO 更新 - 更安全的处理
+        // 只查找独立的 JSON 块，避免误匹配小说内容
+        const lines = accumulatedText.split('\n')
+        let jsonLineIndex = -1
+        let jsonContent = ''
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim()
+          if (line.startsWith('{') && line.includes('"todos"') && line.endsWith('}')) {
+            try {
+              const todoData = JSON.parse(line)
+              if (todoData.todos && Array.isArray(todoData.todos)) {
+                pendingTodoUpdate = todoData.todos
+                jsonLineIndex = i
+                jsonContent = line
+                break
+              }
+            } catch (e) {
+              // 不是有效的 JSON，继续查找
             }
-          } catch (e) {
-            // JSON 解析失败，继续处理为文本
           }
         }
         
-        // 过滤工具调用相关信息
-        accumulatedText = accumulatedText
-          .replace(/AI: \[调用 todo_write 工具\] 正在执行\.\.\.\n/g, '')
-          .replace(/todo_write工具: [^\n]*\n/g, '')
-          .replace(/🎯 \*\*任务列表已更新\*\*[\s\S]*?(?=\n\n[^⎿]|$)/g, '')
-          .replace(/⎿.*?\n/g, '')
-          .trim()
+        // 如果找到有效的 TODO JSON，从文本中移除
+        if (jsonLineIndex >= 0) {
+          lines.splice(jsonLineIndex, 1)
+          accumulatedText = lines.join('\n').trim()
+        }
+        
+        // 过滤工具调用相关信息 - 更精确的过滤
+        let filteredLines = accumulatedText.split('\n').filter(line => {
+          const trimmed = line.trim()
+          return !trimmed.startsWith('AI: [调用 todo_write 工具]') &&
+                 !trimmed.startsWith('todo_write工具:') &&
+                 !trimmed.startsWith('🎯 **任务列表已更新**') &&
+                 !trimmed.startsWith('⎿')
+        })
+        accumulatedText = filteredLines.join('\n').trim()
         
         // 更新消息显示（仅显示非 JSON 内容）
         if (accumulatedText) {
@@ -394,13 +440,24 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       
       // 用最终文本替换流式占位消息（如"思考中..."）
       if (finalText && finalText.trim()) {
-        // 过滤最终文本中的工具调用信息
-        const cleanedFinalText = finalText
-          .replace(/AI: \[调用 todo_write 工具\] 正在执行\.\.\.\n/g, '')
-          .replace(/todo_write工具: [^\n]*\n/g, '')
-          .replace(/🎯 \*\*任务列表已更新\*\*[\s\S]*?(?=\n\n[^⎿]|$)/g, '')
-          .replace(/⎿.*?\n/g, '')
-          .trim()
+        // 过滤最终文本中的工具调用信息 - 更精确的过滤
+        let filteredFinalLines = finalText.split('\n').filter(line => {
+          const trimmed = line.trim()
+          return !trimmed.startsWith('AI: [调用 todo_write 工具]') &&
+                 !trimmed.startsWith('todo_write工具:') &&
+                 !trimmed.startsWith('⎿')
+        })
+        let cleanedFinalText = filteredFinalLines.join('\n')
+        
+        // 更安全地移除 TODO 更新提示，只移除独立的行
+        const lines = cleanedFinalText.split('\n')
+        const filteredLines = lines.filter(line => {
+          const trimmedLine = line.trim()
+          // 只过滤明确的 TODO 系统消息，避免误删小说内容
+          return !trimmedLine.startsWith('🎯 **任务列表已更新**') && 
+                 !trimmedLine.match(/^\s*\{\s*"todos"\s*:\s*\[[\s\S]*?\]\s*\}\s*$/)
+        })
+        cleanedFinalText = filteredLines.join('\n').trim()
         
         if (cleanedFinalText) {
           setMessages(prev => {

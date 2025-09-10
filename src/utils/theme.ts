@@ -235,7 +235,7 @@ export function detectSystemTheme(): 'dark' | 'light' | 'unknown' {
         const result = execSync('defaults read -g AppleInterfaceStyle', { 
           encoding: 'utf8', 
           timeout: 1000,
-          stdio: 'pipe' 
+          stdio: 'pipe', 
         })
         return result.trim() === 'Dark' ? 'dark' : 'light'
       } catch {
@@ -250,7 +250,7 @@ export function detectSystemTheme(): 'dark' | 'light' | 'unknown' {
       try {
         const result = execSync(
           'reg query HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize /v AppsUseLightTheme',
-          { encoding: 'utf8', timeout: 1000, stdio: 'pipe' }
+          { encoding: 'utf8', timeout: 1000, stdio: 'pipe' },
         )
         // If AppsUseLightTheme is 0, dark mode is enabled
         return result.includes('0x0') ? 'dark' : 'light'

@@ -178,7 +178,7 @@ export { PermissionManager, getPermissionManager } from './PermissionManager.js'
 export { 
   SystemPromptOptimizer, 
   getSystemPromptOptimizer, 
-  generateOptimizedSystemPrompt 
+  generateOptimizedSystemPrompt, 
 } from './SystemPromptOptimizer.js'
 export type { ToolCallEvent } from './ToolBase.js'
 
@@ -186,14 +186,14 @@ export type { ToolCallEvent } from './ToolBase.js'
 export type { 
   ToolExecutionRequest, 
   ToolExecutionResult, 
-  OrchestratorConfig 
+  OrchestratorConfig, 
 } from './ToolOrchestrator.js'
 
 export { ToolExecutionStatus } from './ToolOrchestrator.js'
 
 export type {
   PermissionPolicy,
-  ToolUsageStats
+  ToolUsageStats,
 } from './PermissionManager.js'
 
 export { ToolPermissionLevel, PermissionGrantType } from './PermissionManager.js'
@@ -270,7 +270,7 @@ export function getToolRecommendations(): {
   return {
     mostUsed: sortedByUsage.slice(0, 3),
     leastUsed: sortedByUsage.slice(-3).reverse(),
-    recommended: getReadOnlyTools().slice(0, 3) // 推荐安全的只读工具
+    recommended: getReadOnlyTools().slice(0, 3), // 推荐安全的只读工具
   }
 }
 
@@ -292,7 +292,7 @@ export function generateSystemReport(): string {
     ``,
     `---`,
     ``,
-    permissionReport
+    permissionReport,
   ].join('\n')
 }
 

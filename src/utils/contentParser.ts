@@ -26,7 +26,7 @@ export interface ContentParserOptions {
  */
 export function parseContent(
   content: string, 
-  options: ContentParserOptions = {}
+  options: ContentParserOptions = {},
 ): ParsedContent[] {
   const { preserveWhitespace = true, maxDepth = 10 } = options
   
@@ -39,7 +39,7 @@ export function parseContent(
     return [{
       type: 'text',
       content: content,
-      color: getTheme().text
+      color: getTheme().text,
     }]
   }
 }
@@ -52,13 +52,13 @@ function formatToken(
   depth = 0, 
   maxDepth = 10,
   listDepth = 0,
-  orderedListNumber: number | null = null
+  orderedListNumber: number | null = null,
 ): ParsedContent[] {
   if (depth > maxDepth) {
     return [{
       type: 'text',
       content: 'content',
-      color: getTheme().text
+      color: getTheme().text,
     }]
   }
 
@@ -74,14 +74,14 @@ function formatToken(
 
       return [{
         type: 'heading',
-        content: headingText + '\n\n',
+        content: `${headingText  }\n\n`,
         color: theme.claude,
         style: {
           bold: true,
           italic: token.depth === 1,
           underline: token.depth === 1,
-          dim: token.depth > 2
-        }
+          dim: token.depth > 2,
+        },
       }]
     }
 
@@ -103,9 +103,9 @@ function formatToken(
 
       return [{
         type: 'code',
-        content: highlightedCode + '\n',
+        content: `${highlightedCode  }\n`,
         color: theme.codeBlock,
-        language
+        language,
       }]
     }
 
@@ -115,7 +115,7 @@ function formatToken(
         type: 'codespan',
         content: token.text,
         color: theme.codeBlock,
-        style: { bold: true }
+        style: { bold: true },
       }]
     }
 
@@ -130,7 +130,7 @@ function formatToken(
         type: 'blockquote',
         content: quoteText,
         color: theme.quote,
-        style: { italic: true, dim: true }
+        style: { italic: true, dim: true },
       }]
     }
 
@@ -142,8 +142,8 @@ function formatToken(
             depth + 1,
             maxDepth,
             listDepth,
-            token.ordered ? (token.start || 1) + index : null
-          )
+            token.ordered ? (token.start || 1) + index : null,
+          ),
         )
         .flat()
     }
@@ -161,7 +161,7 @@ function formatToken(
       return [{
         type: 'list_item',
         content: `${indent}${marker}${itemText}`,
-        color: theme.text
+        color: theme.text,
       }]
     }
 
@@ -174,8 +174,8 @@ function formatToken(
 
       return [{
         type: 'paragraph',
-        content: paragraphText + '\n',
-        color: theme.text
+        content: `${paragraphText  }\n`,
+        color: theme.text,
       }]
     }
 
@@ -190,7 +190,7 @@ function formatToken(
         type: 'strong',
         content: strongText,
         color: theme.text,
-        style: { bold: true }
+        style: { bold: true },
       }]
     }
 
@@ -205,7 +205,7 @@ function formatToken(
         type: 'em',
         content: emText,
         color: theme.text,
-        style: { italic: true }
+        style: { italic: true },
       }]
     }
 
@@ -214,7 +214,7 @@ function formatToken(
         type: 'link',
         content: token.href,
         color: theme.info,
-        style: { underline: true }
+        style: { underline: true },
       }]
     }
 
@@ -223,7 +223,7 @@ function formatToken(
         type: 'image',
         content: `[图像: ${token.title || token.text || 'image'}: ${token.href}]`,
         color: theme.dimText,
-        style: { dim: true }
+        style: { dim: true },
       }]
     }
 
@@ -232,7 +232,7 @@ function formatToken(
         type: 'hr',
         content: '---\n',
         color: theme.dimText,
-        style: { dim: true }
+        style: { dim: true },
       }]
     }
 
@@ -240,7 +240,7 @@ function formatToken(
       return [{
         type: 'space',
         content: '\n',
-        color: theme.text
+        color: theme.text,
       }]
     }
 
@@ -255,7 +255,7 @@ function formatToken(
       return [{
         type: 'text',
         content: token.text || '',
-        color: theme.text
+        color: theme.text,
       }]
     }
 
@@ -265,7 +265,7 @@ function formatToken(
       return [{
         type: 'unknown',
         content: fallbackContent,
-        color: theme.text
+        color: theme.text,
       }]
     }
   }
@@ -293,7 +293,7 @@ export function extractCodeBlocks(content: string): Array<{language: string, cod
   while ((match = codeBlockRegex.exec(content)) !== null) {
     matches.push({
       language: match[1] || 'text',
-      code: match[2].trim()
+      code: match[2].trim(),
     })
   }
 

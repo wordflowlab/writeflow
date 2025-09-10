@@ -298,7 +298,7 @@ export class TodoManager {
     return {
       previousTask: currentTask,
       nextTask: startedTask,
-      success: !nextTask || !!startedTask
+      success: !nextTask || !!startedTask,
     }
   }
 
@@ -325,7 +325,7 @@ export class TodoManager {
       inProgressTasks,
       completedTasks,
       completionRate: totalTasks > 0 ? completedTasks / totalTasks : 0,
-      estimatedTimeRemaining: pendingTasks * 2 // 简单估算：每任务 2 分钟
+      estimatedTimeRemaining: pendingTasks * 2, // 简单估算：每任务 2 分钟
     }
   }
 
@@ -350,7 +350,7 @@ export class TodoManager {
       const priorityOrder = { 
         [TodoPriority.HIGH]: 3, 
         [TodoPriority.MEDIUM]: 2, 
-        [TodoPriority.LOW]: 1 
+        [TodoPriority.LOW]: 1, 
       }
       const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
       if (priorityDiff !== 0) return priorityDiff
@@ -376,7 +376,7 @@ export class TodoManager {
         return {
           success: true,
           startedTask: currentTask,
-          message: `队列执行继续，当前任务: ${currentTask.content}`
+          message: `队列执行继续，当前任务: ${currentTask.content}`,
         }
       }
 
@@ -386,7 +386,7 @@ export class TodoManager {
         return {
           success: false,
           startedTask: null,
-          message: '没有待处理的任务'
+          message: '没有待处理的任务',
         }
       }
 
@@ -397,13 +397,13 @@ export class TodoManager {
         startedTask,
         message: startedTask 
           ? `开始执行任务: ${startedTask.content}`
-          : '启动任务失败'
+          : '启动任务失败',
       }
     } catch (error) {
       return {
         success: false,
         startedTask: null,
-        message: `启动队列执行失败: ${error instanceof Error ? error.message : '未知错误'}`
+        message: `启动队列执行失败: ${error instanceof Error ? error.message : '未知错误'}`,
       }
     }
   }
