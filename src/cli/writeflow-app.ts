@@ -41,9 +41,13 @@ import { CitationTool } from '../tools/writing/CitationTool.js'
 import { WeChatConverterTool } from '../tools/publish/index.js'
 import { SlideProjectInitTool } from '../tools/slidev/SlideProjectInitTool.js'
 import { SlideExporterTool } from '../tools/slidev/SlideExporterTool.js'
+import { ExitPlanModeTool } from '../tools/ExitPlanMode.js'
 
 // 记忆系统
 import { MemoryManager } from '../tools/memory/MemoryManager.js'
+
+// Plan 模式管理
+import { PlanModeManager } from '../modes/PlanModeManager.js'
 
 // 类型定义
 import { AIWritingConfig } from '../types/writing.js'
@@ -75,6 +79,9 @@ export class WriteFlowApp extends EventEmitter {
 
   // 记忆系统
   private memoryManager!: MemoryManager
+
+  // Plan 模式管理
+  private planModeManager!: PlanModeManager
 
   // AI 服务
   private aiService = getWriteFlowAIService()
@@ -240,6 +247,9 @@ TODO 管理规范：
       // 初始化记忆系统（需最先完成，以便暴露全局会话ID给 Todo 存储等模块）
       await this.initializeMemorySystem()
 
+      // 初始化Plan模式管理器
+      await this.initializePlanModeManager()
+
       // 初始化CLI组件
       await this.initializeCLIComponents()
 
@@ -389,6 +399,12 @@ TODO 管理规范：
     ]
     this.toolManager.registerTools(slidevTools)
 
+    // 注册 Plan 模式工具
+    const planTools = [
+      new ExitPlanModeTool(),
+    ]
+    this.toolManager.registerTools(planTools)
+
     // 命令执行器
     this.commandExecutor = new CommandExecutor({
       maxConcurrentCommands: 3,
@@ -419,6 +435,40 @@ TODO 管理规范：
       const sid = this.memoryManager.getSessionId()
       process.env.WRITEFLOW_SESSION_ID = sid
     } catch {}
+  }
+
+  /**
+   * 初始化Plan模式管理器
+   */
+  private async initializePlanModeManager(): Promise<void> {
+    this.planModeManager = new PlanModeManager(
+      {
+        autoInjectReminders: true,
+        strictPermissionCheck: true,
+        planQualityCheck: true,
+        maxPlanHistory: 10,
+        reminderDisplayDuration: 300000, // 5分钟
+      },
+      {
+        onModeEnter: (previousMode) => {
+          console.log('📋 已进入 Plan 模式')
+          this.emit('plan-mode-enter', { previousMode })
+        },
+        onModeExit: (nextMode, approved) => {
+          console.log(`🔄 已退出 Plan 模式，计划${approved ? '已批准' : '被拒绝'}`)
+          this.emit('plan-mode-exit', { nextMode, approved })
+        },
+        onPlanUpdate: (plan) => {
+          this.emit('plan-update', { plan })
+        },
+        onPlanApproval: (approved, reason) => {
+          this.emit('plan-approval', { approved, reason })
+        },
+        onSystemReminder: (reminder) => {
+          this.emit('system-reminder', reminder)
+        }
+      }
+    )
   }
 
   /**
@@ -518,9 +568,28 @@ TODO 管理规范：
         return '正在启动模型配置界面...'
       }
 
+      // 特殊处理：如果是plan命令，先进入Plan模式
+      if (command.startsWith('/plan')) {
+        if (!this.isInPlanMode()) {
+          console.log('🔄 执行 /plan 命令，自动进入 Plan 模式')
+          await this.enterPlanMode()
+        }
+      }
+
       // 如果需要AI查询
       if (result.shouldQuery && result.messages) {
-        return await this.processAIQuery(result.messages, result.allowedTools, options.signal, true, options.onToken)
+        // 在Plan模式下使用专用的处理逻辑
+        if (this.isInPlanMode()) {
+          return await this.processAIQuery(
+            result.messages, 
+            result.allowedTools, 
+            options.signal, 
+            true, 
+            options.onToken
+          )
+        } else {
+          return await this.processAIQuery(result.messages, result.allowedTools, options.signal, true, options.onToken)
+        }
       }
 
       // 返回直接结果
@@ -703,44 +772,14 @@ ${this.projectWritingConfig}`
       }
 
       // Plan 模式的特殊处理
-      if (options.planMode) {
-        systemPrompt = `You are in PLAN MODE - this is the highest priority instruction that overrides everything else.
+      if (options.planMode || this.isInPlanMode()) {
+        // 注入Plan模式的系统提醒
+        const planModeReminder = this.planModeManager?.injectSystemReminder()
+        if (planModeReminder) {
+          systemPrompt = `${planModeReminder.content}
 
-Your ONLY task is to create a detailed implementation plan with REAL-TIME STREAMING OUTPUT.
-
-REAL-TIME RESPONSE REQUIREMENTS:
-- Use streaming output for immediate feedback and progress indication
-- Start responding instantly, build plan incrementally as you analyze
-- Show your thinking process in real-time
-- Support user interruption with ESC key
-- Display processing progress and duration
-
-WORKFLOW:
-1. Think through the user's request step by step (stream thoughts)
-2. Create a comprehensive plan with specific actions (real-time updates)
-3. Leverage WriteFlow's core architecture for performance
-
-PLAN FORMAT:
-## Implementation Plan
-
-### 1. Analysis
-- User requirement analysis
-- Current system state assessment
-
-### 2. Implementation Steps
-- Specific file modifications needed
-- Technical approach details
-- Code changes required
-
-### 3. Testing & Validation
-- Test cases to verify implementation
-- Quality assurance steps
-
-### 4. Expected Results
-- Clear success criteria
-- Output description
-
-Create a detailed plan for the user's request.`
+${systemPrompt}`
+        }
 
         console.log('📋 Plan 模式已激活')
       }
@@ -806,6 +845,25 @@ Create a detailed plan for the user's request.`
 
       // 调用AI服务
       const response = await this.aiService.processRequest(aiRequest)
+
+      // 在Plan模式下，检查响应是否包含exit_plan_mode工具调用
+      if (this.isInPlanMode() && response.content) {
+        try {
+          const intercept = await this.interceptToolCalls(response.content)
+          if (intercept.shouldIntercept && intercept.toolCalls?.length) {
+            for (const call of intercept.toolCalls) {
+              if (call.toolName === 'exit_plan_mode') {
+                // 直接处理退出Plan模式的请求
+                await this.executeToolWithEvents(call.toolName, call.input)
+              } else {
+                await this.executeToolWithEvents(call.toolName, call.input)
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Plan Mode] 工具调用处理失败:', (e as Error)?.message)
+        }
+      }
 
       // 添加响应到记忆系统
       if (this.memoryManager) {
@@ -1309,6 +1367,65 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       const err = e as Error
       console.warn('[h2A] 消费循环结束:', err?.message || e)
     }
+  }
+
+  /**
+   * 进入 Plan 模式
+   */
+  async enterPlanMode(): Promise<void> {
+    if (!this.planModeManager) {
+      throw new Error('Plan 模式管理器未初始化')
+    }
+    
+    const reminders = await this.planModeManager.enterPlanMode()
+    console.log('✅ 已成功进入 Plan 模式')
+    
+    // 通知UI更新状态
+    this.emit('plan-mode-changed', {
+      isActive: true,
+      reminders
+    })
+  }
+
+  /**
+   * 退出 Plan 模式
+   */
+  async exitPlanMode(plan: string): Promise<boolean> {
+    if (!this.planModeManager) {
+      throw new Error('Plan 模式管理器未初始化')
+    }
+    
+    const result = await this.planModeManager.exitPlanMode(plan)
+    
+    // 通知UI更新状态
+    this.emit('plan-mode-changed', {
+      isActive: !result.approved,
+      approved: result.approved,
+      reminders: result.reminders
+    })
+    
+    return result.approved
+  }
+
+  /**
+   * 检查是否处于 Plan 模式
+   */
+  isInPlanMode(): boolean {
+    return this.planModeManager?.isInPlanMode() || false
+  }
+
+  /**
+   * 获取Plan模式管理器
+   */
+  getPlanModeManager(): PlanModeManager | null {
+    return this.planModeManager || null
+  }
+
+  /**
+   * 获取当前计划
+   */
+  getCurrentPlan(): string | undefined {
+    return this.planModeManager?.getCurrentPlan()
   }
 
 }

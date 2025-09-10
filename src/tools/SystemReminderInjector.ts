@@ -133,49 +133,8 @@ export class SystemReminderInjector {
     const fromName = this.getModeDisplayName(fromMode)
     const toName = this.getModeDisplayName(toMode)
     
-    const reminders = [
-      `🔄 模式切换：${fromName} → ${toName}`,
-      '',
-    ]
-
-    // 不同模式的特殊说明
-    switch (toMode) {
-      case PlanMode.Plan:
-        reminders.push(
-          '📋 已进入计划模式：',
-          '  • 只能使用只读工具（搜索、读取、分析）',
-          '  • 禁止修改文件或执行系统命令',
-          '  • 制定完整计划后使用 exit_plan_mode 退出',
-        )
-        break
-        
-      case PlanMode.AcceptEdits:
-        reminders.push(
-          '✏️ 已进入自动接受编辑模式：',
-          '  • 所有文件修改将自动应用',
-          '  • 无需用户逐个确认',
-          '  • 请谨慎使用此模式',
-        )
-        break
-        
-      case PlanMode.BypassPermissions:
-        reminders.push(
-          '⚠️ 已进入绕过权限模式：',
-          '  • 允许执行危险操作',
-          '  • 请格外小心',
-          '  • 仅限高级用户使用',
-        )
-        break
-        
-      default:
-        reminders.push(
-          '🔓 已恢复默认模式：',
-          '  • 正常权限级别',
-          '  • 需要用户确认修改操作',
-        )
-    }
-
-    return reminders.join('\n')
+    // Claude Code 风格：简洁的状态切换信息，无详细说明
+    return `模式切换: ${fromName} → ${toName}`
   }
 
   /**
@@ -208,32 +167,8 @@ export class SystemReminderInjector {
    * 格式化系统提醒消息（复刻 Claude Code 格式）
    */
   private formatSystemReminderMessage(reminder: SystemReminder): string {
-    const priorityIcons = {
-      high: '🚨',
-      medium: '📢', 
-      low: '💭',
-    }
-
-    const typeLabels = {
-      tool_restriction: '工具限制',
-      mode_notification: '模式通知',
-      permission_warning: '权限警告',
-    }
-
-    const header = [
-      '<system-reminder>',
-      `${priorityIcons[reminder.priority]} ${typeLabels[reminder.type]}`,
-    ].join('\n')
-
-    const footer = '</system-reminder>'
-
-    return [
-      header,
-      '',
-      reminder.content,
-      '',
-      footer,
-    ].join('\n')
+    // Claude Code 风格：简洁的系统消息，无复杂格式
+    return reminder.content
   }
 
   /**

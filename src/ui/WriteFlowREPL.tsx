@@ -9,8 +9,11 @@ import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
 import { PromptInput } from './components/PromptInput.js'
 import { TodoPanel } from './components/TodoPanel.js'
-import { useTodoShortcuts } from '../hooks/useKeyboardShortcuts.js'
+import { PlanModeConfirmation, ConfirmationOption } from './components/PlanModeConfirmation.js'
+import { ShortcutHints } from './components/ShortcutHints.js'
+import { useTodoShortcuts, useModeShortcuts } from '../hooks/useKeyboardShortcuts.js'
 import { Todo, TodoStats, TodoStatus } from '../types/Todo.js'
+import { PlanMode } from '../types/agent.js'
 
 // 导入新的消息系统
 import type { 
@@ -60,6 +63,12 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     completionRate: 0
   })
 
+  // Plan 模式状态
+  const [currentMode, setCurrentMode] = useState<PlanMode>(PlanMode.Default)
+  const [planModeStartTime, setPlanModeStartTime] = useState<number>(0)
+  const [showPlanConfirmation, setShowPlanConfirmation] = useState<boolean>(false)
+  const [pendingPlan, setPendingPlan] = useState<string>('')
+
   // 工具调用状态管理
   const [erroredToolUseIDs, setErroredToolUseIDs] = useState<Set<string>>(new Set())
   const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState<Set<string>>(new Set())
@@ -84,6 +93,86 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   // 键盘快捷键：Ctrl+T 切换 TODO 面板
   useTodoShortcuts({
     onToggleTodos: () => setShowTodos(v => !v)
+  })
+
+  // Plan 模式确认处理
+  const handlePlanConfirmation = useCallback(async (option: ConfirmationOption) => {
+    try {
+      const planManager = writeFlowApp.getPlanModeManager()
+      if (planManager) {
+        await planManager.handleUserConfirmation(option)
+      }
+      
+      // 根据选项执行相应操作
+      if (option === 'auto_approve' || option === 'manual_approve') {
+        await writeFlowApp.exitPlanMode(pendingPlan)
+      }
+      
+      setShowPlanConfirmation(false)
+      setPendingPlan('')
+    } catch (error) {
+      console.error('处理 Plan 模式确认失败:', error)
+      setShowPlanConfirmation(false)
+    }
+  }, [writeFlowApp, pendingPlan])
+
+  const handlePlanConfirmationCancel = useCallback(() => {
+    setShowPlanConfirmation(false)
+    setPendingPlan('')
+  }, [])
+
+  // 模式循环切换处理
+  const handleModeCycle = useCallback(async () => {
+    if (isThinking) return // 在处理中时不允许切换模式
+
+    try {
+      let nextMode: PlanMode
+      
+      switch (currentMode) {
+        case PlanMode.Default:
+          nextMode = PlanMode.Plan
+          await writeFlowApp.enterPlanMode()
+          break
+        case PlanMode.Plan:
+          nextMode = PlanMode.AcceptEdits
+          // 需要调用应用层退出Plan模式，而不是直接设置UI状态
+          const currentPlan = writeFlowApp.getCurrentPlan?.() || '计划内容为空'
+          const exitResult = await writeFlowApp.exitPlanMode(currentPlan)
+          if (!exitResult) {
+            // 如果退出失败，保持当前模式
+            return
+          }
+          break
+        case PlanMode.AcceptEdits:
+        default:
+          nextMode = PlanMode.Default
+          // 回到默认模式
+          break
+      }
+      
+      setCurrentMode(nextMode)
+      console.log(`🔄 模式切换: ${currentMode} → ${nextMode}`)
+      
+    } catch (error) {
+      console.error('模式切换失败:', error)
+    }
+  }, [currentMode, isThinking, writeFlowApp, pendingPlan])
+
+  // 键盘快捷键：Shift+Tab 切换模式，ESC 退出 Plan 模式
+  useModeShortcuts({
+    onModeCycle: handleModeCycle,
+    onExitPlanMode: currentMode === PlanMode.Plan ? async () => {
+      try {
+        // 调用应用层退出Plan模式
+        await writeFlowApp.exitPlanMode('用户通过ESC键退出')
+        // UI状态会通过事件处理器自动更新
+      } catch (error) {
+        console.error('ESC退出Plan模式失败:', error)
+        // 强制重置UI状态作为降级处理
+        setCurrentMode(PlanMode.Default)
+        setPlanModeStartTime(0)
+      }
+    } : undefined
   })
 
   // 获取 TODOs
@@ -136,6 +225,14 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   useEffect(() => {
     console.log('🚀 WriteFlowREPL 组件初始化')
     fetchTodos()
+    
+    // 检查初始的Plan模式状态
+    const initialPlanMode = writeFlowApp.isInPlanMode()
+    if (initialPlanMode) {
+      setCurrentMode(PlanMode.Plan)
+      setPlanModeStartTime(Date.now())
+    }
+    
     // 初始：若已有任务则展开显示
     setShowTodos((prev) => prev || todos.length > 0)
     // 订阅 todo:changed，全局任何地方更新都会刷新此面板
@@ -144,7 +241,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     return () => {
       // 没有 remove 接口，允许会话结束后由服务重置
     }
-  }, [fetchTodos])
+  }, [fetchTodos, writeFlowApp])
 
   // 事件监听器
   useEffect(() => {
@@ -159,14 +256,67 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       }
     }
 
+    const handlePlanModeChanged = (data: { isActive: boolean; approved?: boolean; reminders?: any[] }) => {
+      console.log('🔄 Plan mode changed:', data)
+      if (data.isActive) {
+        setCurrentMode(PlanMode.Plan)
+        setPlanModeStartTime(Date.now())
+      } else if (data.approved) {
+        setCurrentMode(PlanMode.AcceptEdits)
+        setPlanModeStartTime(0)
+        setShowPlanConfirmation(false)
+        setPendingPlan('')
+      } else {
+        setCurrentMode(PlanMode.Default)
+        setPlanModeStartTime(0)
+        setShowPlanConfirmation(false)
+        setPendingPlan('')
+      }
+    }
+
+    const handleExitPlanMode = (plan: string) => {
+      console.log('📋 Exit plan mode requested with plan length:', plan.length)
+      setPendingPlan(plan)
+      setShowPlanConfirmation(true)
+    }
+
     writeFlowApp.on('launch-model-config', handleLaunchModelConfig)
     writeFlowApp.on('ai-thinking', handleThinking)
+    writeFlowApp.on('plan-mode-changed', handlePlanModeChanged)
+    writeFlowApp.on('exit-plan-mode', handleExitPlanMode)
 
     return () => {
       writeFlowApp.off('launch-model-config', handleLaunchModelConfig)
       writeFlowApp.off('ai-thinking', handleThinking)
+      writeFlowApp.off('plan-mode-changed', handlePlanModeChanged)
+      writeFlowApp.off('exit-plan-mode', handleExitPlanMode)
     }
   }, [writeFlowApp])
+
+  // 状态一致性监控 - 仅在组件挂载时检查一次
+  useEffect(() => {
+    const checkConsistency = () => {
+      const appInPlanMode = writeFlowApp.isInPlanMode()
+      const uiInPlanMode = currentMode === PlanMode.Plan
+
+      if (appInPlanMode !== uiInPlanMode) {
+        console.warn(`⚠️ Plan模式状态不一致: App=${appInPlanMode}, UI=${uiInPlanMode}`)
+        // 以应用层状态为准进行修复
+        if (appInPlanMode && !uiInPlanMode) {
+          console.log('🔄 修复UI状态：进入Plan模式')
+          setCurrentMode(PlanMode.Plan)
+          setPlanModeStartTime(Date.now())
+        } else if (!appInPlanMode && uiInPlanMode) {
+          console.log('🔄 修复UI状态：退出Plan模式')
+          setCurrentMode(PlanMode.Default)
+          setPlanModeStartTime(0)
+        }
+      }
+    }
+
+    // 仅在初始加载时检查一次，避免定期检查干扰
+    checkConsistency()
+  }, []) // 空依赖数组，只在组件挂载时运行一次
 
   // 处理消息提交
   const handleSubmit = useCallback(async (message: string) => {
@@ -388,13 +538,25 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         })}
       </Box>
 
+      {/* Plan Mode Confirmation - 只在需要确认时显示 */}
+      {showPlanConfirmation && pendingPlan && (
+        <Box marginTop={1} marginBottom={1}>
+          <PlanModeConfirmation
+            plan={pendingPlan}
+            onConfirm={handlePlanConfirmation}
+            onCancel={handlePlanConfirmationCancel}
+          />
+        </Box>
+      )}
+
       {/* Todo Panel — 紧贴输入框上方，减少间距 */}
-      <Box marginTop={0} marginBottom={0}>
+      <Box marginTop={0} marginBottom={0} paddingTop={0}>
         <TodoPanel
           todos={todos}
           stats={todoStats}
           isVisible={showTodos}
           compact={true}
+          minimal={true}
           onToggle={() => setShowTodos(v => !v)}
           status={activityStatus}
           elapsedSeconds={elapsedSeconds}
@@ -414,6 +576,16 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           messages={[]}
           commands={commands}
           placeholder={isThinking ? '思考中...' : '输入消息...'}
+        />
+      </Box>
+
+      {/* Shortcut Hints with Mode Status */}
+      <Box marginTop={-1}>
+        <ShortcutHints
+          currentMode={currentMode}
+          showTodos={showTodos}
+          isLoading={isThinking}
+          elapsedTime={planModeStartTime > 0 ? Date.now() - planModeStartTime : 0}
         />
       </Box>
 

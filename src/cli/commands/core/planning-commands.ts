@@ -167,7 +167,7 @@ export const planningCommands: SlashCommand[] = [
   {
     type: 'prompt',
     name: 'plan',
-    description: '基于规范生成详细内容计划',
+    description: '基于规范生成详细内容计划（进入Plan模式）',
     aliases: ['计划', '内容计划', 'content-plan'],
     usage: '/plan [基于前一步规范] 或 /plan <规范内容>',
     examples: [
@@ -280,10 +280,10 @@ ${planInput ? `计划输入：${planInput}` : '请基于之前生成的写作规
 
 请基于提供的写作规范，严格按照上述格式生成详细、可操作的内容计划。`
     },
-    
+
     allowedTools: [
       'write_article', 'citation_manager', 'content_analyzer',
-      'research_analyzer', 'time_estimator'
+      'research_analyzer', 'time_estimator', 'todo_write', 'exit_plan_mode'
     ],
     progressMessage: '正在生成详细内容计划...',
     userFacingName: () => 'plan'

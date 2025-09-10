@@ -204,35 +204,11 @@ export function PromptInput({
         flexDirection="row"
         justifyContent="space-between"
         paddingX={2}
-        paddingY={1}
+        paddingY={0}
       >
         <Box justifyContent="flex-start" gap={1}>
-          {exitMessage.show ? (
+          {exitMessage.show && (
             <Text dimColor>按 {exitMessage.key} 再次退出</Text>
-          ) : (
-            <>
-              <Text 
-                color={mode === 'writing' ? MODE_COLORS.writing : undefined}
-                dimColor={mode !== 'writing'}
-              >
-                写作模式
-              </Text>
-              <Text 
-                color={mode === 'editing' ? MODE_COLORS.editing : undefined}
-                dimColor={mode !== 'editing'}
-              >
-                · 编辑模式
-              </Text>
-              <Text 
-                color={mode === 'reviewing' ? MODE_COLORS.reviewing : undefined}
-                dimColor={mode !== 'reviewing'}
-              >
-                · 审阅模式
-              </Text>
-              <Text dimColor>
-                · Ctrl+M 切换模式 · Ctrl+C 退出
-              </Text>
-            </>
           )}
         </Box>
         

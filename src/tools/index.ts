@@ -25,6 +25,9 @@ import { GrepTool } from './search/GrepTool/GrepTool.js'
 // 系统工具
 import { BashTool } from './system/BashTool/BashTool.js'
 
+// Plan 模式工具
+import { ExitPlanModeTool } from './ExitPlanMode.js'
+
 // 工具实例 - 延迟初始化以避免循环依赖
 let toolInstances: Map<string, WriteFlowTool<any, any>> | null = null
 
@@ -41,6 +44,7 @@ function getOrCreateToolInstances(): Map<string, WriteFlowTool<any, any>> {
       ['Glob', new GlobTool() as WriteFlowTool<any, any>],
       ['Grep', new GrepTool() as WriteFlowTool<any, any>],
       ['Bash', new BashTool() as WriteFlowTool<any, any>],
+      ['ExitPlanMode', new ExitPlanModeTool() as any as WriteFlowTool<any, any>],
     ])
     
     // 自动注册到工具编排器
@@ -61,6 +65,7 @@ export const multiEditTool = () => getOrCreateToolInstances().get('MultiEdit')!
 export const globTool = () => getOrCreateToolInstances().get('Glob')!
 export const grepTool = () => getOrCreateToolInstances().get('Grep')!
 export const bashTool = () => getOrCreateToolInstances().get('Bash')!
+export const exitPlanModeTool = () => getOrCreateToolInstances().get('ExitPlanMode')!
 
 // 核心工具数组
 export const coreTools: WriteFlowTool[] = Array.from(getOrCreateToolInstances().values())
@@ -70,6 +75,7 @@ export const toolsByCategory = {
   get file() { return [readTool(), writeTool(), editTool(), multiEditTool()] },
   get search() { return [globTool(), grepTool()] },
   get system() { return [bashTool()] },
+  get plan() { return [exitPlanModeTool()] },
 } as const
 
 // 工具名称到工具实例的映射 - 使用编排器作为唯一数据源

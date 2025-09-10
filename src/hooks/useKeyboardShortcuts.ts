@@ -6,6 +6,9 @@ interface KeyboardShortcuts {
   'ctrl+d'?: () => void
   'ctrl+r'?: () => void
   'escape'?: () => void
+  'shift+tab'?: () => void
+  'tab'?: () => void
+  'ctrl+p'?: () => void
 }
 
 interface UseKeyboardShortcutsOptions {
@@ -36,6 +39,18 @@ export function useKeyboardShortcuts(
       }
     }
 
+    // Handle Shift+Tab combination
+    if (key.shift && key.tab && shortcuts['shift+tab']) {
+      shortcuts['shift+tab']()
+      return
+    }
+
+    // Handle Tab key
+    if (key.tab && !key.shift && shortcuts.tab) {
+      shortcuts.tab()
+      return
+    }
+
     // Handle special keys
     if (key.escape && shortcuts.escape) {
       shortcuts.escape()
@@ -63,6 +78,29 @@ export function useTodoShortcuts({
     },
     { enabled }
   )
+}
+
+/**
+ * Hook for mode switching shortcuts
+ */
+export function useModeShortcuts({
+  onModeCycle,
+  onExitPlanMode,
+  enabled = true
+}: {
+  onModeCycle: () => void
+  onExitPlanMode?: () => void
+  enabled?: boolean
+}) {
+  const shortcuts: KeyboardShortcuts = {
+    'shift+tab': onModeCycle
+  }
+  
+  if (onExitPlanMode) {
+    shortcuts.escape = onExitPlanMode
+  }
+  
+  useKeyboardShortcuts(shortcuts, { enabled })
 }
 
 /**
