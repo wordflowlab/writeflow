@@ -186,6 +186,24 @@ export type WritingPreferences = {
   preferredWritingMode: 'technical' | 'academic' | 'creative' | 'mixed'
 }
 
+// 成本跟踪配置
+export type CostConfig = {
+  dailyLimit?: number
+  monthlyLimit?: number
+  warningThreshold?: number  // 百分比 (0.8 = 80%)
+  emergencyThreshold?: number  // 百分比 (0.95 = 95%)
+  enableWarnings?: boolean
+  lastSessionSummary?: {
+    sessionId: string
+    cost: number
+    tokens: number
+    requests: number
+    duration: number
+    apiDuration: number
+    timestamp: number
+  }
+}
+
 export type GlobalConfig = {
   projects?: Record<string, ProjectConfig>
   numStartups: number
@@ -220,6 +238,9 @@ export type GlobalConfig = {
   
   // 写作偏好设置
   writingPreferences?: WritingPreferences
+  
+  // 成本跟踪配置
+  cost?: CostConfig
 }
 
 export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
@@ -250,6 +271,15 @@ export const DEFAULT_GLOBAL_CONFIG: GlobalConfig = {
     writingStyle: 'friendly',
     showWritingTips: true,
     preferredWritingMode: 'mixed',
+  },
+  
+  // 成本跟踪默认值
+  cost: {
+    dailyLimit: 10.0,
+    monthlyLimit: 100.0,
+    warningThreshold: 0.8,
+    emergencyThreshold: 0.95,
+    enableWarnings: true,
   },
 }
 

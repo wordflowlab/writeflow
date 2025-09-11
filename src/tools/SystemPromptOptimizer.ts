@@ -24,6 +24,11 @@ export interface SystemPromptConfig {
   maxToolsInPrompt: number
   prioritizeReadOnlyTools: boolean
   customInstructions?: string[]
+  // Token优化配置
+  enableTokenOptimization: boolean
+  targetTokenLength: number // 目标token长度
+  useAbbreviatedExamples: boolean // 使用简化示例
+  adaptiveToolSelection: boolean // 根据任务自适应选择工具
 }
 
 /**
@@ -53,6 +58,11 @@ export class SystemPromptOptimizer {
       includeSecurityWarnings: true,
       maxToolsInPrompt: 20,
       prioritizeReadOnlyTools: true,
+      // Token优化默认配置
+      enableTokenOptimization: true,
+      targetTokenLength: 2000, // 目标2000 tokens
+      useAbbreviatedExamples: false,
+      adaptiveToolSelection: true,
       ...config,
     }
   }
@@ -65,6 +75,11 @@ export class SystemPromptOptimizer {
     safeMode?: boolean
     userPreferences?: any
   }): Promise<string> {
+    // 如果启用token优化，使用优化版本
+    if (this.config.enableTokenOptimization) {
+      return this.generateOptimizedSystemPrompt(context)
+    }
+    
     const sections: string[] = []
 
     // 基础身份说明
@@ -118,7 +133,25 @@ export class SystemPromptOptimizer {
 • 多步骤任务规划和执行
 • 权限感知的安全操作
 • 高效的批量处理
-• 实时进度反馈`
+• 实时进度反馈
+
+**重要：你应该主动使用工具完成任务，而不是被动等待用户详细指令。**
+
+## 🎯 智能工作方式
+
+### 何时主动使用工具：
+- 需要搜索、查找、分析任何内容时
+- 执行复杂的多步骤任务时
+- 需要理解现有文件或项目结构时  
+- 处理写作、编辑、研究任务时
+
+### 智能工作原则：
+- **探索优先**: 需要广泛搜索时使用 Grep 或 Glob，知道具体路径时使用 Read
+- **系统方法**: 从概览开始逐步深入，如果第一种方法无效则尝试其他策略
+- **完整彻底**: 检查相关位置，考虑不同可能性，查找关联信息
+- **直接执行**: 直接使用你的工具能力完成用户请求
+
+**核心理念：主动探索，智能分析，高效完成！**`
   }
 
   /**
@@ -188,6 +221,18 @@ ${toolDescriptions.join('\n\n')}`
   private async generateBestPracticesSection(): Promise<string> {
     return `## ✨ 工具使用最佳实践
 
+### 🎯 智能工作流
+1. **理解需求**: 用户提出要求时，主动使用工具探索和理解现状
+2. **搜集信息**: 自动读取相关文件、搜索必要内容、获取背景信息
+3. **分析处理**: 使用工具深入分析，不只是表面理解
+4. **完整执行**: 结合分析结果，完整完成用户的实际需求
+
+### 🔍 智能搜索策略
+1. **广泛到具体**: 先用 Glob 找文件，再用 Grep 搜索内容
+2. **多角度思考**: 考虑不同的文件位置、命名方式、内容格式
+3. **关联分析**: 发现重要信息后，主动查找相关内容
+4. **深度理解**: 不满足于表面信息，深入分析以提供最佳帮助
+
 ### 🎯 工具选择策略
 1. **优先使用只读工具** 进行信息收集和分析
 2. **确认需求** 再使用写入工具进行修改
@@ -195,21 +240,22 @@ ${toolDescriptions.join('\n\n')}`
 4. **搜索优化** 使用 Glob 定位文件，用 Grep 搜索内容
 
 ### 🔄 执行流程规范
-1. **读取 → 分析 → 规划 → 执行** 的标准流程
+1. **主动探索 → 深度分析 → 完整执行** 的标准流程
 2. **验证输入** 确保参数格式正确
 3. **错误处理** 遇到失败时检查权限和参数
 4. **进度反馈** 长时间操作时说明执行状态
 
-### 🧩 工具组合技巧
-• **文档分析**: Read → Grep → 分析总结
-• **批量编辑**: Glob → Read → MultiEdit
-• **项目搜索**: Glob + Grep 组合定位
-• **安全编辑**: Read → 备份 → Edit → 验证
+### 🧩 智能工具组合
+• **内容分析**: \`Read 文件\` → \`Grep 关键词\` → \`分析总结\`
+• **文件操作**: \`Glob 查找\` → \`Read 确认\` → \`Edit/Write 执行\`
+• **信息搜集**: \`Grep 搜索\` → \`Read 详细\` → \`整合输出\`
+• **任务执行**: \`理解需求\` → \`工具操作\` → \`验证结果\`
 
 ### 📊 性能优化
 • 优先使用并发安全的工具进行并行操作
 • 大文件操作时使用分片处理
-• 避免重复的文件读取操作`
+• 避免重复的文件读取操作
+• 利用缓存减少重复搜索`
   }
 
   /**
@@ -351,13 +397,13 @@ ${this.config.customInstructions!.map((instruction, index) => `${index + 1}. ${i
    */
   private getToolUsageScenarios(toolName: string): string {
     const scenarios: Record<string, string> = {
-      Read: '查看文件内容、代码审查、文档分析',
-      Write: '创建新文件、保存内容、生成报告',
-      Edit: '修改现有文件、文本替换、代码更新',
-      MultiEdit: '批量修改、重构代码、统一格式',
-      Glob: '查找文件、模式匹配、文件筛选',
-      Grep: '搜索内容、日志分析、代码定位',
-      Bash: '系统操作、脚本执行、环境配置',
+      Read: '主动读取文件内容、理解现有资料、分析文档结构',
+      Write: '创建新文件、保存写作内容、生成文档',
+      Edit: '修改现有文件、文本编辑、内容更新',
+      MultiEdit: '批量修改、内容重构、格式统一',
+      Glob: '主动查找文件、按模式匹配、文件发现',
+      Grep: '主动搜索关键词、内容定位、信息查找',
+      Bash: '执行系统命令、环境操作、工具调用',
     }
     
     return scenarios[toolName] || '通用工具操作'
@@ -406,6 +452,118 @@ ${this.config.customInstructions!.map((instruction, index) => `${index + 1}. ${i
 • 确认需求后使用写入工具
 • 遇到权限问题时说明原因
 • 保持操作的安全性和准确性`
+  }
+
+  /**
+   * 生成Token优化的系统提示词
+   */
+  private async generateOptimizedSystemPrompt(context?: {
+    taskContext?: string
+    safeMode?: boolean
+    userPreferences?: any
+  }): Promise<string> {
+    const { targetTokenLength, useAbbreviatedExamples, adaptiveToolSelection } = this.config
+    
+    // 根据任务上下文智能选择必要的工具
+    let relevantTools: WriteFlowTool[] = []
+    if (adaptiveToolSelection && context?.taskContext) {
+      const recommendations = await recommendToolsForTask(context.taskContext)
+      relevantTools = recommendations.slice(0, Math.min(10, this.config.maxToolsInPrompt)) // 限制工具数量
+    } else {
+      const allTools = await getAvailableTools()
+      relevantTools = allTools.slice(0, Math.min(8, this.config.maxToolsInPrompt)) // 更严格的限制
+    }
+
+    // 精简的身份说明
+    const identity = `你是 WriteFlow AI 写作助手，支持智能工具调用。当前可用 ${relevantTools.length} 个工具。`
+
+    // 精简的工具列表
+    const toolList = relevantTools.map(tool => {
+      const basicInfo = `${tool.name}: ${tool.description}`
+      if (useAbbreviatedExamples) {
+        return basicInfo
+      }
+      
+      // 只为最重要的工具添加示例
+      const isImportant = tool.name.includes('read') || tool.name.includes('write') || tool.name.includes('search')
+      if (isImportant && tool.inputSchema) {
+        const paramSummary = Object.keys(tool.inputSchema.shape || {}).slice(0, 2).join(', ')
+        return `${basicInfo} (参数: ${paramSummary})`
+      }
+      return basicInfo
+    }).join('\n')
+
+    // 精简的使用原则
+    const principles = `
+核心原则:
+- 理解任务需求，选择合适工具
+- 优先使用 read/search 类工具获取信息
+- 需要修改文件时使用 write/edit 工具
+- 工具调用失败时检查参数格式`
+
+    // 组装优化后的提示词
+    const sections = [
+      identity,
+      '',
+      '可用工具:',
+      toolList,
+      '',
+      principles
+    ]
+
+    // 任务特定指导（精简版）
+    if (context?.taskContext) {
+      const taskGuidance = this.generateCompactTaskGuidance(context.taskContext, relevantTools)
+      if (taskGuidance) {
+        sections.push('', '任务提示:', taskGuidance)
+      }
+    }
+
+    const result = sections.join('\n')
+    
+    // 估算token数并进一步优化
+    const estimatedTokens = this.estimateTokens(result)
+    if (estimatedTokens > targetTokenLength) {
+      return this.generateCompactPrompt() // 回退到最精简版本
+    }
+
+    return result
+  }
+
+  /**
+   * 生成精简的任务指导
+   */
+  private generateCompactTaskGuidance(taskContext: string, tools: WriteFlowTool[]): string {
+    const taskLower = taskContext.toLowerCase()
+    
+    if (taskLower.includes('read') || taskLower.includes('查看') || taskLower.includes('搜索')) {
+      return '使用 read/glob/grep 工具获取信息'
+    }
+    
+    if (taskLower.includes('write') || taskLower.includes('创建') || taskLower.includes('修改')) {
+      return '使用 read 了解现状，然后 write/edit 修改文件'
+    }
+    
+    if (taskLower.includes('debug') || taskLower.includes('error') || taskLower.includes('错误')) {
+      return '使用 read 查看错误，grep 搜索相关代码'
+    }
+    
+    if (taskLower.includes('test') || taskLower.includes('测试')) {
+      return '使用 bash 运行测试，read 查看结果'
+    }
+    
+    return '根据任务需求选择合适工具组合'
+  }
+
+  /**
+   * 估算文本的token数量（简化版）
+   */
+  private estimateTokens(text: string): number {
+    // 中文字符约1.5个token，英文单词约1个token
+    const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length
+    const englishWords = text.replace(/[\u4e00-\u9fff]/g, '').split(/\s+/).filter(Boolean).length
+    
+    return Math.ceil(chineseChars * 1.5 + englishWords)
   }
 }
 

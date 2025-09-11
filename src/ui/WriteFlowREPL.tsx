@@ -12,6 +12,7 @@ import { TodoPanel } from './components/TodoPanel.js'
 import { PlanModeConfirmation, ConfirmationOption } from './components/PlanModeConfirmation.js'
 import { ShortcutHints } from './components/ShortcutHints.js'
 import { useTodoShortcuts, useModeShortcuts } from '../hooks/useKeyboardShortcuts.js'
+import { useCollapsibleShortcuts } from '../hooks/useCollapsibleShortcuts.js'
 import { Todo, TodoStats, TodoStatus } from '../types/Todo.js'
 import { PlanMode } from '../types/agent.js'
 
@@ -49,6 +50,22 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   
   // 消息状态 - 使用新的 UIMessage 类型
   const [messages, setMessages] = useState<UIMessage[]>([])
+  
+  // 可折叠内容管理
+  const {
+    focusedId: focusedCollapsibleId,
+    toggleCollapsible,
+    setFocus: setCollapsibleFocus,
+    getStats: getCollapsibleStats,
+    registerCollapsible,
+    manager: collapsibleManager
+  } = useCollapsibleShortcuts({
+    enableGlobalShortcuts: true,
+    onStateChange: (event) => {
+      // 可以在这里添加状态变化的日志或其他处理逻辑
+      console.log(`🔧 可折叠内容 ${event.contentId} ${event.collapsed ? '已折叠' : '已展开'}`)
+    }
+  })
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const [showModelConfig, setShowModelConfig] = useState(false)
@@ -537,6 +554,23 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const [statusStart, setStatusStart] = useState<number | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
 
+  // 辅助函数：自动注册新的可折叠内容并设置焦点
+  const registerAndFocusNewCollapsible = useCallback((contentId: string) => {
+    // 注册新的可折叠内容
+    registerCollapsible(contentId, {
+      collapsed: true,
+      autoCollapse: true,
+      maxLines: 15,
+      focusable: true
+    })
+    
+    // 自动设置为焦点，这样用户可以立即使用 Ctrl+R
+    setCollapsibleFocus(contentId)
+    
+    console.log(`🔧 已注册并聚焦新的可折叠内容: ${contentId}`)
+    console.log(`💡 提示: 按 Ctrl+R 展开详细内容`)
+  }, [registerCollapsible, setCollapsibleFocus])
+
   useEffect(() => {
     if (activityStatus === 'idle') {
       setStatusStart(null)
@@ -588,6 +622,11 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
                 unresolvedToolUseIDs={unresolvedToolUseIDs}
                 shouldAnimate={isThinking && index === normalizedMessages.length - 1}
                 shouldShowDot={message.type === 'assistant' && index === normalizedMessages.length - 1}
+                enableCollapsible={true}
+                onCollapsibleToggle={(collapsed, id) => toggleCollapsible(id)}
+                onCollapsibleFocus={setCollapsibleFocus}
+                focusedCollapsibleId={focusedCollapsibleId || undefined}
+                onNewCollapsibleContent={registerAndFocusNewCollapsible}
               />
             )
           }

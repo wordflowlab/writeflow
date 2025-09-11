@@ -29,6 +29,11 @@ interface MessageProps {
   shouldAnimate: boolean
   shouldShowDot: boolean
   width?: number | string
+  enableCollapsible?: boolean
+  onCollapsibleToggle?: (collapsed: boolean, id: string) => void
+  onCollapsibleFocus?: (id: string) => void
+  focusedCollapsibleId?: string
+  onNewCollapsibleContent?: (id: string) => void
 }
 
 export function Message({
@@ -44,6 +49,11 @@ export function Message({
   shouldAnimate,
   shouldShowDot,
   width,
+  enableCollapsible = true,
+  onCollapsibleToggle,
+  onCollapsibleFocus,
+  focusedCollapsibleId,
+  onNewCollapsibleContent,
 }: MessageProps): React.ReactNode {
   // 助手消息
   if (message.type === 'assistant') {
@@ -65,6 +75,11 @@ export function Message({
             shouldAnimate={shouldAnimate}
             shouldShowDot={shouldShowDot}
             width={width}
+            enableCollapsible={enableCollapsible}
+            onCollapsibleToggle={onCollapsibleToggle}
+            onCollapsibleFocus={onCollapsibleFocus}
+            focusedCollapsibleId={focusedCollapsibleId}
+            onNewCollapsibleContent={onNewCollapsibleContent}
           />
         ))}
       </Box>
@@ -101,6 +116,11 @@ interface AssistantBlockProps {
   shouldAnimate: boolean
   shouldShowDot: boolean
   width?: number | string
+  enableCollapsible?: boolean
+  onCollapsibleToggle?: (collapsed: boolean, id: string) => void
+  onCollapsibleFocus?: (id: string) => void
+  focusedCollapsibleId?: string
+  onNewCollapsibleContent?: (id: string) => void
 }
 
 function AssistantBlock({
@@ -117,9 +137,18 @@ function AssistantBlock({
   shouldAnimate,
   shouldShowDot,
   width,
+  enableCollapsible,
+  onCollapsibleToggle,
+  onCollapsibleFocus,
+  focusedCollapsibleId,
+  onNewCollapsibleContent,
 }: AssistantBlockProps): React.ReactNode {
   switch (block.type) {
     case 'text':
+      // 生成唯一的块ID用于可折叠功能
+      const blockId = `text-block-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const isBlockFocused = focusedCollapsibleId === blockId
+      
       return (
         <AssistantTextMessage
           block={block}
@@ -130,6 +159,11 @@ function AssistantBlock({
           debug={debug}
           verbose={verbose}
           width={width}
+          enableCollapsible={enableCollapsible}
+          onCollapsibleToggle={onCollapsibleToggle}
+          onCollapsibleFocus={onCollapsibleFocus}
+          isCollapsibleFocused={isBlockFocused}
+          onNewCollapsibleContent={onNewCollapsibleContent}
         />
       )
     

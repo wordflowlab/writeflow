@@ -9,10 +9,10 @@ import {
   getPermissionManager,
   ToolPermissionLevel,
   PermissionGrantType,
-  PlanMode,
-  getToolOrchestrator,
-  WriteFlowAIService
+  getToolOrchestrator
 } from '@/tools/index.js'
+import { PlanMode } from '@/types/agent.js'
+import { WriteFlowAIService } from '@/services/ai/WriteFlowAIService.js'
 import { generateOptimizedSystemPrompt } from '@/tools/index.js'
 import { ToolUseContext } from '@/Tool.js'
 

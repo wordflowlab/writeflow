@@ -1,6 +1,8 @@
 import { SlashCommand } from '../../../types/command.js'
 import { AgentContext } from '../../../types/agent.js'
 import { getCommandHelp } from './utils.js'
+import { generateCostSummary, getDetailedStats } from '../../../services/CostTracker.js'
+import { formatDuration } from '../../../utils/format.js'
 
 /**
  * 系统类命令：model, help
@@ -91,5 +93,64 @@ export const systemCommands: SlashCommand[] = [
     },
     
     userFacingName: () => 'help'
+  },
+
+  {
+    type: 'local',
+    name: 'cost',
+    description: '显示当前会话的 token 使用和成本统计',
+    aliases: ['成本', 'tokens', 'usage', '使用量'],
+    
+    async call(args: string, context: AgentContext): Promise<string> {
+      const option = args.trim().toLowerCase()
+      
+      if (option === 'detailed' || option === 'detail' || option === '详细') {
+        // 显示详细统计信息
+        const stats = getDetailedStats()
+        
+        return `📊 WriteFlow 详细使用统计
+
+📈 会话信息:
+  会话 ID: ${stats.session.id}
+  开始时间: ${new Date(stats.session.startTime).toLocaleString()}
+  会话时长: ${formatDuration(stats.session.duration)}
+  API 调用时长: ${formatDuration(stats.session.apiDuration)}
+
+💰 成本统计:
+  总成本: $${stats.session.cost.toFixed(4)}
+  总 tokens: ${stats.session.tokens.toLocaleString()}
+  总请求: ${stats.session.requests}
+  平均每请求成本: $${(stats.session.cost / Math.max(stats.session.requests, 1)).toFixed(4)}
+
+🤖 模型使用详情:
+${Object.entries(stats.models).map(([model, usage]: [string, any]) => 
+`  ${model}:
+    请求次数: ${usage.requests}
+    输入 tokens: ${usage.inputTokens.toLocaleString()}
+    输出 tokens: ${usage.outputTokens.toLocaleString()}
+    成本: $${usage.cost.toFixed(4)}
+    平均时长: ${formatDuration(usage.duration / Math.max(usage.requests, 1))}`
+).join('\n')}
+
+📊 成本阈值:
+  每日限制: $${stats.thresholds.dailyLimit}
+  每月限制: $${stats.thresholds.monthlyLimit}
+  警告阈值: ${(stats.thresholds.warningThreshold * 100).toFixed(0)}%
+  紧急阈值: ${(stats.thresholds.emergencyThreshold * 100).toFixed(0)}%
+
+📈 最近请求:
+${stats.recent.map((entry: any) => 
+`  ${new Date(entry.timestamp).toLocaleTimeString()} - ${entry.model}: ${entry.inputTokens + entry.outputTokens} tokens, $${entry.cost.toFixed(4)} (${entry.requestType})`
+).join('\n')}
+
+💡 提示: 使用 /cost 查看简洁摘要`
+      }
+      
+      // 默认显示简洁摘要
+      return generateCostSummary()
+    },
+    
+    userFacingName: () => 'cost'
   }
 ]
+

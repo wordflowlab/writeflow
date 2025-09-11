@@ -25,12 +25,12 @@ describe('Plan 模式基础测试', () => {
     expect(permissionManager).toBeDefined()
     
     // 测试默认模式
-    const defaultResult = permissionManager.checkToolPermission('edit_article')
+    const defaultResult = permissionManager.checkToolPermissionByName('edit_article')
     expect(defaultResult.allowed).toBe(true)
     
     // 测试 Plan 模式
-    permissionManager.setCurrentMode(PlanMode.Plan)
-    const planResult = permissionManager.checkToolPermission('edit_article')
+    permissionManager.setCurrentMode('plan' as any)
+    const planResult = permissionManager.checkToolPermissionByName('edit_article')
     expect(planResult.allowed).toBe(false)
   })
 

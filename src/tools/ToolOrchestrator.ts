@@ -423,7 +423,8 @@ export class ToolOrchestrator {
       result.logs.push(`[${new Date().toISOString()}] ${message}`)
     }
     
-    console.log(`[${executionId}] ${message}`)
+    // 简化的控制台输出 - 不输出详细的执行ID和时间戳
+    // console.log(`[${executionId}] ${message}`)  // 注释掉详细日志
   }
 
   /**

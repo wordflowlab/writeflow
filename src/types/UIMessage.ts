@@ -1,14 +1,19 @@
 /**
  * UI 消息类型定义
  * 完全参考 Kode 的架构实现，用于 REPL 界面消息显示
+ * 扩展支持可折叠内容功能
  */
 
 import type { UUID } from 'crypto'
+import type { CollapsibleState, ContentRenderMetadata, CollapsibleContentType } from './CollapsibleContent.js'
 
 // 基础内容块类型
 export interface TextBlock {
   type: 'text'
   text: string
+  // 可折叠相关属性
+  collapsible?: CollapsibleState
+  renderMetadata?: ContentRenderMetadata
 }
 
 export interface ToolUseBlock {
@@ -16,6 +21,9 @@ export interface ToolUseBlock {
   id: string
   name: string
   input: any
+  // 可折叠相关属性
+  collapsible?: CollapsibleState
+  renderMetadata?: ContentRenderMetadata
 }
 
 export interface ToolResultBlock {
@@ -23,15 +31,32 @@ export interface ToolResultBlock {
   tool_use_id: string
   content: string | any[]
   is_error?: boolean
+  // 可折叠相关属性
+  collapsible?: CollapsibleState
+  renderMetadata?: ContentRenderMetadata
 }
 
 export interface ThinkingBlock {
   type: 'thinking'
   content: string
+  // 可折叠相关属性
+  collapsible?: CollapsibleState
+  renderMetadata?: ContentRenderMetadata
+}
+
+// 新增：长内容块类型（专门用于可折叠的长文本内容）
+export interface LongContentBlock {
+  type: 'long_content'
+  content: string
+  title?: string
+  contentType: CollapsibleContentType
+  // 可折叠相关属性
+  collapsible: CollapsibleState
+  renderMetadata: ContentRenderMetadata
 }
 
 // 内容块联合类型
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock
+export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock | ThinkingBlock | LongContentBlock
 
 // 消息参数类型（发送给 API）
 export interface MessageParam {
@@ -118,10 +143,16 @@ export function createAssistantMessage(
   }
 }
 
-export function createTextBlock(text: string): TextBlock {
+export function createTextBlock(
+  text: string, 
+  collapsible?: CollapsibleState,
+  renderMetadata?: ContentRenderMetadata
+): TextBlock {
   return {
     type: 'text',
     text,
+    collapsible,
+    renderMetadata,
   }
 }
 
@@ -129,12 +160,16 @@ export function createToolUseBlock(
   id: string,
   name: string,
   input: any,
+  collapsible?: CollapsibleState,
+  renderMetadata?: ContentRenderMetadata
 ): ToolUseBlock {
   return {
     type: 'tool_use',
     id,
     name,
     input,
+    collapsible,
+    renderMetadata,
   }
 }
 
@@ -142,12 +177,46 @@ export function createToolResultBlock(
   tool_use_id: string,
   content: string | any[],
   is_error: boolean = false,
+  collapsible?: CollapsibleState,
+  renderMetadata?: ContentRenderMetadata
 ): ToolResultBlock {
   return {
     type: 'tool_result',
     tool_use_id,
     content,
     is_error,
+    collapsible,
+    renderMetadata,
+  }
+}
+
+export function createLongContentBlock(
+  content: string,
+  contentType: LongContentBlock['contentType'],
+  title?: string,
+  collapsible?: Partial<CollapsibleState>,
+  renderMetadata?: Partial<ContentRenderMetadata>
+): LongContentBlock {
+  const id = `long-content-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  
+  return {
+    type: 'long_content',
+    content,
+    title,
+    contentType,
+    collapsible: {
+      id,
+      collapsed: false,
+      autoCollapse: true,
+      maxLines: 15,
+      ...collapsible
+    },
+    renderMetadata: {
+      estimatedLines: content.split('\n').length,
+      hasLongContent: content.length > 1000,
+      contentType: contentType,
+      ...renderMetadata
+    }
   }
 }
 
@@ -166,6 +235,33 @@ export function isToolResultBlock(block: ContentBlock): block is ToolResultBlock
 
 export function isThinkingBlock(block: ContentBlock): block is ThinkingBlock {
   return block.type === 'thinking'
+}
+
+export function isLongContentBlock(block: ContentBlock): block is LongContentBlock {
+  return block.type === 'long_content'
+}
+
+// 检查内容块是否可折叠
+export function isCollapsibleBlock(block: ContentBlock): boolean {
+  return !!(block as any).collapsible
+}
+
+// 获取内容块的文本内容
+export function getBlockText(block: ContentBlock): string {
+  switch (block.type) {
+    case 'text':
+      return block.text
+    case 'thinking':
+      return block.content
+    case 'long_content':
+      return block.content
+    case 'tool_result':
+      return typeof block.content === 'string' ? block.content : JSON.stringify(block.content)
+    case 'tool_use':
+      return JSON.stringify(block.input)
+    default:
+      return ''
+  }
 }
 
 export function isUserMessage(message: UIMessage): message is UserMessage {

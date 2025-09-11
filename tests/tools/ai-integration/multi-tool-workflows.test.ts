@@ -290,7 +290,7 @@ describe('Utils', () => {
       const readResults = await orchestrator.executeToolsBatch(readRequests)
       
       expect(readResults).toHaveLength(3)
-      readResults.forEach((result, index) => {
+      readResults.forEach((result: any, index: number) => {
         expect(result.status).toBe(ToolExecutionStatus.COMPLETED)
         expect(result.result).toContain(`test file ${index + 1}`)
       })
@@ -429,7 +429,7 @@ describe('Utils', () => {
       expect(duration).toBeLessThan(5000)
       
       // 验证所有工具都成功执行
-      const successfulExecutions = results.filter(r => r.status === ToolExecutionStatus.COMPLETED)
+      const successfulExecutions = results.filter((r: any) => r.status === ToolExecutionStatus.COMPLETED)
       expect(successfulExecutions.length).toBeGreaterThanOrEqual(2) // 至少成功2个
     })
 

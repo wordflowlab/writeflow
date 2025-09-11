@@ -77,7 +77,7 @@ CLAUDE.md
 
 other/
 
-# Tool-specific directories that should not be committed
+# Tool-specific directories that should not be committeds
 web-bundles/
 .playwright-mcp/
 .claude/

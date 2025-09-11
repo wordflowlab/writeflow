@@ -44,8 +44,10 @@ describe('AI Tool Recognition Tests', () => {
 
     test('should include tool usage examples in prompt', async () => {
       const systemPrompt = await generateOptimizedSystemPrompt({
-        includeUsageExamples: true,
-        taskContext: '文件编辑任务'
+        taskContext: '文件编辑任务',
+        customConfig: {
+          includeUsageExamples: true
+        }
       })
 
       expect(systemPrompt).toContain('使用场景')

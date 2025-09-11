@@ -2,7 +2,6 @@ import { SlashCommand, ParsedCommand, CommandResult, CommandExecutorConfig } fro
 import { AgentContext } from '../../types/agent.js'
 import { SlashCommandParser } from '../parser/slash-parser.js'
 import { coreCommands } from '../commands/core/index.js'
-import { systemCommands } from '../commands/system-commands.js'
 import { fileCommands } from '../commands/file-commands.js'
 import { publishCommands } from '../commands/publish-commands.js'
 import { styleCommands } from '../commands/style-commands.js'
@@ -21,7 +20,6 @@ export class CommandExecutor {
   constructor(private config: CommandExecutorConfig) {
     this.availableCommands = [
       ...coreCommands,
-      ...systemCommands, 
       ...fileCommands,
       ...publishCommands,
       ...styleCommands,

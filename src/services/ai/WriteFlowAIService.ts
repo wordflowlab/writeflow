@@ -17,6 +17,9 @@ import {
   type ToolExecutionResult,
   type WriteFlowTool
 } from '../../tools/index.js'
+import { formatContent, toolFormatter } from '../../utils/SmartFormatter.js'
+import { format } from '../../utils/colorScheme.js'
+import { analyzeContent } from '../../utils/contentAnalyzer.js'
 import { AgentContext } from '../../types/agent.js'
 import { ToolUseContext } from '../../Tool.js'
 import { getStreamingService, StreamingService, StreamingRequest } from '../streaming/StreamingService.js'
@@ -26,7 +29,25 @@ import { emitReminderEvent } from '../SystemReminderService.js'
 import { startStreamingProgress, stopStreamingProgress } from '../streaming/ProgressIndicator.js'
 import { getOutputFormatter } from '../../ui/utils/outputFormatter.js'
 import { parseAIResponse, parseStreamingChunk, type ParsedResponse } from './ResponseParser.js'
-import type { ContentBlock } from '../../types/UIMessage.js'
+import type { 
+  ContentBlock, 
+  LongContentBlock 
+} from '../../types/UIMessage.js'
+import { 
+  createTextBlock, 
+  createLongContentBlock
+} from '../../types/UIMessage.js'
+import type { 
+  CollapsibleContentType, 
+  ContentAnalysis
+} from '../../types/CollapsibleContent.js'
+import { 
+  AUTO_COLLAPSE_THRESHOLDS,
+  CONTENT_TYPE_PATTERNS 
+} from '../../types/CollapsibleContent.js'
+import { generateOptimizedSystemPrompt } from '../../tools/SystemPromptOptimizer.js'
+import { addCostEntry } from '../CostTracker.js'
+import { getContextManager, estimateTokens, ContextEntry } from '../ContextManager.js'
 
 export interface AIRequest {
   prompt: string
@@ -38,6 +59,10 @@ export interface AIRequest {
   onToken?: (chunk: string) => void
   allowedTools?: string[]
   enableToolCalls?: boolean
+  // 智能分析相关选项
+  enableSmartAnalysis?: boolean
+  taskContext?: string
+  autoGenerateSystemPrompt?: boolean
 }
 
 export interface AIResponse {
@@ -83,17 +108,518 @@ export class WriteFlowAIService {
   private toolOrchestrator = getToolOrchestrator()
   private permissionManager = getPermissionManager()
   private providerAdapter = getProviderAdapter(undefined)
+  private contextManager = getContextManager()
   
   /**
    * 处理 AI 请求（支持流式和非流式）
    */
   async processRequest(request: AIRequest): Promise<AIResponse> {
+    // 预处理请求：智能分析和系统提示词增强
+    const enhancedRequest = await this.enhanceRequest(request)
+    
     // 如果请求流式处理，委托给流式服务
-    if (request.stream) {
-      return this.processStreamingRequest(request)
+    if (enhancedRequest.stream) {
+      return this.processStreamingRequest(enhancedRequest)
     }
     
-    return this.processNonStreamingRequest(request)
+    return this.processNonStreamingRequest(enhancedRequest)
+  }
+
+  /**
+   * 增强请求：自动检测并启用智能分析功能
+   */
+  private async enhanceRequest(request: AIRequest): Promise<AIRequest> {
+    const enhanced = { ...request }
+    
+    // 自动检测是否需要智能分析
+    const needsSmartAnalysis = this.detectSmartAnalysisNeed(request.prompt)
+    
+    if (needsSmartAnalysis || request.enableSmartAnalysis) {
+      // 启用工具调用
+      enhanced.enableToolCalls = true
+      enhanced.allowedTools = enhanced.allowedTools || [
+        'Read', 'Grep', 'Glob', 'Bash', 
+        'todo_write', 'todo_read'
+      ]
+      
+      // 设置任务上下文
+      enhanced.taskContext = enhanced.taskContext || this.extractTaskContext(request.prompt)
+    }
+    
+    // 自动生成或增强系统提示词
+    if (enhanced.autoGenerateSystemPrompt !== false) {
+      enhanced.systemPrompt = await this.generateEnhancedSystemPrompt(enhanced)
+    }
+    
+    return enhanced
+  }
+
+  /**
+   * 检测是否需要智能分析
+   */
+  private detectSmartAnalysisNeed(prompt: string): boolean {
+    const analysisKeywords = [
+      '分析', '项目', '总结', '理解', '查看', '检查', '搜索', '探索',
+      'analyze', 'project', 'summary', 'understand', 'explore', 'search'
+    ]
+    
+    const lowerPrompt = prompt.toLowerCase()
+    return analysisKeywords.some(keyword => 
+      lowerPrompt.includes(keyword) || 
+      lowerPrompt.includes(keyword.toLowerCase())
+    )
+  }
+
+  /**
+   * 从提示词中提取任务上下文
+   */
+  private extractTaskContext(prompt: string): string {
+    // 简单的上下文提取逻辑
+    if (prompt.includes('项目') || prompt.includes('project')) {
+      return '项目分析和结构理解'
+    }
+    if (prompt.includes('代码') || prompt.includes('code')) {
+      return '代码分析和理解'
+    }
+    if (prompt.includes('文件') || prompt.includes('file')) {
+      return '文件分析和处理'
+    }
+    return '智能分析任务'
+  }
+
+  /**
+   * 生成增强的系统提示词
+   */
+  private async generateEnhancedSystemPrompt(request: AIRequest): Promise<string> {
+    try {
+      const optimizedPrompt = await generateOptimizedSystemPrompt({
+        taskContext: request.taskContext,
+        safeMode: false,
+        compact: false
+      })
+      
+      // 如果用户提供了自定义系统提示词，将其与优化提示词合并
+      if (request.systemPrompt) {
+        return `${optimizedPrompt}\n\n## 用户自定义指令\n${request.systemPrompt}`
+      }
+      
+      return optimizedPrompt
+    } catch (error) {
+      console.warn('生成优化系统提示词失败，使用默认提示词:', error)
+      return request.systemPrompt || '你是 WriteFlow AI 写作助手，请帮助用户完成各种写作和分析任务。'
+    }
+  }
+
+  /**
+   * 显示工具执行过程的详细反馈，使用智能格式化器
+   */
+  private displayToolExecution(toolCall: any): ContentBlock | null {
+    const { name: toolName, arguments: argsStr } = toolCall.function
+    
+    try {
+      const args = JSON.parse(argsStr)
+      
+      // 🔧 标准化参数以支持不同的参数命名
+      const normalizedArgs = this.normalizeToolParams(toolName, args)
+      
+      // 简化的控制台输出 - 只显示关键信息
+      const briefMessage = this.getBriefToolMessage(toolName, normalizedArgs)
+      
+      // 构建详细内容用于展开
+      const detailedContent = this.formatDetailedToolExecution(toolName, normalizedArgs, '执行中...')
+      
+      // 控制台显示简洁信息和展开提示
+      console.log(`${briefMessage} ${format.dim('(Ctrl+R to expand)')}`)
+      
+      // 创建可折叠的工具执行块
+      const contentId = `tool-exec-${toolName.toLowerCase()}-${Date.now()}`
+      return createLongContentBlock(
+        detailedContent,
+        'tool-execution',
+        briefMessage,
+        { 
+          collapsed: true, // 默认折叠，显示简洁信息
+          maxLines: 1,
+          id: contentId
+        },
+        {
+          toolName,
+          contentType: 'tool-execution',
+          estimatedLines: detailedContent.split('\n').length,
+          hasLongContent: true
+        }
+      )
+      
+    } catch (error) {
+      const simpleMessage = format.tool(toolName, '执行中')
+      console.log(`${simpleMessage} ${format.dim('(parsing error)')}`)
+      
+      // 即使解析失败也创建基本的内容块
+      return createTextBlock(
+        simpleMessage,
+        {
+          id: `tool-${Date.now()}`,
+          collapsed: false,
+          autoCollapse: false,
+          maxLines: 3
+        },
+        {
+          estimatedLines: 1,
+          hasLongContent: false,
+          contentType: 'tool-execution',
+          toolName
+        }
+      )
+    }
+  }
+
+  /**
+   * 格式化详细的工具执行信息
+   */
+  private formatDetailedToolExecution(toolName: string, args: any, status: string): string {
+    const lines = [`🔧 ${toolName} 工具执行详细信息`, '']
+    
+    // 添加参数信息
+    lines.push('参数:')
+    for (const [key, value] of Object.entries(args)) {
+      const displayValue = typeof value === 'string' && value.length > 100 
+        ? value.slice(0, 100) + '...' 
+        : JSON.stringify(value)
+      lines.push(`  ${key}: ${displayValue}`)
+    }
+    
+    lines.push('')
+    lines.push(`状态: ${status}`)
+    
+    return lines.join('\n')
+  }
+
+  /**
+   * 生成简化的工具执行消息 - 只显示最关键的信息
+   */
+  private getBriefToolMessage(toolName: string, args: any): string {
+    switch (toolName) {
+      case 'Read':
+        const fileName = this.getFileName(args.file_path || '未知文件')
+        return format.info(`📖 读取 ${fileName}`)
+      case 'Grep':
+        const pattern = args.pattern || '未知模式'
+        return format.info(`🔍 搜索 "${pattern}"`)
+      case 'Glob':
+        const globPattern = args.pattern || '未知模式'
+        return format.info(`📁 查找 ${globPattern}`)
+      case 'Bash':
+        const cmd = this.getSimpleCommand(args.command || '未知命令')
+        return format.info(`⚡ 执行 ${cmd}`)
+      case 'Write':
+        const writeFile = this.getFileName(args.file_path || '未知文件')
+        return format.info(`✏️ 写入 ${writeFile}`)
+      case 'Edit':
+        const editFile = this.getFileName(args.file_path || '未知文件')
+        return format.info(`✂️ 编辑 ${editFile}`)
+      default:
+        return format.info(`🔧 ${toolName}`)
+    }
+  }
+  
+  /**
+   * 从文件路径中提取文件名
+   */
+  private getFileName(filePath: string): string {
+    const parts = filePath.split('/')
+    return parts[parts.length - 1] || filePath
+  }
+  
+  /**
+   * 简化命令显示
+   */
+  private getSimpleCommand(command: string): string {
+    if (command.length > 30) {
+      return command.split(' ')[0] + '...'
+    }
+    return command
+  }
+  
+  /**
+   * 生成简化的工具结果消息
+   */
+  private getBriefResultMessage(toolName: string, status: string, result: string): string {
+    const lines = result.split('\n').length
+    const chars = result.length
+    
+    let statusIcon = ''
+    let statusColor = format.success
+    
+    switch (status) {
+      case 'success':
+        statusIcon = '✅'
+        statusColor = format.success
+        break
+      case 'error':
+        statusIcon = '❌'
+        statusColor = format.error
+        break
+      default:
+        statusIcon = '🔧'
+        statusColor = format.info
+    }
+    
+    // 根据工具类型生成不同的结果摘要
+    switch (toolName) {
+      case 'Read':
+        if (status === 'success') {
+          return statusColor(`${statusIcon} 读取完成 (${lines} 行)`)
+        } else {
+          return statusColor(`${statusIcon} 读取失败`)
+        }
+      case 'Grep':
+        if (status === 'success') {
+          const matches = lines - 1 // 通常第一行是文件路径
+          return statusColor(`${statusIcon} 找到 ${matches} 个匹配`)
+        } else {
+          return statusColor(`${statusIcon} 搜索失败`)
+        }
+      case 'Glob':
+        if (status === 'success') {
+          return statusColor(`${statusIcon} 找到 ${lines} 个文件`)
+        } else {
+          return statusColor(`${statusIcon} 查找失败`)
+        }
+      case 'Bash':
+        if (status === 'success') {
+          return statusColor(`${statusIcon} 命令执行完成`)
+        } else {
+          return statusColor(`${statusIcon} 命令执行失败`)
+        }
+      case 'Write':
+      case 'Edit':
+        if (status === 'success') {
+          return statusColor(`${statusIcon} 文件保存成功`)
+        } else {
+          return statusColor(`${statusIcon} 文件保存失败`)
+        }
+      default:
+        if (status === 'success') {
+          return statusColor(`${statusIcon} ${toolName} 完成`)
+        } else {
+          return statusColor(`${statusIcon} ${toolName} 失败`)
+        }
+    }
+  }
+
+  /**
+   * 提取工具的关键参数用于显示
+   */
+  private extractKeyParams(toolName: string, args: any): [string, string][] {
+    const params: [string, string][] = []
+    
+    switch (toolName) {
+      case 'Read':
+        if (args.file_path) params.push(['文件', format.path(args.file_path)])
+        break
+      case 'Grep':
+        if (args.pattern) params.push(['模式', args.pattern])
+        if (args.path) params.push(['路径', args.path])
+        break
+      case 'Glob':
+        if (args.pattern) params.push(['模式', args.pattern])
+        if (args.path) params.push(['路径', args.path])
+        break
+      case 'Bash':
+        if (args.command) {
+          const cmd = args.command.length > 50 ? args.command.slice(0, 50) + '...' : args.command
+          params.push(['命令', cmd])
+        }
+        break
+      case 'Write':
+      case 'Edit':
+        if (args.file_path) params.push(['文件', format.path(args.file_path)])
+        break
+      default:
+        // 对于其他工具，显示前2个参数
+        const entries = Object.entries(args).slice(0, 2)
+        entries.forEach(([key, value]) => {
+          const strValue = String(value)
+          const displayValue = strValue.length > 50 ? strValue.slice(0, 50) + '...' : strValue
+          params.push([key, displayValue])
+        })
+    }
+    
+    return params
+  }
+
+  /**
+   * 创建工具执行结果的内容块 - 使用智能格式化器
+   */
+  private createToolResultBlock(
+    toolName: string, 
+    result: string, 
+    success: boolean,
+    callId?: string
+  ): ContentBlock {
+    const status = success ? 'success' : 'error'
+    
+    // 简化的结果输出
+    const briefResult = this.getBriefResultMessage(toolName, status, result)
+    
+    // 格式化详细结果
+    const detailedResult = this.formatDetailedToolResult(toolName, result, success)
+    
+    // 控制台显示简洁信息和展开提示
+    const resultLines = result.split('\n').length
+    console.log(`${briefResult} ${format.dim(`(${resultLines} lines, Ctrl+R to expand)`)}`)
+    
+    // 使用内容分析器分析结果
+    const analysis = analyzeContent(result)
+    
+    // 总是创建可折叠的长内容块，让用户可以选择展开
+    const resultId = `tool-result-${toolName.toLowerCase()}-${Date.now()}`
+    return createLongContentBlock(
+      detailedResult,
+      analysis.contentType,
+      briefResult,
+      {
+        collapsed: true, // 默认折叠，显示简洁信息
+        maxLines: analysis.shouldCollapse ? 15 : 5,
+        id: resultId
+      },
+      {
+        toolName,
+        contentType: analysis.contentType,
+        estimatedLines: analysis.estimatedLines,
+        hasLongContent: true
+      }
+    )
+  }
+
+  /**
+   * 格式化详细的工具执行结果
+   */
+  private formatDetailedToolResult(toolName: string, result: string, success: boolean): string {
+    const lines = [`🔧 ${toolName} 执行结果`, '']
+    
+    lines.push(`状态: ${success ? '✅ 成功' : '❌ 失败'}`)
+    lines.push(`结果长度: ${result.length} 字符，${result.split('\n').length} 行`)
+    lines.push('')
+    lines.push('详细内容:')
+    lines.push('─'.repeat(40))
+    lines.push(result)
+    lines.push('─'.repeat(40))
+    
+    return lines.join('\n')
+  }
+
+
+  /**
+   * 分析内容并决定是否需要创建可折叠块
+   */
+  /**
+   * 检测是否为创作内容（永远不应该被折叠）
+   */
+  private isCreativeContent(content: string): boolean {
+    const creativePatternsOrder = [
+      CONTENT_TYPE_PATTERNS['creative-content'],
+      CONTENT_TYPE_PATTERNS['creative-writing'], 
+      CONTENT_TYPE_PATTERNS['article'],
+      CONTENT_TYPE_PATTERNS['novel']
+    ]
+    
+    return creativePatternsOrder.some(pattern => pattern.test(content))
+  }
+
+  private analyzeContentForCollapsible(content: string): ContentAnalysis {
+    const lines = content.split('\n')
+    const lineCount = lines.length
+    const charCount = content.length
+    const hasLongLines = lines.some(line => line.length > 120)
+    const hasCodeBlocks = /```[\s\S]*?```/.test(content)
+    
+    // 检测内容类型
+    let contentType: CollapsibleContentType = 'long-text'
+    for (const [type, pattern] of Object.entries(CONTENT_TYPE_PATTERNS)) {
+      if (pattern.test(content)) {
+        contentType = type as CollapsibleContentType
+        break
+      }
+    }
+    
+    // 优先检测创作内容 - 永远不折叠
+    if (this.isCreativeContent(content)) {
+      return {
+        shouldAutoCollapse: false,  // 创作内容永远不折叠
+        estimatedLines: lineCount,
+        contentType: 'creative-content',
+        hasCodeBlocks,
+        hasLongLines,
+        complexity: lineCount > 50 ? 'complex' : lineCount > 20 ? 'medium' : 'simple'
+      }
+    }
+    
+    // 判断是否应该自动折叠
+    let shouldAutoCollapse = false
+    switch (contentType) {
+      case 'tool-execution':
+        shouldAutoCollapse = lineCount > AUTO_COLLAPSE_THRESHOLDS.toolOutputLines
+        break
+      case 'code-block':
+        shouldAutoCollapse = lineCount > AUTO_COLLAPSE_THRESHOLDS.codeBlockLines
+        break
+      case 'error-message':
+        shouldAutoCollapse = lineCount > AUTO_COLLAPSE_THRESHOLDS.errorMessageLines
+        break
+      case 'creative-content':
+      case 'creative-writing':
+      case 'article':
+      case 'novel':
+        shouldAutoCollapse = false  // 创作内容永远不折叠
+        break
+      default:
+        shouldAutoCollapse = lineCount > AUTO_COLLAPSE_THRESHOLDS.lines || 
+                           charCount > AUTO_COLLAPSE_THRESHOLDS.characters
+    }
+    
+    // 计算复杂度
+    let complexity: ContentAnalysis['complexity'] = 'simple'
+    if (hasCodeBlocks || lineCount > 50) complexity = 'complex'
+    else if (lineCount > 20 || hasLongLines) complexity = 'medium'
+    
+    return {
+      shouldAutoCollapse,
+      estimatedLines: lineCount,
+      contentType,
+      hasCodeBlocks,
+      hasLongLines,
+      complexity
+    }
+  }
+
+  /**
+   * 将长内容转换为可折叠的内容块
+   */
+  private createCollapsibleContentBlocks(content: string): ContentBlock[] {
+    const analysis = this.analyzeContentForCollapsible(content)
+    
+    // 如果内容不需要折叠，返回普通文本块
+    if (!analysis.shouldAutoCollapse) {
+      return [createTextBlock(content)]
+    }
+    
+    // 创建可折叠的长内容块
+    return [createLongContentBlock(
+      content,
+      analysis.contentType,
+      undefined, // 让组件自动生成标题
+      {
+        collapsed: analysis.shouldAutoCollapse,
+        maxLines: AUTO_COLLAPSE_THRESHOLDS.lines,
+        autoCollapse: true
+      },
+      {
+        estimatedLines: analysis.estimatedLines,
+        hasLongContent: true,
+        contentType: analysis.contentType
+      }
+    )]
   }
 
   /**
@@ -310,9 +836,12 @@ export class WriteFlowAIService {
     const rawContent = data.content?.[0]?.text || '无响应内容'
     const parsedResponse = parseAIResponse(rawContent)
     
+    // 分析内容并创建可折叠的内容块
+    const collapsibleBlocks = this.createCollapsibleContentBlocks(rawContent)
+    
     return {
       content: rawContent,
-      contentBlocks: parsedResponse.content,
+      contentBlocks: collapsibleBlocks.length > 0 ? collapsibleBlocks : parsedResponse.content,
       usage: {
         inputTokens: data.usage?.input_tokens || 0,
         outputTokens: data.usage?.output_tokens || 0
@@ -384,10 +913,13 @@ export class WriteFlowAIService {
     const finalTokens = Math.ceil(content.length / 4)
     const stats = responseManager.completeStreaming(streamId, finalTokens)
     const parsedResponse = parseAIResponse(content)
+    
+    // 分析内容并创建可折叠的内容块
+    const collapsibleBlocks = this.createCollapsibleContentBlocks(content)
 
     return {
       content,
-      contentBlocks: parsedResponse.content,
+      contentBlocks: collapsibleBlocks.length > 0 ? collapsibleBlocks : parsedResponse.content,
       usage: { inputTokens: 0, outputTokens: finalTokens },
       cost: 0,
       duration: stats.duration,
@@ -451,9 +983,12 @@ export class WriteFlowAIService {
     const rawContent = data.choices?.[0]?.message?.content || '无响应内容'
     const parsedResponse = parseAIResponse(rawContent)
     
+    // 分析内容并创建可折叠的内容块
+    const collapsibleBlocks = this.createCollapsibleContentBlocks(rawContent)
+    
     return {
       content: rawContent,
-      contentBlocks: parsedResponse.content,
+      contentBlocks: collapsibleBlocks.length > 0 ? collapsibleBlocks : parsedResponse.content,
       usage: {
         inputTokens: data.usage?.prompt_tokens || 0,
         outputTokens: data.usage?.completion_tokens || 0
@@ -635,9 +1170,12 @@ export class WriteFlowAIService {
     const rawContent = data.choices?.[0]?.message?.content || '无响应内容'
     const parsedResponse = parseAIResponse(rawContent)
     
+    // 分析内容并创建可折叠的内容块
+    const collapsibleBlocks = this.createCollapsibleContentBlocks(rawContent)
+    
     return {
       content: rawContent,
-      contentBlocks: parsedResponse.content,
+      contentBlocks: collapsibleBlocks.length > 0 ? collapsibleBlocks : parsedResponse.content,
       usage: {
         inputTokens: data.usage?.prompt_tokens || 0,
         outputTokens: data.usage?.completion_tokens || 0
@@ -695,9 +1233,12 @@ export class WriteFlowAIService {
     const rawContent = data.choices?.[0]?.message?.content || '无响应内容'
     const parsedResponse = parseAIResponse(rawContent)
     
+    // 分析内容并创建可折叠的内容块
+    const collapsibleBlocks = this.createCollapsibleContentBlocks(rawContent)
+    
     return {
       content: rawContent,
-      contentBlocks: parsedResponse.content,
+      contentBlocks: collapsibleBlocks.length > 0 ? collapsibleBlocks : parsedResponse.content,
       usage: {
         inputTokens: data.usage?.prompt_tokens || 0,
         outputTokens: data.usage?.completion_tokens || 0
@@ -896,8 +1437,19 @@ export class WriteFlowAIService {
     let consecutiveFailures = 0
     const maxConsecutiveFailures = 2
     let lastRoundHadTodoUpdate = false
+    
+    // 添加用户请求到上下文管理器
+    const userRequestTokens = estimateTokens(request.prompt)
+    this.contextManager.addEntry({
+      role: 'user',
+      content: request.prompt,
+      tokens: userRequestTokens,
+      importance: this.contextManager.calculateImportance(request.prompt, 'conversation'),
+      type: 'conversation'
+    })
 
     while (iteration < maxIterations) {
+      const iterationStartTime = Date.now()
       console.log(`🔄 AI 正在思考和执行...`)
       
       const payload: any = {
@@ -957,12 +1509,38 @@ export class WriteFlowAIService {
         }
       }
       
-      totalInputTokens += data.usage?.prompt_tokens || 0
-      totalOutputTokens += data.usage?.completion_tokens || 0
+      const promptTokens = data.usage?.prompt_tokens || 0
+      const completionTokens = data.usage?.completion_tokens || 0
+      
+      totalInputTokens += promptTokens
+      totalOutputTokens += completionTokens
+      
+      // 计算成本并记录到 CostTracker
+      const cost = this.calculateCost(data.usage, profile.provider)
+      const duration = Date.now() - iterationStartTime
+      
+      addCostEntry(
+        profile.modelName,
+        promptTokens,
+        completionTokens,
+        cost,
+        duration,
+        message.tool_calls && message.tool_calls.length > 0 ? 'tool' : 'chat'
+      )
 
       // 如果AI没有调用工具，则对话结束
       if (!message.tool_calls || message.tool_calls.length === 0) {
         conversationHistory += this.sanitizeLLMArtifacts(message.content)
+        
+        // 添加AI响应到上下文管理器
+        const responseTokens = estimateTokens(message.content)
+        this.contextManager.addEntry({
+          role: 'assistant',
+          content: message.content,
+          tokens: responseTokens,
+          importance: this.contextManager.calculateImportance(message.content, 'conversation'),
+          type: 'conversation'
+        })
 
         // 若上一轮刚进行了 todo_* 更新，这一轮是正文生成：
         // 1) 自动将当前 in_progress 置为 completed
@@ -1013,7 +1591,9 @@ export class WriteFlowAIService {
       let currentRoundHasFailures = false
       let currentRoundHasTodoUpdate = false
       for (const toolCall of message.tool_calls) {
-        console.log(`🔧 [${toolCall.function.name}] 正在执行...`)
+        // 显示简洁的工具执行信息（已通过 displayToolExecution 处理）
+        this.displayToolExecution(toolCall)
+        
         // 过滤TODO工具的执行信息，不添加到conversation history中
         if (!toolCall.function.name.includes('todo')) {
           conversationHistory += `\nAI: [调用 ${toolCall.function.name} 工具] 正在执行...\n`
@@ -1023,19 +1603,32 @@ export class WriteFlowAIService {
           const toolResult = await this.executeDeepSeekToolCall(toolCall)
           
           if (toolResult.success) {
-            console.log(`✅ [${toolCall.function.name}] ${toolResult.result}`)
-            // 过滤TODO工具结果，不添加到conversation history中
+            // 显示简洁的结果消息（通过 createToolResultBlock 或直接输出）
             if (!toolCall.function.name.includes('todo')) {
+              const briefMessage = this.getBriefResultMessage(toolCall.function.name, 'success', toolResult.result)
+              const resultLines = toolResult.result.split('\n').length
+              console.log(`${briefMessage} ${format.dim(`(${resultLines} lines, Ctrl+R to expand)`)}`)
               conversationHistory += `${toolCall.function.name}工具: ${toolResult.result}\n`
+              
+              // 添加工具执行结果到上下文管理器
+              const toolResultTokens = estimateTokens(toolResult.result)
+              this.contextManager.addEntry({
+                role: 'tool',
+                content: `${toolCall.function.name}: ${toolResult.result}`,
+                tokens: toolResultTokens,
+                importance: this.contextManager.calculateImportance(toolResult.result, 'tool_use'),
+                type: 'tool_use'
+              })
             }
             consecutiveFailures = 0 // 重置连续失败计数
             if (toolCall.function.name.startsWith('todo_')) {
               currentRoundHasTodoUpdate = true
             }
           } else {
-            console.log(`❌ [${toolCall.function.name}] ${toolResult.error}`)
-            // TODO工具的错误也不添加到conversation history中
+            // 显示简洁的错误消息
             if (!toolCall.function.name.includes('todo')) {
+              const briefMessage = this.getBriefResultMessage(toolCall.function.name, 'error', toolResult.error || '执行失败')
+              console.log(`${briefMessage} ${format.dim('(error)')}`)
               conversationHistory += `${toolCall.function.name}工具: ${toolResult.error}\n`
             }
             currentRoundHasFailures = true
@@ -1049,8 +1642,10 @@ export class WriteFlowAIService {
           })
         } catch (error) {
           const errorMsg = `工具执行失败: ${error instanceof Error ? error.message : '未知错误'}`
-          console.log(`❌ [${toolCall.function.name}] ${errorMsg}`)
-          conversationHistory += `${toolCall.function.name}工具: ${errorMsg}\n`
+          if (!toolCall.function.name.includes('todo')) {
+            console.log(`❌ [${toolCall.function.name}] ${errorMsg} ${format.dim('(exception)')}`)
+            conversationHistory += `${toolCall.function.name}工具: ${errorMsg}\n`
+          }
           currentRoundHasFailures = true
           
           messages.push({
@@ -1362,6 +1957,53 @@ export class WriteFlowAIService {
   }
 
   /**
+   * 标准化工具参数 - 解决 AI 模型参数命名不一致问题
+   */
+  private normalizeToolParams(toolName: string, args: any): any {
+    const normalized = { ...args }
+    
+    switch (toolName) {
+      case 'Read':
+        // AI 常用: path, file_path, filePath, filename
+        if (args.path && !args.file_path) normalized.file_path = args.path
+        if (args.filePath && !args.file_path) normalized.file_path = args.filePath  
+        if (args.filename && !args.file_path) normalized.file_path = args.filename
+        break
+        
+      case 'Write':
+        if (args.path && !args.file_path) normalized.file_path = args.path
+        if (args.filePath && !args.file_path) normalized.file_path = args.filePath
+        if (args.text && !args.content) normalized.content = args.text
+        break
+        
+      case 'Edit': 
+        if (args.path && !args.file_path) normalized.file_path = args.path
+        if (args.filePath && !args.file_path) normalized.file_path = args.filePath
+        if (args.new_content && !args.new_string) normalized.new_string = args.new_content
+        if (args.replacement && !args.new_string) normalized.new_string = args.replacement
+        break
+        
+      case 'Bash':
+        // AI 常用: cmd, command
+        if (args.cmd && !args.command) normalized.command = args.cmd
+        if (args.script && !args.command) normalized.command = args.script
+        break
+        
+      case 'Grep':
+        if (args.search && !args.pattern) normalized.pattern = args.search
+        if (args.query && !args.pattern) normalized.pattern = args.query
+        break
+        
+      case 'Glob':
+        if (args.search && !args.pattern) normalized.pattern = args.search
+        if (args.glob && !args.pattern) normalized.pattern = args.glob
+        break
+    }
+    
+    return normalized
+  }
+
+  /**
    * 执行 DeepSeek API 的工具调用 - 使用新的工具编排器
    */
   private async executeDeepSeekToolCall(toolCall: any): Promise<AIToolExecutionResult> {
@@ -1371,7 +2013,12 @@ export class WriteFlowAIService {
     let args: any
     try {
       args = this.safeJSONParse(argsStr)
-      console.log(`🔧 [${toolName}] 解析参数:`, JSON.stringify(args, null, 2))
+      // 移除详细参数日志 - 太冗余了
+      // console.log(`🔧 [${toolName}] 解析参数:`, JSON.stringify(args, null, 2))
+      
+      // 🔧 新增：标准化参数，解决 AI 模型参数命名不一致问题
+      args = this.normalizeToolParams(toolName, args)
+      // console.log(`🔧 [${toolName}] 标准化后参数:`, JSON.stringify(args, null, 2))
     } catch (parseError) {
       console.error(`❌ [${toolName}] JSON 解析失败，原始字符串:`, argsStr)
       return {
@@ -1509,11 +2156,13 @@ export class WriteFlowAIService {
         const result = await this.executeToolCall(toolCall)
         toolResults.push(result)
         
-        // 显示工具执行过程
+        // 显示工具执行过程 - 使用简洁消息
         if (result.success) {
-          console.log(`✅ [${result.toolName}] ${result.result}`)
+          const briefMessage = this.getBriefResultMessage(result.toolName, 'success', result.result)
+          console.log(briefMessage)
         } else {
-          console.log(`❌ [${result.toolName}] ${result.error}`)
+          const briefMessage = this.getBriefResultMessage(result.toolName, 'error', result.error || '执行失败')
+          console.log(briefMessage)
         }
       }
 
