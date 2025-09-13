@@ -660,6 +660,14 @@ export class WriteFlowAIService {
       glm: {
         baseURL: process.env.API_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4',
         envKeys: ['GLM_API_KEY', 'ZHIPUAI_API_KEY']
+      },
+      custom: {
+        baseURL: process.env.CUSTOM_BASE_URL || process.env.API_BASE_URL || '',
+        envKeys: ['CUSTOM_API_KEY', 'API_KEY']
+      },
+      'custom-openai': {
+        baseURL: process.env.CUSTOM_BASE_URL || process.env.API_BASE_URL || '',
+        envKeys: ['CUSTOM_API_KEY', 'API_KEY', 'OPENAI_API_KEY']
       }
     }
     
@@ -676,8 +684,14 @@ export class WriteFlowAIService {
       }
     }
     
-    if (!apiKey) {
-      logWarn(`找不到 ${providerName} 的 API 密钥`)
+    // 对于自定义提供商，检查 baseURL 是否配置
+    if ((providerName === 'custom' || providerName === 'custom-openai') && !config.baseURL) {
+      logWarn(`自定义提供商 ${providerName} 需要配置 CUSTOM_BASE_URL 或 API_BASE_URL 环境变量`)
+      return null
+    }
+
+    if (!apiKey && config.envKeys.length > 0) {
+      logWarn(`找不到 ${providerName} 的 API 密钥，尝试的环境变量: ${config.envKeys.join(', ')}`)
       return null
     }
     

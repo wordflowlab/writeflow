@@ -237,6 +237,26 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
       'X-DashScope-SSE': 'enable'
     },
     errorField: 'error'
+  },
+  
+  custom: {
+    name: 'custom',
+    baseURL: '', // 由环境变量或配置文件确定
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${apiKey}'
+    },
+    errorField: 'error'
+  },
+  
+  'custom-openai': {
+    name: 'custom-openai',
+    baseURL: '', // 由环境变量或配置文件确定
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${apiKey}'
+    },
+    errorField: 'error'
   }
 }
 
@@ -268,4 +288,12 @@ export function createKimiAdapter(config?: Partial<StreamAdapterConfig>): Univer
 
 export function createQwenAdapter(config?: Partial<StreamAdapterConfig>): UniversalOpenAIAdapter {
   return createUniversalOpenAIAdapter('qwen', config)
+}
+
+export function createCustomAdapter(config?: Partial<StreamAdapterConfig>): UniversalOpenAIAdapter {
+  return createUniversalOpenAIAdapter('custom', config)
+}
+
+export function createCustomOpenAIAdapter(config?: Partial<StreamAdapterConfig>): UniversalOpenAIAdapter {
+  return createUniversalOpenAIAdapter('custom-openai', config)
 }

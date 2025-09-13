@@ -17,6 +17,12 @@ export const help = `
 - 设置 API 密钥和模型参数
 - 查看模型状态和使用情况
 
+支持的自定义提供商环境变量：
+- CUSTOM_BASE_URL: 自定义 API 端点 URL
+- CUSTOM_API_KEY: 自定义 API 密钥
+- API_BASE_URL: 通用 API 端点 URL (备用)
+- API_KEY: 通用 API 密钥 (备用)
+
 交互操作：
 - ↑/↓ 导航选项
 - Space 键循环模型

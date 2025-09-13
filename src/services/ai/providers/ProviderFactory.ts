@@ -11,6 +11,8 @@ export type ProviderName =
   | 'kimi' 
   | 'qwen' 
   | 'glm'
+  | 'custom'
+  | 'custom-openai'
 
 /**
  * 简化的提供商接口
@@ -76,6 +78,8 @@ export function createProvider(providerName: ProviderName): AIProvider {
     case 'kimi':
     case 'qwen':
     case 'glm':
+    case 'custom':
+    case 'custom-openai':
       // 这些提供商使用 OpenAI 兼容协议，复用 OpenAI 提供商
       provider = createOpenAIProvider()
       break
@@ -97,6 +101,15 @@ export function createProvider(providerName: ProviderName): AIProvider {
 export function inferProviderFromModel(modelName: string): ProviderName {
   const lowerModel = modelName.toLowerCase()
 
+  // 优先检查 custom 提供商（避免被其他关键词覆盖）
+  if (lowerModel.includes('custom')) {
+    // 区分 custom 和 custom-openai
+    if (lowerModel.includes('openai')) {
+      return 'custom-openai'
+    }
+    return 'custom'
+  }
+
   if (lowerModel.includes('claude') || lowerModel.includes('anthropic')) {
     return 'anthropic'
   } else if (lowerModel.includes('deepseek')) {
@@ -117,6 +130,11 @@ export function inferProviderFromModel(modelName: string): ProviderName {
     return envProvider
   }
 
+  // 检查是否配置了自定义提供商环境变量
+  if (process.env.CUSTOM_BASE_URL || process.env.CUSTOM_API_KEY) {
+    return 'custom'
+  }
+
   // 默认返回 deepseek
   return 'deepseek'
 }
@@ -125,14 +143,14 @@ export function inferProviderFromModel(modelName: string): ProviderName {
  * 检查是否为有效的提供商名称
  */
 function isValidProviderName(name: string): name is ProviderName {
-  return ['anthropic', 'bigdream', 'deepseek', 'openai', 'kimi', 'qwen', 'glm'].includes(name)
+  return ['anthropic', 'bigdream', 'deepseek', 'openai', 'kimi', 'qwen', 'glm', 'custom', 'custom-openai'].includes(name)
 }
 
 /**
  * 获取所有支持的提供商名称
  */
 export function getSupportedProviders(): ProviderName[] {
-  return ['anthropic', 'bigdream', 'deepseek', 'openai', 'kimi', 'qwen', 'glm']
+  return ['anthropic', 'bigdream', 'deepseek', 'openai', 'kimi', 'qwen', 'glm', 'custom', 'custom-openai']
 }
 
 /**

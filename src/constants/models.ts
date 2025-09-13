@@ -199,4 +199,5 @@ export default {
   ],
   ollama: [], // Ollama 支持本地模型，动态配置
   custom: [], // 自定义 OpenAI 兼容 API
+  'custom-openai': [], // 自定义 OpenAI API
 }

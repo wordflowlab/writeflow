@@ -82,6 +82,14 @@ export const providers = {
     requiresApiKey: true,
     isCustom: true,
   },
+  'custom-openai': {
+    name: 'Custom OpenAI API',
+    nameZh: '自定义 OpenAI API',
+    baseURL: '', // 用户自定义
+    description: '完全自定义的 OpenAI 兼容服务端点',
+    requiresApiKey: true,
+    isCustom: true,
+  },
 }
 
 // 提供商类型定义
