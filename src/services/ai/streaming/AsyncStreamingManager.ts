@@ -1,5 +1,5 @@
 /**
- * 异步流式管理器 - 借鉴 Kode 的 AsyncGenerator 消息流模式
+ * 异步流式管理器 - 采用 AsyncGenerator 流式架构模式
  * 将传统 SSE 流重构为结构化的消息流处理系统
  */
 
@@ -7,7 +7,7 @@ import { getMessageLogger } from '../messaging/MessageManager.js'
 import { getProgressManager } from '../tools/ProgressManager.js'
 
 /**
- * 流式消息类型定义 - 借鉴 Kode 的消息分类
+ * 流式消息类型定义 - 采用标准的消息分类
  */
 export type StreamMessage = 
   | AIResponseMessage 
@@ -74,7 +74,7 @@ export interface StreamingOptions {
 }
 
 /**
- * 异步流式管理器 - Kode 风格的消息流处理
+ * 异步流式管理器 - 现代化的消息流处理
  */
 export class AsyncStreamingManager {
   private messageLogger = getMessageLogger()
@@ -83,7 +83,7 @@ export class AsyncStreamingManager {
 
   /**
    * 主要的流式处理函数 - 返回 AsyncGenerator
-   * 这是 Kode 模式的核心：每个消息都通过 yield 逐步发送
+   * 这是 AsyncGenerator 架构的核心：每个消息都通过 yield 逐步发送
    */
   async* processStreamingRequest(
     request: any,
@@ -101,7 +101,7 @@ export class AsyncStreamingManager {
         timestamp: Date.now()
       } as SystemMessage
 
-      // 模拟分阶段处理 - 借鉴 Kode 的渐进式处理
+      // 模拟分阶段处理 - 采用渐进式流式处理
       yield* this.processAIResponse(request, streamId, abortController, options)
 
       // 如果有工具调用，处理工具执行

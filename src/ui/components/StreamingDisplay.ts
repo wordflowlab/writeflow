@@ -1,5 +1,5 @@
 /**
- * 流式显示组件 - 借鉴 Kode 的实时UI更新机制
+ * 流式显示组件 - 采用现代化的实时UI更新机制
  * 处理 AsyncGenerator 消息流并提供优雅的终端展示
  */
 
@@ -31,7 +31,7 @@ export interface DisplayOptions {
 }
 
 /**
- * 流式显示管理器 - Kode 风格的UI更新
+ * 流式显示管理器 - 现代流式风格的UI更新
  */
 export class StreamingDisplay {
   private state: DisplayState
@@ -163,7 +163,7 @@ export class StreamingDisplay {
     const formatted = formatStreamMessage(message)
     
     if (this.options.compactMode && this.isIncrementalUpdate(message)) {
-      // 增量更新模式 - 类似 Kode 的实时打字效果
+      // 增量更新模式 - 现代流式的实时打字效果
       this.renderIncremental(formatted, message)
     } else {
       // 完整消息渲染

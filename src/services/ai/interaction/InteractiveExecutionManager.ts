@@ -1,5 +1,5 @@
 /**
- * 交互式执行管理器 - 参考 Kode 的分步骤可中断响应
+ * 交互式执行管理器 - 基于最佳实践的分步骤可中断响应
  * 提供用户可控的、分阶段的工具执行体验
  */
 
@@ -66,7 +66,7 @@ export interface InteractionOptions {
 }
 
 /**
- * 交互式执行管理器 - Kode 风格的分步骤控制
+ * 交互式执行管理器 - 现代流式的分步骤控制
  */
 export class InteractiveExecutionManager {
   private sessions = new Map<string, ExecutionSession>()
@@ -109,7 +109,7 @@ export class InteractiveExecutionManager {
   }
 
   /**
-   * 开始交互式执行 - Kode 风格的分步骤控制
+   * 开始交互式执行 - 实时交互式的分步骤控制
    */
   async startInteractiveExecution(
     plan: ExecutionPlan,
@@ -232,7 +232,7 @@ export class InteractiveExecutionManager {
   }
 
   /**
-   * 显示执行计划 - Kode 风格的预览
+   * 显示执行计划 - 现代流式的预览
    */
   private displayExecutionPlan(plan: ExecutionPlan): void {
     this.messageLogger.systemInfo('📋 执行计划预览', {

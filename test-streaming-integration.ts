@@ -1,7 +1,7 @@
 #!/usr/bin/env npx tsx
 
 /**
- * WriteFlow 流式集成测试 - 验证 Kode 风格实时工具执行显示
+ * WriteFlow 流式集成测试 - 验证现代流式实时工具执行显示
  * 测试完整的 AsyncGenerator 架构从 DeepSeek -> WriteFlowAIService -> UI
  */
 
@@ -110,7 +110,7 @@ async function testStreamingIntegration() {
     // 验证是否成功实现实时显示
     if (toolExecutionCount > 0) {
       console.log('\n🎉 成功验证实时工具执行显示!')
-      console.log('✅ Kode 风格的 AsyncGenerator 架构工作正常')
+      console.log('✅ AsyncGenerator 流式架构工作正常')
       console.log('✅ 解决了 "一口气输出" 问题 - 现在支持实时流式显示')
     } else {
       console.log('\n⚠️  未检测到工具执行消息')

@@ -100,7 +100,7 @@ class TodoToolAdapter implements LegacyWritingTool {
     }
   }
 
-  // 生成彩色的 Todos 文本输出 - 借鉴 Kode 的视觉效果
+  // 生成彩色的 Todos 文本输出 - 采用现代化的视觉效果
   private renderColorfulTodos(todoTool: TodoWriteTool): string {
     const todos = (todoTool as any).cachedTodos as Todo[]
     
@@ -108,7 +108,7 @@ class TodoToolAdapter implements LegacyWritingTool {
       return '\n🎯 **任务列表已更新**\n\n    ⎿  暂无任务\n'
     }
 
-    // 排序: [completed, in_progress, pending] - 与 Kode 相同的逻辑
+    // 排序: [completed, in_progress, pending] - 采用最佳实践的逻辑
     const sortedTodos = [...todos].sort((a, b) => {
       const order = ['completed', 'in_progress', 'pending']
       return (
@@ -123,7 +123,7 @@ class TodoToolAdapter implements LegacyWritingTool {
     let output = '\n🎯 **任务列表已更新**\n\n'
     
     sortedTodos.forEach((todo, index) => {
-      // 确定复选框符号和显示样式 - 借鉴 Kode 的精确配色
+      // 确定复选框符号和显示样式 - 采用最佳实践的精确配色
       let checkbox: string
       let statusLabel: string
       let emphasis = ''

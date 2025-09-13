@@ -221,7 +221,7 @@ export class ToolExecutionManager {
     const executionId = `${toolName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     try {
-      // 开始进度跟踪 - Kode 风格的渐进式展示
+      // 开始进度跟踪 - 实时交互式的渐进式展示
       startToolProgress(toolName, executionId)
       
       // 检查权限

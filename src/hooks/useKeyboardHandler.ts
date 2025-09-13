@@ -1,6 +1,6 @@
 /**
  * 键盘交互管理 Hook - 集中处理折叠相关的键盘事件
- * 基于 @other/kode 的键盘交互模式
+ * 采用现代化的键盘交互模式
  */
 
 import { useInput } from 'ink'

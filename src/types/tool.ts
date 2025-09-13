@@ -40,7 +40,7 @@ export interface EnhancedWritingTool extends WritingTool {
   // 流式输出支持（用于长时间运行的工具）
   executeStream?(input: ToolInput): AsyncGenerator<ToolResult, void, unknown>
   
-  // 内嵌专用提示词（借鉴 Kode 模式）
+  // 内嵌专用提示词（基于最佳实践）
   getPrompt?(options?: { safeMode?: boolean }): Promise<string>
   
   // 细粒度权限验证

@@ -105,7 +105,7 @@ async function testToolStreaming() {
       console.log('\n🎉 成功验证实时工具执行显示!')
       console.log('✅ 工具执行进度实时推送')
       console.log('✅ 完全解决 "一口气输出" 问题')
-      console.log('✅ Kode 风格流式架构完美运行')
+      console.log('✅ AsyncGenerator 流式架构完美运行')
     } else {
       console.log('\n📝 当前测试未包含工具执行')
       console.log('这可能是由于离线模式的限制')

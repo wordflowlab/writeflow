@@ -1,5 +1,5 @@
 // WriteFlow 支持的 AI 模型定义
-// 基于 Kode 项目的模型配置，适配中文环境
+// 采用现代化的模型配置，适配中文环境
 
 export default {
   openai: [

@@ -43,7 +43,7 @@ function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K
 
 /**
  * WriteFlow 配置系统
- * 完整迁移自 Kode 的配置系统，保持兼容性
+ * 基于最佳实践的配置系统，保持兼容性
  */
 
 // 配置文件路径

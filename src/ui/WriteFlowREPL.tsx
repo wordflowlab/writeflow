@@ -1,6 +1,6 @@
 /**
  * WriteFlow REPL - 重构版本
- * 完全采用 Kode 架构，使用新的消息类型系统和渲染组件
+ * 采用 AsyncGenerator 流式架构，使用新的消息类型系统和渲染组件
  */
 
 import { Box, Text } from 'ink'
@@ -409,18 +409,34 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         for (const line of lines) {
           const trimmed = line.trim()
           
-          // 检测完整的JSON TODO更新行
-          if (trimmed.startsWith('{') && trimmed.includes('"todos"') && trimmed.endsWith('}')) {
+          // 🛡️ 关键修复：检测并过滤AI生成的JSON格式内容
+          if (trimmed.startsWith('{') && (
+            trimmed.includes('"todos"') ||
+            trimmed.includes('"type":"tool_use"') ||
+            trimmed.includes('"id":"call_') ||
+            trimmed.includes('"name":"todo_')
+          ) && trimmed.endsWith('}')) {
             try {
-              const todoData = JSON.parse(trimmed)
-              if (todoData.todos && Array.isArray(todoData.todos)) {
-                pendingTodoUpdate = todoData.todos
+              const jsonData = JSON.parse(trimmed)
+              if (jsonData.todos && Array.isArray(jsonData.todos)) {
+                pendingTodoUpdate = jsonData.todos
                 hasJsonUpdate = true
-                continue // 跳过此行，不添加到显示内容
+                continue // 跳过TODO JSON行，不显示
+              }
+              if (jsonData.type === 'tool_use') {
+                console.log(`🛡️ [REPL过滤] 检测到AI生成的tool_use JSON，已过滤`)
+                continue // 跳过tool_use JSON行，不显示
               }
             } catch (e) {
-              // 不是有效的JSON，保留原始内容
+              // JSON解析失败，可能是不完整的JSON，保留原始内容
+              console.log(`🛡️ [REPL过滤] JSON解析失败，保留原始内容: ${trimmed.slice(0, 50)}...`)
             }
+          }
+          
+          // 🛡️ 额外保护：检测不完整的JSON模式
+          if (trimmed.includes('{"type":"tool_use"') || trimmed.includes('"id":"call_')) {
+            console.log(`🛡️ [REPL过滤] 检测到不完整的工具调用JSON模式，已过滤`)
+            continue // 跳过此行，不添加到显示内容
           }
           
           // 过滤明确的系统消息，但保护内容中的格式
@@ -487,16 +503,31 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
             for (const line of lines) {
               const trimmed = line.trim()
               
-              // 跳过JSON TODO更新行
-              if (trimmed.startsWith('{') && trimmed.includes('"todos"') && trimmed.endsWith('}')) {
+              // 🛡️ 跳过所有工具调用JSON行 - 与onToken过滤逻辑保持一致
+              if (trimmed.startsWith('{') && (
+                trimmed.includes('"todos"') ||
+                trimmed.includes('"type":"tool_use"') ||
+                trimmed.includes('"id":"call_') ||
+                trimmed.includes('"name":"todo_')
+              ) && trimmed.endsWith('}')) {
                 try {
-                  const todoData = JSON.parse(trimmed)
-                  if (todoData.todos && Array.isArray(todoData.todos)) {
+                  const jsonData = JSON.parse(trimmed)
+                  if (jsonData.todos && Array.isArray(jsonData.todos)) {
                     continue // 跳过TODO JSON行
                   }
+                  if (jsonData.type === 'tool_use') {
+                    console.log(`🛡️ [最终清理] 过滤tool_use JSON`)
+                    continue // 跳过tool_use JSON行
+                  }
                 } catch (e) {
-                  // 不是有效JSON，保留原始内容
+                  // JSON解析失败，保留原始内容
                 }
+              }
+              
+              // 🛡️ 额外保护：检测不完整的工具调用JSON模式
+              if (trimmed.includes('{"type":"tool_use"') || trimmed.includes('"id":"call_')) {
+                console.log(`🛡️ [最终清理] 过滤不完整的工具调用JSON`)
+                continue
               }
               
               // 跳过系统消息行，保护创意内容

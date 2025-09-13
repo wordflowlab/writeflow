@@ -1,5 +1,5 @@
 /**
- * WriteFlow 消息系统 - 完整照抄 Kode 的实现
+ * WriteFlow 消息系统 - 采用 AsyncGenerator 流式架构
  * 支持实时工具执行显示的消息类型和创建函数
  */
 
@@ -14,7 +14,7 @@ import type {
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Tool, ToolUseContext } from '../Tool.js'
 
-// 📋 常量定义 - 照抄 Kode
+// 📋 常量定义 - 标准架构
 export const INTERRUPT_MESSAGE = '[Request interrupted by user]'
 export const INTERRUPT_MESSAGE_FOR_TOOL_USE = '[Request interrupted by user for tool use]'
 export const CANCEL_MESSAGE = "The user doesn't want to take this action right now. STOP what you are doing and wait for the user to tell you how to proceed."
@@ -22,7 +22,7 @@ export const REJECT_MESSAGE = "The user doesn't want to proceed with this tool u
 export const NO_RESPONSE_REQUESTED = 'No response requested.'
 export const NO_CONTENT_MESSAGE = '[No content]'
 
-// 📝 消息类型定义 - 完全照抄 Kode 的类型系统
+// 📝 消息类型定义 - 实现流式架构消息类型系统
 export type UserMessage = {
   message: MessageParam
   type: 'user'
@@ -74,10 +74,10 @@ export type NormalizedMessage =
   | AssistantMessage
   | ProgressMessage
 
-// 🏭 消息创建函数 - 完全照抄 Kode 的实现
+// 🏭 消息创建函数 - 实现 AsyncGenerator 消息工厂
 
 /**
- * 创建基础助手消息 - 照抄 Kode 的 baseCreateAssistantMessage
+ * 创建基础助手消息 - 流式架构基础消息创建
  */
 function baseCreateAssistantMessage(
   content: ContentBlock[],
@@ -111,7 +111,7 @@ function baseCreateAssistantMessage(
 }
 
 /**
- * 创建助手消息 - 照抄 Kode
+ * 创建助手消息 - 流式架构实现
  */
 export function createAssistantMessage(content: string): AssistantMessage {
   return baseCreateAssistantMessage([
@@ -124,7 +124,7 @@ export function createAssistantMessage(content: string): AssistantMessage {
 }
 
 /**
- * 创建助手错误消息 - 照抄 Kode
+ * 创建助手错误消息 - 流式架构实现
  */
 export function createAssistantAPIErrorMessage(
   content: string,
@@ -142,7 +142,7 @@ export function createAssistantAPIErrorMessage(
 }
 
 /**
- * 创建用户消息 - 照抄 Kode
+ * 创建用户消息 - 流式架构实现
  */
 export function createUserMessage(
   content: string | ContentBlockParam[],
@@ -161,7 +161,7 @@ export function createUserMessage(
 }
 
 /**
- * 创建进度消息 - 核心！照抄 Kode 的 createProgressMessage
+ * 创建进度消息 - 核心！实现实时进度显示
  * 这是实时工具执行显示的关键函数
  */
 export function createProgressMessage(
@@ -183,7 +183,7 @@ export function createProgressMessage(
 }
 
 /**
- * 创建工具结果停止消息 - 照抄 Kode
+ * 创建工具结果停止消息 - 流式架构实现
  */
 export function createToolResultStopMessage(
   toolUseID: string,
@@ -197,7 +197,7 @@ export function createToolResultStopMessage(
 }
 
 /**
- * 标准化消息处理 - 照抄 Kode 的核心逻辑
+ * 标准化消息处理 - 实现 API 兼容层核心逻辑
  */
 export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
   return messages.flatMap(message => {

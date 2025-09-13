@@ -1,12 +1,12 @@
 /**
- * WriteFlow 并发工具协调器 - 完整照抄 Kode 的实现
+ * WriteFlow 并发工具协调器 - 实现 AsyncGenerator 并发架构
  * 支持多个 AsyncGenerator 的并发执行和结果流式推送
  */
 
 const NO_VALUE = Symbol('NO_VALUE')
 
 /**
- * 获取异步生成器的最后一个值 - 照抄 Kode
+ * 获取异步生成器的最后一个值 - 标准实现
  */
 export async function lastX<A>(as: AsyncGenerator<A>): Promise<A> {
   let lastValue: A | typeof NO_VALUE = NO_VALUE
@@ -20,7 +20,7 @@ export async function lastX<A>(as: AsyncGenerator<A>): Promise<A> {
 }
 
 /**
- * 队列中的生成器类型定义 - 照抄 Kode
+ * 队列中的生成器类型定义 - 流式架构类型
  */
 type QueuedGenerator<A> = {
   done: boolean | void
@@ -30,8 +30,8 @@ type QueuedGenerator<A> = {
 }
 
 /**
- * 并发运行多个生成器，实时 yield 结果 - 完全照抄 Kode 的核心逻辑
- * 这是 Kode 实时工具执行显示的关键函数！
+ * 并发运行多个生成器，实时 yield 结果 - AsyncGenerator 并发执行核心
+ * 这是实时工具执行显示的关键函数！
  * 
  * @param generators 要并发执行的异步生成器数组
  * @param concurrencyCap 并发数量限制，默认无限制

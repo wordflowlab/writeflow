@@ -75,7 +75,7 @@ async function testOfflineStreaming() {
     if (messageCount > 0) {
       console.log('\n🎉 成功验证 AsyncGenerator 流式架构!')
       console.log('✅ 消息流式推送正常')
-      console.log('✅ Kode 风格架构集成成功')
+      console.log('✅ AsyncGenerator 流式架构集成成功')
     } else {
       console.log('\n⚠️  未收到任何消息，可能存在问题')
     }

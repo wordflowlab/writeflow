@@ -296,7 +296,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
       return '🎯 **任务列表**\n\n    ⎿  暂无任务'
     }
 
-    // 排序: [completed, in_progress, pending] - 与 Kode 相同的逻辑
+    // 排序: [completed, in_progress, pending] - 采用最佳实践的逻辑
     const sortedTodos = [...todos].sort((a, b) => {
       const order = ['completed', 'in_progress', 'pending']
       return (

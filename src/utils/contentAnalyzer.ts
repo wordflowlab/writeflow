@@ -1,6 +1,6 @@
 /**
  * 内容分析器 - 智能判断内容是否需要折叠
- * 基于 @other/kode 的内容分析逻辑
+ * 采用先进设计的内容分析逻辑
  */
 
 import { 
@@ -19,7 +19,7 @@ export interface ContentAnalysis {
 }
 
 /**
- * 折叠阈值配置 - 借鉴 @other/kode 的经验值，提高阈值减少过度折叠
+ * 折叠阈值配置 - 基于最佳实践的经验值，提高阈值减少过度折叠
  */
 export const COLLAPSE_THRESHOLDS = {
   toolResult: { lines: 15, chars: 1200 },      // 工具结果：提高从10->15行

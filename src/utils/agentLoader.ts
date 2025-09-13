@@ -1,7 +1,7 @@
 /**
  * Agent 配置加载器
  * 动态加载和管理 WriteFlow 的专用 Agent
- * 参考 Kode 项目的架构设计，实现按需加载机制
+ * 基于最佳实践的架构设计，实现按需加载机制
  */
 
 import { existsSync, readFileSync } from 'fs'

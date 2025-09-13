@@ -1,5 +1,5 @@
 /**
- * 流式消息格式化引擎 - 借鉴 Kode 的实时渲染能力
+ * 流式消息格式化引擎 - 实现现代化的实时渲染能力
  * 提供 Markdown 实时渲染、语法高亮和视觉层次
  */
 
@@ -96,7 +96,7 @@ export class StreamingFormatter {
   }
 
   /**
-   * 格式化工具执行消息 - 借鉴 Kode 的工具执行展示
+   * 格式化工具执行消息 - 实现实时的工具执行展示
    */
   private formatToolExecution(message: any): string {
     const icon = this.getToolIcon(message.toolName)

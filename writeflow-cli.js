@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * WriteFlow 智能启动器 - 借鉴 Kode 的跨平台兼容性设计
+ * WriteFlow 智能启动器 - 实现跨平台兼容性设计
  * 
  * 解决 Windows 下的 ESM 模块加载问题：
  * - 优先使用编译后的纯 Node.js 版本 (Windows 最佳)

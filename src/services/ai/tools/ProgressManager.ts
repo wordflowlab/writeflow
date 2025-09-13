@@ -1,5 +1,5 @@
 /**
- * 进度管理器 - 参考 Kode 的渐进式工具执行展示
+ * 进度管理器 - 实现渐进式工具执行展示
  * 提供实时的工具执行状态和进度反馈
  */
 
@@ -34,7 +34,7 @@ export interface ProgressDisplayOptions {
 }
 
 /**
- * 进度管理器 - 借鉴 Kode 的分步骤执行展示
+ * 进度管理器 - 实现实时的分步骤执行展示
  */
 export class ProgressManager {
   private activeProgresses = new Map<string, ToolProgressState>()
@@ -166,7 +166,7 @@ export class ProgressManager {
   }
 
   /**
-   * 显示工具开始执行 - Kode 风格
+   * 显示工具开始执行 - 实时交互式
    */
   private displayToolStart(state: ToolProgressState): void {
     const { toolName, executionId } = state
@@ -195,7 +195,7 @@ export class ProgressManager {
       statusText = currentStep
     }
 
-    // 使用 \r 实现同一行更新，借鉴 Kode 的方式
+    // 使用 \r 实现同一行更新，采用现代终端最佳实践
     const line = `   ${progressText} ${statusText}`
     
     if (this.displayOptions.enableColors) {

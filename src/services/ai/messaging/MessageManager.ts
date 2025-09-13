@@ -1,5 +1,5 @@
 /**
- * 消息管理器 - 借鉴 Kode 的消息分类机制
+ * 消息管理器 - 采用标准架构的消息分类机制
  * 提供统一的消息处理、分类和展示系统
  */
 
@@ -67,7 +67,7 @@ export interface MessageDisplayOptions {
 }
 
 /**
- * 消息管理器 - Kode 风格的分类展示
+ * 消息管理器 - 现代流式的分类展示
  */
 export class MessageManager {
   private messages: Message[] = []
@@ -123,7 +123,7 @@ export class MessageManager {
   }
 
   /**
-   * 显示消息 - Kode 风格的分类展示
+   * 显示消息 - 现代流式的分类展示
    */
   private displayMessage(message: Message): void {
     const formatted = this.formatMessage(message)
@@ -154,7 +154,7 @@ export class MessageManager {
   }
 
   /**
-   * 格式化消息 - 借鉴 Kode 的视觉层次
+   * 格式化消息 - 采用现代化的视觉层次
    */
   private formatMessage(message: Message): string {
     const parts: string[] = []

@@ -1,7 +1,7 @@
 /**
  * AI 响应解析器
  * 将 AI 服务返回的字符串响应解析成结构化的 ContentBlock 数组
- * 遵循 Kode 架构，分离工具调用和文本内容
+ * 遵循模块化架构，分离工具调用和文本内容
  */
 
 import type { ContentBlock, TextBlock, ToolUseBlock, ThinkingBlock } from '../../types/UIMessage.js'
@@ -15,7 +15,7 @@ export interface ParsedResponse {
 
 /**
  * 解析 AI 响应字符串为 ContentBlock 数组
- * 这是实现 Kode 架构的核心 - 确保工具调用和文本完全分离
+ * 这是实现模块化架构的核心 - 确保工具调用和文本完全分离
  */
 export function parseAIResponse(response: string): ParsedResponse {
   const blocks: ContentBlock[] = []

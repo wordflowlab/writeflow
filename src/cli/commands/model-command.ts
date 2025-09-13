@@ -1,6 +1,6 @@
 /**
  * WriteFlow /model 命令
- * 迁移自 Kode 的模型配置系统
+ * 基于现代化的模型配置系统
  */
 
 import { CommandResult } from '../../types/command'

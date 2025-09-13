@@ -2,7 +2,7 @@
 
 /**
  * 测试新的异步流式处理系统
- * 验证 Kode 风格的 AsyncGenerator 消息流实现
+ * 验证现代流式的 AsyncGenerator 消息流实现
  */
 
 import { displayMessageStream } from './src/ui/components/StreamingDisplay.js'

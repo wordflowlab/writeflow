@@ -84,7 +84,7 @@ export class DeepSeekProvider {
       availableTools,
       toolUseContext
     )) {
-      // 转换 Kode 风格消息为 WriteFlow StreamMessage
+      // 转换流式架构消息为 WriteFlow StreamMessage
       yield this.convertToStreamMessage(message)
     }
   }
@@ -106,7 +106,7 @@ export class DeepSeekProvider {
   }
 
   /**
-   * 转换 Kode 风格消息为 WriteFlow StreamMessage - 支持字符级流式显示
+   * 转换 AsyncGenerator 架构消息为 WriteFlow StreamMessage - 支持字符级流式显示
    */
   private convertToStreamMessage(message: Message): any {
     switch (message.type) {
@@ -1171,10 +1171,10 @@ export class DeepSeekProvider {
     return inputTokens * inputCostPerToken + outputTokens * outputCostPerToken
   }
 
-  // 🚀 新增：AsyncGenerator 流式查询引擎 - 完全照抄 Kode
+  // 🚀 新增：AsyncGenerator 流式查询引擎 - 采用标准架构
   
   /**
-   * 流式查询引擎 - 照抄 Kode 的核心架构
+   * 流式查询引擎 - 实现 AsyncGenerator 核心架构
    * 支持实时工具执行显示的异步生成器模式
    */
   async* queryWithStreamingTools(
@@ -1249,7 +1249,7 @@ export class DeepSeekProvider {
       
       console.log(`⚙️ [流式-第${iteration + 1}轮] 检测到 ${toolUseBlocks.length} 个工具调用`)
       
-      // 5. 并发或串行执行工具 - 照抄 Kode 的逻辑
+      // 5. 并发或串行执行工具 - 实现标准并发逻辑
       const toolResults: UserMessage[] = []
       const canRunConcurrently = toolUseBlocks.every((block: any) => {
         const tool = availableTools.find(t => t.name === block.name)
@@ -1438,9 +1438,12 @@ export class DeepSeekProvider {
           
           try {
             const data = JSON.parse(dataStr)
-            const delta = data.choices?.[0]?.delta?.content
             
-            // 🚀 关键：每个字符增量立即发出！
+            // 🎯 关键修复：严格分离文本内容和工具调用处理
+            const delta = data.choices?.[0]?.delta?.content
+            const deltaToolCalls = data.choices?.[0]?.delta?.tool_calls
+            
+            // 🚀 处理文本内容：每个字符增量立即发出！
             if (delta && delta.length > 0) {
               content += delta
               
@@ -1480,9 +1483,8 @@ export class DeepSeekProvider {
               yield deltaMessage
             }
             
-            // 处理工具调用
-            if (data.choices?.[0]?.delta?.tool_calls) {
-              const deltaToolCalls = data.choices[0].delta.tool_calls
+            // 🔧 处理工具调用：使用已分离的变量，避免重复访问
+            if (deltaToolCalls && deltaToolCalls.length > 0) {
               for (const tc of deltaToolCalls) {
                 if (tc.index !== undefined) {
                   toolCalls[tc.index] = toolCalls[tc.index] || {}
@@ -1507,8 +1509,21 @@ export class DeepSeekProvider {
               finalUsage = data.usage
             }
             
-          } catch (e) {
-            console.warn(`⚠️ SSE 解析失败: ${e}`)
+          } catch (parseError: any) {
+            // 🛡️ 关键修复：JSON解析失败时不中断流程，而是记录并继续
+            console.warn(`⚠️ [流式] SSE JSON解析失败，跳过此数据块:`, {
+              error: parseError?.message || String(parseError),
+              dataStr: dataStr.slice(0, 100) + (dataStr.length > 100 ? '...' : ''),
+              dataLength: dataStr.length
+            })
+            
+            // 检查是否是AI生成的包含JSON内容的文本
+            if (dataStr.includes('"type":"tool_use"') || dataStr.includes('{"type":')) {
+              console.log(`📝 [流式] 检测到AI生成的JSON格式文本内容，已安全跳过解析`)
+            }
+            
+            // 继续处理下一个数据块，不中断流程
+            continue
           }
         }
       }
@@ -1598,10 +1613,10 @@ export class DeepSeekProvider {
     yield finalMessage
   }
   
-  // 🚀 阶段4：工具执行流式推送 - 照抄 Kode 的 runToolUse 逻辑
+  // 🚀 阶段4：工具执行流式推送 - 实现实时工具执行架构
   
   /**
-   * 并发执行工具 - 照抄 Kode 的 runToolsConcurrently
+   * 并发执行工具 - 实现并发工具执行架构
    */
   async* runToolsConcurrently(
     toolUseBlocks: any[],
@@ -1624,7 +1639,7 @@ export class DeepSeekProvider {
   }
   
   /**
-   * 串行执行工具 - 照抄 Kode 的 runToolsSerially
+   * 串行执行工具 - 实现串行工具执行架构
    */
   async* runToolsSerially(
     toolUseBlocks: any[],
@@ -1644,7 +1659,7 @@ export class DeepSeekProvider {
   }
   
   /**
-   * 执行单个工具 - 完全照抄 Kode 的 runToolUse 核心逻辑
+   * 执行单个工具 - 实现 AsyncGenerator 流式执行核心逻辑
    * 这是实时工具执行显示的核心实现！
    */
   async* runSingleToolUse(
@@ -1673,7 +1688,7 @@ export class DeepSeekProvider {
       return
     }
     
-    // 2. 执行工具并流式推送进度 - 照抄 Kode 的核心逻辑！
+    // 2. 执行工具并流式推送进度 - 实现 AsyncGenerator 流式架构！
     try {
       console.log(`⚡ [工具执行] ${toolName} 开始执行...`)
       

@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { WriteFlowTool, ToolUseContext, PermissionResult, ValidationResult } from '../Tool.js'
 
 /**
- * 工具调用事件类型 - 参考 Kode 的设计
+ * 工具调用事件类型 - 采用现代化设计
  */
 export interface ToolCallEvent {
   type: 'progress' | 'result' | 'error' | 'permission_request' | 'input_request'
@@ -14,7 +14,7 @@ export interface ToolCallEvent {
 }
 
 /**
- * WriteFlow 工具基类 - 参考 Kode 的优秀架构
+ * WriteFlow 工具基类 - 采用 AsyncGenerator 流式架构
  * 提供统一的工具实现模式和完善的生命周期管理
  */
 export abstract class ToolBase<

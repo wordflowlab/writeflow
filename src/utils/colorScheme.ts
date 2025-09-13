@@ -1,5 +1,5 @@
 /**
- * 色彩层次系统 - 基于 @other/kode 的视觉设计
+ * 色彩层次系统 - 采用现代化的视觉设计
  * 提供错落有致的排版和层次化颜色方案
  */
 
@@ -40,7 +40,7 @@ export interface ColorScheme {
 }
 
 /**
- * WriteFlow 默认配色方案 - 借鉴 @other/kode 的优秀设计
+ * WriteFlow 默认配色方案 - 采用现代化的优秀设计
  */
 export const defaultColorScheme: ColorScheme = {
   // 主要颜色 - 紫色系（品牌色）

@@ -1,7 +1,7 @@
 /**
  * 智能上下文管理器
  * 优化token消费，实现上下文窗口管理和压缩
- * 借鉴 Kode 和 gemini-cli 的上下文优化策略
+ * 优化上下文管理，实现智能压缩和内容筛选
  */
 
 import { formatDuration } from '../utils/format.js'

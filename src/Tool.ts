@@ -30,7 +30,7 @@ export interface ValidationResult {
   meta?: any
 }
 
-// WriteFlow 工具标准接口 - 参考 Claude Code & Kode
+// WriteFlow 工具标准接口 - 统一的工具规范
 export interface WriteFlowTool<
   TInput extends z.ZodObject<any> = z.ZodObject<any>,
   TOutput = any,

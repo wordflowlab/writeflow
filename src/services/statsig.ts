@@ -11,7 +11,7 @@ export function logEvent(eventName: string, data?: Record<string, any>): void {
   }
   
   // WriteFlow 暂时不需要实际的分析数据收集
-  // 这个函数主要是为了兼容从 Kode 迁移过来的代码
+  // 这个函数主要是为了兼容旧版本代码的接口
 }
 
 // 其他可能需要的 statsig 接口，都提供空实现

@@ -3,7 +3,7 @@ import { ToolUseContext, WriteFlowTool, PermissionResult } from '../Tool.js'
 import { ToolCallEvent } from './ToolBase.js'
 
 /**
- * 工具权限级别定义 - 参考 Kode 的细粒度权限控制
+ * 工具权限级别定义 - 采用现代化的细粒度权限控制
  */
 export enum ToolPermissionLevel {
   READ_only = 'READ_only',        // 只读工具：搜索、读取、分析

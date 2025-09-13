@@ -1,6 +1,6 @@
 /**
  * WriteFlow 成本跟踪器
- * 参考 Kode 的 cost-tracker 实现，提供实时成本监控和预算控制
+ * 提供实时成本监控和预算控制，支持多模型成本统计
  */
 
 import { formatDuration } from '../utils/format.js'
@@ -43,7 +43,7 @@ interface CostThresholds {
   enableWarnings: boolean
 }
 
-// 全局状态 - 参考 Kode 的简洁设计
+// 全局状态 - 简洁的单例设计
 const STATE: CostState = {
   totalCost: 0,
   totalTokens: 0,
