@@ -1,6 +1,6 @@
 {
   "name": "writeflow",
-  "version": "2.18.1",
+  "version": "2.19.0",
   "description": "AI 写作助手",
   "main": "writeflow-cli.js",
   "type": "module",
