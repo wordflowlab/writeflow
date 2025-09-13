@@ -241,13 +241,18 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
  */
 export function normalizeMessagesForAPI(messages: Message[]): MessageParam[] {
   const apiMessages: any[] = []
+  const isDebugMode = process.env.WRITEFLOW_DEBUG_STREAM === 'verbose'
   
-  console.log(`🔧 [消息构造] 开始构造API消息，输入消息数: ${messages.length}`)
+  if (isDebugMode) {
+    console.log(`🔧 [消息构造] 开始构造API消息，输入消息数: ${messages.length}`)
+  }
   
   for (const m of messages) {
     if (m.type === 'progress') continue // 过滤掉进度消息
     
-    console.log(`🔧 [消息构造] 处理消息类型: ${m.type}，UUID: ${m.uuid.slice(0, 8)}...`)
+    if (isDebugMode) {
+      console.log(`🔧 [消息构造] 处理消息类型: ${m.type}，UUID: ${m.uuid.slice(0, 8)}...`)
+    }
     
     switch (m.type) {
       case 'user':
@@ -269,7 +274,9 @@ export function normalizeMessagesForAPI(messages: Message[]): MessageParam[] {
               
               toolResultContent += `[工具执行结果 ${block.tool_use_id}]\n${resultText}\n\n`
               
-              console.log(`🔧 [消息构造] 工具结果转换为用户消息: ${block.tool_use_id}`)
+              if (isDebugMode) {
+                console.log(`🔧 [消息构造] 工具结果转换为用户消息: ${block.tool_use_id}`)
+              }
             } else {
               // 其他类型的内容块
               const blockContent = (block as any).content || (block as any).text || JSON.stringify(block)
@@ -310,12 +317,14 @@ export function normalizeMessagesForAPI(messages: Message[]): MessageParam[] {
     }
   }
   
-  console.log(`🔧 [消息构造] 完成构造，输出API消息数: ${apiMessages.length}`)
-  console.log(`🔧 [消息构造] 最后3条消息:`, apiMessages.slice(-3).map((msg: any) => ({
-    role: msg.role,
-    contentLength: typeof msg.content === 'string' ? msg.content.length : 'non-string',
-    preview: typeof msg.content === 'string' ? msg.content.slice(0, 50) + '...' : 'non-string'
-  })))
+  if (isDebugMode) {
+    console.log(`🔧 [消息构造] 完成构造，输出API消息数: ${apiMessages.length}`)
+    console.log(`🔧 [消息构造] 最后3条消息:`, apiMessages.slice(-3).map((msg: any) => ({
+      role: msg.role,
+      contentLength: typeof msg.content === 'string' ? msg.content.length : 'non-string',
+      preview: typeof msg.content === 'string' ? msg.content.slice(0, 50) + '...' : 'non-string'
+    })))
+  }
   
   return apiMessages
 }

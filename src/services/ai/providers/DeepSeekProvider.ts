@@ -1188,6 +1188,7 @@ export class DeepSeekProvider {
     const MAX_ITERATIONS = 5
     const MAX_TOOL_USE_CONCURRENCY = 10
     const ITERATION_TIMEOUT = 90000 // 90秒每轮超时
+    const isDebugMode = process.env.WRITEFLOW_DEBUG_STREAM === 'verbose'
     
     let iteration = 0
     let totalInputTokens = 0
@@ -1211,6 +1212,7 @@ export class DeepSeekProvider {
       // 2. 调用 DeepSeek API 获取 AI 响应 - 现在是流式的！
       let assistantMessage: AssistantMessage | null = null
       let hasCharacterDeltas = false
+      let realtimeCharCount = 0 // 实时字符计数器
       
       for await (const message of this.callDeepSeekAPIForStreaming(
         profile, 
@@ -1222,7 +1224,12 @@ export class DeepSeekProvider {
         // 检查是否是字符级增量消息
         if (message.type === 'assistant' && message.message.content?.[0] && (message.message.content[0] as any).isCharacterDelta) {
           hasCharacterDeltas = true
-          console.log(`🔥 [字符流-第${iteration + 1}轮] 实时字符: "${(message.message.content[0] as any).text}"`)
+          realtimeCharCount++
+          
+          // 🚀 优化实时字符日志：仅在调试模式或采样输出
+          if (isDebugMode || realtimeCharCount % 10 === 0) {
+            console.log(`🔥 [字符流-第${iteration + 1}轮] 第${realtimeCharCount}个字符: "${(message.message.content[0] as any).text}"`)
+          }
         } else {
           // 这是最终完整消息
           assistantMessage = message as AssistantMessage
@@ -1328,6 +1335,13 @@ export class DeepSeekProvider {
     }
     
     const url = profile.baseURL || 'https://api.deepseek.com/v1/chat/completions'
+    
+    // 🚀 日志节流变量
+    let characterCount = 0
+    let lastLogTime = 0
+    const LOG_THROTTLE_INTERVAL = 2000 // 2秒
+    const LOG_CHARACTER_THRESHOLD = 100 // 100个字符
+    const isDebugMode = process.env.WRITEFLOW_DEBUG_STREAM === 'verbose'
     
     // 转换工具定义
     const tools = await this.convertToolsToDeepSeekFormat(availableTools.map(t => t.name))
@@ -1479,7 +1493,18 @@ export class DeepSeekProvider {
                 }
               }
               
-              console.log(`📝 [字符流] +${delta.length} 字符: "${delta.slice(0, 20)}..."`)
+              // 🚀 节流日志输出
+              characterCount += delta.length
+              const now = Date.now()
+              const shouldLog = isDebugMode || 
+                               characterCount % LOG_CHARACTER_THRESHOLD === 0 ||
+                               now - lastLogTime >= LOG_THROTTLE_INTERVAL
+              
+              if (shouldLog) {
+                console.log(`📝 [字符流] 累计${characterCount}字符, 本次+${delta.length}: "${delta.slice(0, 20)}..."`)
+                lastLogTime = now
+              }
+              
               yield deltaMessage
             }
             

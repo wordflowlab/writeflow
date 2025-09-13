@@ -368,6 +368,139 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   }, [writeFlowApp])
 
   // 移除状态监控，避免干扰消息渲染
+  
+  // 🚀 React性能优化 - 节流更新机制
+  const createThrottledTokenHandler = useCallback(() => {
+    // 节流配置
+    const THROTTLE_INTERVAL = 16 // 约60fps，防止过度更新
+    const BATCH_SIZE_THRESHOLD = 50 // 累积50个字符或达到时间间隔才更新
+    
+    // 状态变量需要通过ref或闭包维护
+    let accumulatedText = ''
+    let updateTimer: NodeJS.Timeout | null = null
+    let lastUpdateTime = 0
+    
+    // 🚀 REPL更新日志节流
+    let lastLoggedLength = 0
+    const LOG_LENGTH_THRESHOLD = 50 // 内容增长50字符才输出日志
+    const isDebugMode = process.env.WRITEFLOW_DEBUG_STREAM === 'verbose'
+    
+    const performUpdate = () => {
+      if (updateTimer) {
+        clearTimeout(updateTimer)
+        updateTimer = null
+      }
+      
+      // 智能分离JSON和内容 - 保护创意内容的markdown格式
+      let displayText = accumulatedText
+      
+      // 检测并移除TODO JSON更新（在独立行中）
+      const lines = displayText.split('\n')
+      const filteredLines: string[] = []
+      
+      for (const line of lines) {
+        const trimmed = line.trim()
+        
+        // 🛡️ 关键修复：检测并过滤AI生成的JSON格式内容
+        if (trimmed.startsWith('{') && (
+          trimmed.includes('"todos"') ||
+          trimmed.includes('"type":"tool_use"') ||
+          trimmed.includes('"id":"call_') ||
+          trimmed.includes('"name":"todo_')
+        ) && trimmed.endsWith('}')) {
+          try {
+            const jsonData = JSON.parse(trimmed)
+            if (jsonData.todos && Array.isArray(jsonData.todos)) {
+              continue // 跳过TODO JSON行，不显示
+            }
+            if (jsonData.type === 'tool_use') {
+              console.log(`🛡️ [REPL过滤] 检测到AI生成的tool_use JSON，已过滤`)
+              continue // 跳过tool_use JSON行，不显示
+            }
+          } catch (e) {
+            // JSON解析失败，可能是不完整的JSON，保留原始内容
+            console.log(`🛡️ [REPL过滤] JSON解析失败，保留原始内容: ${trimmed.slice(0, 50)}...`)
+          }
+        }
+        
+        // 🛡️ 额外保护：检测不完整的JSON模式
+        if (trimmed.includes('{"type":"tool_use"') || trimmed.includes('"id":"call_')) {
+          console.log(`🛡️ [REPL过滤] 检测到不完整的工具调用JSON模式，已过滤`)
+          continue // 跳过此行，不添加到显示内容
+        }
+        
+        // 过滤明确的系统消息，但保护内容中的格式
+        if (trimmed.startsWith('AI: [调用 todo_write 工具]') ||
+            trimmed.startsWith('todo_write工具:') ||
+            trimmed.startsWith('🎯 **任务列表已更新**') ||
+            trimmed.startsWith('⎿')) {
+          continue // 跳过系统消息行
+        }
+        
+        // 保留所有其他内容，包括markdown格式
+        filteredLines.push(line)
+      }
+      
+      // 重新组装显示文本，保留原始格式
+      displayText = filteredLines.join('\n').trim()
+      
+      // 🚀 优化状态更新逻辑 - 避免不必要的重建
+      if (displayText) {
+        // 🚀 优化REPL日志：仅在显著内容变化或调试模式下输出
+        const shouldLogUpdate = isDebugMode || displayText.length - lastLoggedLength >= LOG_LENGTH_THRESHOLD
+        if (shouldLogUpdate) {
+          console.log(`🎯 [REPL更新] 显示长度: ${lastLoggedLength} -> ${displayText.length} (+${displayText.length - lastLoggedLength})`)
+          lastLoggedLength = displayText.length
+        }
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1]
+          
+          if (!isAssistantMessage(lastMessage)) {
+            return prev // 无需更新
+          }
+          
+          const currentContent = lastMessage.message.content?.[0]
+          const currentText = (currentContent && isTextBlock(currentContent)) ? currentContent.text : ''
+          
+          // 🎯 关键优化：只有内容真正改变时才更新
+          if (currentText === displayText) {
+            return prev // 内容相同，避免不必要的重新渲染
+          }
+          
+          // 🔧 高效更新：只修改最后一条消息
+          const updatedMessages = [...prev]
+          updatedMessages[prev.length - 1] = {
+            ...lastMessage,
+            message: {
+              ...lastMessage.message,
+              content: [createTextBlock(displayText)]
+            }
+          }
+          
+          return updatedMessages
+        })
+      }
+    }
+    
+    return (chunk: string) => {
+      accumulatedText += chunk
+      
+      // 节流更新：避免高频DOM操作导致的闪烁
+      const now = Date.now()
+      const shouldForceUpdate = accumulatedText.length % BATCH_SIZE_THRESHOLD === 0
+      const shouldTimeUpdate = now - lastUpdateTime >= THROTTLE_INTERVAL
+      
+      if (shouldForceUpdate || shouldTimeUpdate) {
+        // 立即更新
+        lastUpdateTime = now
+        performUpdate()
+      } else {
+        // 延迟更新：确保最后的内容也能显示
+        if (updateTimer) clearTimeout(updateTimer)
+        updateTimer = setTimeout(performUpdate, THROTTLE_INTERVAL)
+      }
+    }
+  }, [setMessages]) // 只依赖setMessages
 
   // 处理消息提交
   const handleSubmit = useCallback(async (message: string) => {
@@ -389,112 +522,31 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       // 设置流式状态
       setStreamingMessageId(streamingMessage.uuid)
       
-      // 智能文本缓冲器，用于处理 JSON 和纯文本混合
-      let accumulatedText = ''
-      let pendingTodoUpdate: any = null
-
-      // 🎯 修复后的流式处理回调 - 保护markdown格式
-      const onToken = (chunk: string) => {
-        console.log(`🌊 [REPL流式] 收到字符块: "${chunk}" (长度: ${chunk.length})`)
-        accumulatedText += chunk
-        
-        // 智能分离JSON和内容 - 保护创意内容的markdown格式
-        let displayText = accumulatedText
-        let hasJsonUpdate = false
-        
-        // 检测并移除TODO JSON更新（在独立行中）
-        const lines = displayText.split('\n')
-        const filteredLines: string[] = []
-        
-        for (const line of lines) {
-          const trimmed = line.trim()
-          
-          // 🛡️ 关键修复：检测并过滤AI生成的JSON格式内容
-          if (trimmed.startsWith('{') && (
-            trimmed.includes('"todos"') ||
-            trimmed.includes('"type":"tool_use"') ||
-            trimmed.includes('"id":"call_') ||
-            trimmed.includes('"name":"todo_')
-          ) && trimmed.endsWith('}')) {
-            try {
-              const jsonData = JSON.parse(trimmed)
-              if (jsonData.todos && Array.isArray(jsonData.todos)) {
-                pendingTodoUpdate = jsonData.todos
-                hasJsonUpdate = true
-                continue // 跳过TODO JSON行，不显示
-              }
-              if (jsonData.type === 'tool_use') {
-                console.log(`🛡️ [REPL过滤] 检测到AI生成的tool_use JSON，已过滤`)
-                continue // 跳过tool_use JSON行，不显示
-              }
-            } catch (e) {
-              // JSON解析失败，可能是不完整的JSON，保留原始内容
-              console.log(`🛡️ [REPL过滤] JSON解析失败，保留原始内容: ${trimmed.slice(0, 50)}...`)
-            }
-          }
-          
-          // 🛡️ 额外保护：检测不完整的JSON模式
-          if (trimmed.includes('{"type":"tool_use"') || trimmed.includes('"id":"call_')) {
-            console.log(`🛡️ [REPL过滤] 检测到不完整的工具调用JSON模式，已过滤`)
-            continue // 跳过此行，不添加到显示内容
-          }
-          
-          // 过滤明确的系统消息，但保护内容中的格式
-          if (trimmed.startsWith('AI: [调用 todo_write 工具]') ||
-              trimmed.startsWith('todo_write工具:') ||
-              trimmed.startsWith('🎯 **任务列表已更新**') ||
-              trimmed.startsWith('⎿')) {
-            continue // 跳过系统消息行
-          }
-          
-          // 保留所有其他内容，包括markdown格式
-          filteredLines.push(line)
-        }
-        
-        // 重新组装显示文本，保留原始格式
-        displayText = filteredLines.join('\n').trim()
-        
-        // 实时更新消息显示 - 保护markdown结构
-        if (displayText) {
-          console.log(`🎯 [REPL更新] 更新显示，保护格式，长度: ${displayText.length}`)
-          setMessages(prev => {
-            const newMessages = [...prev]
-            const lastMessage = newMessages[newMessages.length - 1]
-            
-            if (isAssistantMessage(lastMessage)) {
-              newMessages[newMessages.length - 1] = {
-                ...lastMessage,
-                message: {
-                  ...lastMessage.message,
-                  content: [createTextBlock(displayText)]
-                }
-              }
-            }
-            
-            return newMessages
-          })
-        }
-      }
+      // 🚀 使用优化的节流token处理器
+      let pendingTodoUpdate: any = null // TODO更新状态
+      const onToken = createThrottledTokenHandler()
 
       // 调用 WriteFlowApp 的 handleFreeTextInput 方法
       const finalText = await writeFlowApp.handleFreeTextInput(trimmedMessage, {
         onToken
       })
       
-      // 🎯 智能处理最终文本，强化markdown格式保护
+      // 🚀 智能处理最终文本，强化markdown格式保护
       if (finalText && finalText.trim()) {
         setMessages(prev => {
-          const newMessages = [...prev]
-          const last = newMessages[newMessages.length - 1]
-          if (isAssistantMessage(last)) {
-            const currentContent = last.message.content[0]
-            const currentText = isTextBlock(currentContent) ? currentContent.text : ''
-            
-            // 检查当前内容是否需要更新
-            const shouldUpdate = !currentText || 
-                                currentText.trim() === '' ||
-                                currentText.includes('思考中...') ||
-                                currentText.includes('正在处理...')
+          const last = prev[prev.length - 1]
+          if (!isAssistantMessage(last)) {
+            return prev // 不是助手消息，无需更新
+          }
+          
+          const currentContent = last.message.content?.[0]
+          const currentText = (currentContent && isTextBlock(currentContent)) ? currentContent.text : ''
+          
+          // 检查当前内容是否需要更新
+          const shouldUpdate = !currentText || 
+                              currentText.trim() === '' ||
+                              currentText.includes('思考中...') ||
+                              currentText.includes('正在处理...')
             
             // 应用与onToken相同的过滤逻辑，确保一致性
             const lines = finalText.split('\n')
@@ -541,22 +593,30 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
               // 保留所有其他内容，包括markdown格式
               filteredLines.push(line)
             }
-            
-            const cleanedText = filteredLines.join('\n').trim()
-            
-            if (shouldUpdate && cleanedText) {
-              console.log(`🎯 [最终文本] 更新内容，保护markdown格式，长度: ${cleanedText.length}`)
-              newMessages[newMessages.length - 1] = {
-                ...last,
-                message: {
-                  ...last.message,
-                  content: [createTextBlock(cleanedText)]
-                }
-              }
-            }
-            // 如果已有格式化内容且无需更新，完全保护现有格式
+          
+          const cleanedText = filteredLines.join('\n').trim()
+          
+          // 🎯 关键优化：只有内容真正改变时才更新
+          if (!shouldUpdate || !cleanedText || currentText === cleanedText) {
+            return prev // 避免不必要的重新渲染
           }
-          return newMessages
+          
+          // 🚀 优化最终文本日志：仅在调试模式下输出
+          if (process.env.WRITEFLOW_DEBUG_STREAM === 'verbose') {
+            console.log(`🎯 [最终文本] 更新内容，保护markdown格式，长度: ${cleanedText.length}`)
+          }
+          
+          // 🔧 高效更新：只修改最后一条消息
+          const updatedMessages = [...prev]
+          updatedMessages[prev.length - 1] = {
+            ...last,
+            message: {
+              ...last.message,
+              content: [createTextBlock(cleanedText)]
+            }
+          }
+          
+          return updatedMessages
         })
 
         // 若文本包含 TODO 更新的信号，则刷新面板
@@ -618,7 +678,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   // console.log('🎨 WriteFlowREPL 渲染中，todos.length:', todos.length, 'messages.length:', messages.length)
   
   // 计算动态状态文案
-  const activityStatus: 'idle' | 'working' | 'thinking' | 'executing' =
+  const activityStatus: 'idle' | 'working' | 'executing' =
     inProgressToolUseIDs.size > 0 ? 'executing' : (isThinking ? 'working' : 'idle')
 
   // 运行计时（用于 working/executing 状态显示秒数）
@@ -641,6 +701,23 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     console.log(`🔧 已注册并聚焦新的可折叠内容: ${contentId}`)
     console.log(`💡 提示: 按 Ctrl+R 展开详细内容`)
   }, [registerCollapsible, setCollapsibleFocus])
+  
+  // 🚀 React性能优化 - 活动状态计算memo化
+  const shouldShowActivity = useMemo(() => {
+    return activityStatus !== 'idle' && statusStart !== null
+  }, [activityStatus, statusStart])
+  
+  // 🚀 计算状态显示文本
+  const activityDisplayText = useMemo(() => {
+    if (!shouldShowActivity) return ''
+    
+    const baseText = activityStatus === 'working' 
+      ? '🤔 AI思考中' 
+      : activityStatus === 'executing' 
+        ? '⚙️ 工具执行中'
+        : '✨ AI生成中'
+    return elapsedSeconds > 0 ? `${baseText} (${elapsedSeconds}s)` : baseText
+  }, [activityStatus, shouldShowActivity, elapsedSeconds])
 
   useEffect(() => {
     if (activityStatus === 'idle') {
