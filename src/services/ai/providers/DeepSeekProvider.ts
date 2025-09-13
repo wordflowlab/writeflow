@@ -20,11 +20,12 @@ import {
   AssistantMessage,
   UserMessage,
   createUserMessage,
-  createProgressMessage,
   normalizeMessagesForAPI,
+  createAssistantMessage
 } from '../../../utils/messages.js'
 import { all } from '../../../utils/generators.js'
 import type { Tool, ToolUseContext } from '../../../Tool.js'
+import type { StreamMessage, ProgressMessage } from '../streaming/AsyncStreamingManager.js'
 
 export class DeepSeekProvider {
   private contentProcessor = getContentProcessor()
@@ -111,35 +112,15 @@ export class DeepSeekProvider {
   private convertToStreamMessage(message: Message): any {
     switch (message.type) {
       case 'assistant':
-        // 🌟 关键：检测字符级增量消息！
+        // 🚀 优化：简化字符级增量消息结构
         const content = message.message.content
         if (Array.isArray(content) && content[0] && (content[0] as any).isCharacterDelta) {
           const block = content[0] as any
+          // 只保留核心信息，大幅减少对象创建开销
           return {
-            type: 'character_delta', // 特殊类型标识字符增量
-            delta: block.text,       // 字符增量
-            fullContent: block.fullContent, // 完整内容
-            timestamp: Date.now(),
-            streamId: message.uuid,
-            // UI 流式组件需要的元信息
-            uiChunk: {
-              streamId: message.uuid,
-              content: block.fullContent,
-              delta: block.text,
-              timestamp: Date.now(),
-              characterCount: block.fullContent.length,
-              renderHint: {
-                contentType: 'text',
-                suggestedDelay: 15, // 建议15ms间隔
-                priority: 'normal'
-              },
-              performance: {
-                networkLatency: 50,
-                processingTime: 5,
-                bufferSize: block.fullContent.length
-              }
-            }
-          }
+            type: 'character_delta',
+            delta: block.text,      // 只保留字符增量
+          } as any  // 临时类型修复，character_delta 不在 StreamMessage 中
         }
         
         // 常规完整消息
@@ -1195,12 +1176,16 @@ export class DeepSeekProvider {
     let totalOutputTokens = 0
     
     while (iteration < MAX_ITERATIONS) {
-      console.log(`🔄 [流式-第${iteration + 1}轮] 开始 AI 查询...`)
+      if (isDebugMode) {
+        console.log(`🔄 [流式-第${iteration + 1}轮] 开始 AI 查询...`)
+      }
       
       // 🎯 为每轮对话添加超时控制
       const iterationController = new AbortController()
       const iterationTimeoutId = setTimeout(() => {
-        console.log(`⏰ [流式-第${iteration + 1}轮] 单轮超时 (90s)，中断当前轮次`)
+        if (isDebugMode) {
+          console.log(`⏰ [流式-第${iteration + 1}轮] 单轮超时 (90s)，中断当前轮次`)
+        }
         iterationController.abort()
       }, ITERATION_TIMEOUT)
       
@@ -1226,14 +1211,16 @@ export class DeepSeekProvider {
           hasCharacterDeltas = true
           realtimeCharCount++
           
-          // 🚀 优化实时字符日志：仅在调试模式或采样输出
-          if (isDebugMode || realtimeCharCount % 10 === 0) {
-            console.log(`🔥 [字符流-第${iteration + 1}轮] 第${realtimeCharCount}个字符: "${(message.message.content[0] as any).text}"`)
+          // 🚀 简化实时字符日志：仅在详细调试模式输出
+          if (isDebugMode && realtimeCharCount % 50 === 0) {
+            console.log(`🔥 [字符流-第${iteration + 1}轮] 第${realtimeCharCount}个字符`)
           }
         } else {
           // 这是最终完整消息
           assistantMessage = message as AssistantMessage
-          console.log(`📝 [流式-第${iteration + 1}轮] AI 响应完成，内容长度: ${assistantMessage.message.content?.length || 0}`)
+          if (isDebugMode) {
+            console.log(`📝 [流式-第${iteration + 1}轮] AI 响应完成，内容长度: ${assistantMessage.message.content?.length || 0}`)
+          }
         }
         
         // 3. 立即 yield 每个消息 - 实时显示的关键！
@@ -1250,11 +1237,15 @@ export class DeepSeekProvider {
       )
       
       if (toolUseBlocks.length === 0) {
-        console.log(`🏁 [流式-第${iteration + 1}轮] 无工具调用，对话结束`)
+        if (isDebugMode) {
+          console.log(`🏁 [流式-第${iteration + 1}轮] 无工具调用，对话结束`)
+        }
         return
       }
       
-      console.log(`⚙️ [流式-第${iteration + 1}轮] 检测到 ${toolUseBlocks.length} 个工具调用`)
+      if (isDebugMode) {
+        console.log(`⚙️ [流式-第${iteration + 1}轮] 检测到 ${toolUseBlocks.length} 个工具调用`)
+      }
       
       // 5. 并发或串行执行工具 - 实现标准并发逻辑
       const toolResults: UserMessage[] = []
@@ -1265,7 +1256,9 @@ export class DeepSeekProvider {
       })
       
       if (canRunConcurrently) {
-        console.log(`🚀 [流式-第${iteration + 1}轮] 并发执行工具`)
+        if (isDebugMode) {
+          console.log(`🚀 [流式-第${iteration + 1}轮] 并发执行工具`)
+        }
         for await (const message of this.runToolsConcurrently(
           toolUseBlocks, 
           assistantMessage,
@@ -1278,7 +1271,9 @@ export class DeepSeekProvider {
           }
         }
       } else {
-        console.log(`🔄 [流式-第${iteration + 1}轮] 串行执行工具`)
+        if (isDebugMode) {
+          console.log(`🔄 [流式-第${iteration + 1}轮] 串行执行工具`)
+        }
         for await (const message of this.runToolsSerially(
           toolUseBlocks,
           assistantMessage, 
@@ -1638,6 +1633,34 @@ export class DeepSeekProvider {
     yield finalMessage
   }
   
+  // 🚀 实用工具方法：创建工具实例以获取状态消息
+  
+  /**
+   * 创建工具实例用于获取状态消息
+   */
+  private async createToolInstance(toolName: string, toolInput: any): Promise<any | null> {
+    try {
+      const sessionId = 'status-display-session'
+      const { TodoManager } = await import('../../../tools/TodoManager.js')
+      const sharedManager = new TodoManager(sessionId)
+      
+      if (toolName === 'todo_write') {
+        const { TodoWriteTool } = await import('../../../tools/writing/TodoWriteTool.js')
+        return new TodoWriteTool(sharedManager)
+      }
+      
+      if (toolName === 'todo_read') {
+        const { TodoReadTool } = await import('../../../tools/writing/TodoReadTool.js')
+        return new TodoReadTool(sharedManager)
+      }
+      
+      return null
+    } catch (error) {
+      console.warn(`⚠️ 创建工具实例失败 ${toolName}:`, error)
+      return null
+    }
+  }
+  
   // 🚀 阶段4：工具执行流式推送 - 实现实时工具执行架构
   
   /**
@@ -1719,6 +1742,7 @@ export class DeepSeekProvider {
       
       // 如果工具支持 AsyncGenerator，使用流式执行
       // 注意：当前 WriteFlow 工具接口可能还不支持 call 方法，这是未来优化方向
+      console.log(`🔍 [调试] ${toolName} 工具call方法检查:`, (tool as any).call ? '有call方法' : '无call方法')
       if ((tool as any).call && typeof (tool as any).call === 'function') {
         const generator = (tool as any).call(toolInput as never, toolUseContext)
         
@@ -1739,35 +1763,88 @@ export class DeepSeekProvider {
             case 'progress':
               console.log(`🔄 [工具执行] ${toolName} 进度更新`)
               // 🌟 关键！yield 进度消息实现实时显示
-              yield createProgressMessage(
-                toolUseID,
-                siblingToolUseIDs,
-                result.content,
-                result.normalizedMessages || [],
-                result.tools || [],
-              )
+              yield {
+                type: 'progress',
+                stage: 'tool_progress',
+                message: result.content || '工具执行中...',
+                progress: result.progress || 50
+              } as any  // 临时解决类型冲突
               break
           }
         }
       } else {
-        // 兼容老式工具：直接执行并返回结果
-        console.log(`🔧 [工具执行] ${toolName} 使用兼容模式执行`)
+        // 🚀 采用Kode架构：Progress消息系统 + 完全消息类型分离
+        console.log(`🔧 [工具执行] ${toolName} 使用Kode风格架构执行`)
         
-        // 使用现有的 DeepSeek 工具执行逻辑
+        // 🌟 阶段1: 工具执行开始的Progress消息（WriteFlow格式）
+        yield {
+          type: 'progress',
+          stage: 'tool_execution', 
+          message: `🔧 正在执行 ${toolName} 工具...`,
+          progress: 50
+        } as any  // 临时解决类型冲突
+        
+        // 🌟 阶段2: 如果是TODO工具，显示详细状态（仿照Kode的TaskTool）
+        if (toolName === 'todo_write') {
+          // 创建工具实例以获取详细状态
+          const toolInstance = await this.createToolInstance(toolName, toolInput)
+          if (toolInstance && (toolInstance as any).renderToolUseMessage) {
+            try {
+              const statusMessage = (toolInstance as any).renderToolUseMessage(toolInput, { verbose: true })
+              
+              // 🌟 推送WriteFlow格式的详细进度消息
+              yield {
+                type: 'progress',
+                stage: 'todo_status',
+                message: statusMessage,
+                progress: 75
+              } as any  // 临时解决类型冲突
+            } catch (statusError) {
+              console.warn(`⚠️ [工具状态] ${toolName} 状态消息生成失败:`, statusError)
+            }
+          }
+        }
+        
+        // 🌟 阶段3: 执行工具（技术层面，结果不直接显示给用户）
         const result = await this.executeDeepSeekToolCall({
           id: toolUseID,
           function: { name: toolName, arguments: JSON.stringify(toolInput) }
         })
         
+        // 🌟 阶段4: Kode风格的结果处理 - 用户友好消息 + 技术消息分离
         if (result.success) {
-          console.log(`✅ [工具执行] ${toolName} 兼容模式执行成功`)
+          console.log(`✅ [工具执行] ${toolName} 执行成功`)
+          
+          // 🌟 推送用户友好的完成消息（WriteFlow Progress格式）
+          const completionMessage = toolName === 'todo_write' 
+            ? '✅ 任务列表更新完成'
+            : `✅ ${toolName} 工具执行完成`
+            
+          yield {
+            type: 'progress',
+            stage: 'tool_completed',
+            message: completionMessage,
+            progress: 100
+          } as any  // 临时解决类型冲突
+          
+          // 🔧 技术层面：为AI对话历史提供tool_result（用户不可见）
           yield createUserMessage([{
             type: 'tool_result', 
             content: result.result,
             tool_use_id: toolUseID,
           }])
         } else {
-          console.error(`❌ [工具执行] ${toolName} 兼容模式执行失败:`, result.error)
+          console.error(`❌ [工具执行] ${toolName} 执行失败:`, result.error)
+          
+          // 🌟 推送用户友好的错误消息（WriteFlow格式）
+          yield {
+            type: 'progress',
+            stage: 'tool_error',
+            message: `❌ ${toolName} 工具执行失败`,
+            progress: 0
+          } as any  // 临时解决类型冲突
+          
+          // 🔧 技术层面：为AI对话历史提供错误结果
           yield createUserMessage([{
             type: 'tool_result',
             content: result.error || '执行失败',

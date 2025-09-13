@@ -49,8 +49,13 @@ interface WriteFlowREPLProps {
 export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const theme = getTheme()
   
-  // 消息状态 - 使用新的 UIMessage 类型
+  // 🚀 消息窗口化 - 限制消息数量防止性能下降
+  const MAX_MESSAGES = 50 // 最多保留50条消息，超出自动清理
   const [messages, setMessages] = useState<UIMessage[]>([])
+  
+  // 🚀 性能监控：跟踪渲染性能和内存使用
+  const [renderTime, setRenderTime] = useState(0)
+  const [lastRenderStart, setLastRenderStart] = useState(0)
   
   // 可折叠内容管理
   const {
@@ -95,6 +100,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   // 流式显示状态管理
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   
+  // 🚀 文本选择模式 - 暂停更新以支持复制
+  const [textSelectionMode, setTextSelectionMode] = useState<boolean>(false)
+  
   // 获取可用工具
   const tools = useMemo(() => getAvailableTools(), [])
   
@@ -114,6 +122,14 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   // 键盘快捷键：Ctrl+T 切换 TODO 面板
   useTodoShortcuts({
     onToggleTodos: () => setShowTodos(v => !v)
+  })
+
+  // 🚀 键盘快捷键：Ctrl+P 切换文本选择模式
+  useModeShortcuts({
+    onModeCycle: () => setTextSelectionMode(v => {
+      console.log(`📋 文本选择模式: ${v ? '关闭' : '开启'}`)
+      return !v
+    })
   })
 
   // Plan 模式确认处理
@@ -369,21 +385,16 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
 
   // 移除状态监控，避免干扰消息渲染
   
-  // 🚀 React性能优化 - 节流更新机制
+  // 🚀 优化节流处理器 - 平衡性能与文本复制体验
   const createThrottledTokenHandler = useCallback(() => {
-    // 节流配置
-    const THROTTLE_INTERVAL = 16 // 约60fps，防止过度更新
-    const BATCH_SIZE_THRESHOLD = 50 // 累积50个字符或达到时间间隔才更新
+    // 🎯 防闪烁配置 - 减少更新频率以支持文本复制
+    const THROTTLE_INTERVAL = 150 // 降低到150ms，支持流畅文本选择
+    const BATCH_SIZE_THRESHOLD = 80 // 增加批量大小，减少更新次数
     
-    // 状态变量需要通过ref或闭包维护
-    let accumulatedText = ''
+    // 🚀 性能优化：使用数组拼接替代字符串拼接
+    const textChunks: string[] = []
     let updateTimer: NodeJS.Timeout | null = null
     let lastUpdateTime = 0
-    
-    // 🚀 REPL更新日志节流
-    let lastLoggedLength = 0
-    const LOG_LENGTH_THRESHOLD = 50 // 内容增长50字符才输出日志
-    const isDebugMode = process.env.WRITEFLOW_DEBUG_STREAM === 'verbose'
     
     const performUpdate = () => {
       if (updateTimer) {
@@ -391,83 +402,77 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         updateTimer = null
       }
       
-      // 智能分离JSON和内容 - 保护创意内容的markdown格式
-      let displayText = accumulatedText
+      // 🚀 性能监控：检测处理时间
+      const startTime = performance.now()
       
-      // 检测并移除TODO JSON更新（在独立行中）
-      const lines = displayText.split('\n')
-      const filteredLines: string[] = []
+      // 🔧 简化内容过滤 - 只过滤必要的系统消息  
+      let displayText = textChunks.join('')
       
-      for (const line of lines) {
-        const trimmed = line.trim()
-        
-        // 🛡️ 关键修复：检测并过滤AI生成的JSON格式内容
-        if (trimmed.startsWith('{') && (
-          trimmed.includes('"todos"') ||
-          trimmed.includes('"type":"tool_use"') ||
-          trimmed.includes('"id":"call_') ||
-          trimmed.includes('"name":"todo_')
-        ) && trimmed.endsWith('}')) {
-          try {
-            const jsonData = JSON.parse(trimmed)
-            if (jsonData.todos && Array.isArray(jsonData.todos)) {
-              continue // 跳过TODO JSON行，不显示
-            }
-            if (jsonData.type === 'tool_use') {
-              console.log(`🛡️ [REPL过滤] 检测到AI生成的tool_use JSON，已过滤`)
-              continue // 跳过tool_use JSON行，不显示
-            }
-          } catch (e) {
-            // JSON解析失败，可能是不完整的JSON，保留原始内容
-            console.log(`🛡️ [REPL过滤] JSON解析失败，保留原始内容: ${trimmed.slice(0, 50)}...`)
-          }
-        }
-        
-        // 🛡️ 额外保护：检测不完整的JSON模式
-        if (trimmed.includes('{"type":"tool_use"') || trimmed.includes('"id":"call_')) {
-          console.log(`🛡️ [REPL过滤] 检测到不完整的工具调用JSON模式，已过滤`)
-          continue // 跳过此行，不添加到显示内容
-        }
-        
-        // 过滤明确的系统消息，但保护内容中的格式
-        if (trimmed.startsWith('AI: [调用 todo_write 工具]') ||
-            trimmed.startsWith('todo_write工具:') ||
-            trimmed.startsWith('🎯 **任务列表已更新**') ||
-            trimmed.startsWith('⎿')) {
-          continue // 跳过系统消息行
-        }
-        
-        // 保留所有其他内容，包括markdown格式
-        filteredLines.push(line)
+      // 🚨 断路器：内容过长时启用降级模式
+      if (displayText.length > 50000) {
+        displayText = `${displayText.slice(-30000)}\n\n... [内容过长，已截取最后30000字符]`
       }
       
-      // 重新组装显示文本，保留原始格式
-      displayText = filteredLines.join('\n').trim()
+      // 🚀 Kode架构：基于消息类型的智能过滤，完全消除JSON泄露
+      // 检测并过滤所有原始JSON工具调用数据
+      if (displayText.includes('{"type":"tool_use"') || 
+          displayText.includes('{"id":"call_') || 
+          displayText.includes('"todos":[') ||
+          /\{\s*"type"\s*:\s*"tool_use"/g.test(displayText)) {
+        
+        console.log(`🔍 [UI过滤] 检测到JSON工具调用数据，执行Kode风格过滤...`)
+        
+        // 🌟 Kode风格：激进过滤策略 - 宁可过度过滤也不能泄露技术细节
+        displayText = displayText
+          .split('\n')
+          .filter(line => {
+            const trimmed = line.trim()
+            
+            // 过滤所有JSON格式的工具调用
+            const isJsonToolCall = (
+              trimmed.startsWith('{"type":"tool_use"') ||
+              trimmed.startsWith('{"id":"call_') ||
+              trimmed.startsWith('{"todos":') ||
+              trimmed.startsWith('{"name":"todo_') ||
+              (trimmed.startsWith('{') && trimmed.includes('"type":"tool_use"')) ||
+              (trimmed.startsWith('{') && trimmed.includes('"id":"call_')) ||
+              // 过滤JSON片段
+              /^\s*["{[].*("type"|"id"|"todos"|"input").*["}]\s*$/.test(trimmed) ||
+              // 过滤明显的工具调用JSON结构
+              /call_\w+/.test(trimmed) && trimmed.includes('{')
+            )
+            
+            if (isJsonToolCall) {
+              console.log(`🔍 [UI过滤] 过滤JSON行:`, trimmed.substring(0, 100) + '...')
+              return false
+            }
+            
+            return true
+          })
+          .join('\n')
+          .trim()
+          
+        console.log(`✅ [UI过滤] JSON过滤完成，内容长度: ${displayText.length}`)
+      }
       
-      // 🚀 优化状态更新逻辑 - 避免不必要的重建
+      // 📦 高效状态更新
       if (displayText) {
-        // 🚀 优化REPL日志：仅在显著内容变化或调试模式下输出
-        const shouldLogUpdate = isDebugMode || displayText.length - lastLoggedLength >= LOG_LENGTH_THRESHOLD
-        if (shouldLogUpdate) {
-          console.log(`🎯 [REPL更新] 显示长度: ${lastLoggedLength} -> ${displayText.length} (+${displayText.length - lastLoggedLength})`)
-          lastLoggedLength = displayText.length
-        }
         setMessages(prev => {
           const lastMessage = prev[prev.length - 1]
           
           if (!isAssistantMessage(lastMessage)) {
-            return prev // 无需更新
+            return prev
           }
           
           const currentContent = lastMessage.message.content?.[0]
           const currentText = (currentContent && isTextBlock(currentContent)) ? currentContent.text : ''
           
-          // 🎯 关键优化：只有内容真正改变时才更新
+          // 只在内容真正改变时更新
           if (currentText === displayText) {
-            return prev // 内容相同，避免不必要的重新渲染
+            return prev
           }
           
-          // 🔧 高效更新：只修改最后一条消息
+          // 高效更新最后一条消息
           const updatedMessages = [...prev]
           updatedMessages[prev.length - 1] = {
             ...lastMessage,
@@ -477,47 +482,87 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
             }
           }
           
+          // 消息窗口化管理
+          if (updatedMessages.length > MAX_MESSAGES) {
+            return updatedMessages.slice(-MAX_MESSAGES)
+          }
+          
           return updatedMessages
         })
+        
+        // 🚀 性能监控：记录处理耗时
+        const processingTime = Date.now() - startTime
+        if (processingTime > 20) {
+          console.warn(`⚠️ UI更新耗时: ${processingTime}ms, 内容长度: ${displayText.length}`)
+        }
       }
     }
     
     return (chunk: string) => {
-      accumulatedText += chunk
+      // 🚀 防闪烁优化：忽略空内容和重复内容
+      if (!chunk || chunk.trim() === '') return
       
-      // 节流更新：避免高频DOM操作导致的闪烁
+      // 🎯 文本选择模式下暂停更新，避免干扰复制操作
+      if (textSelectionMode) {
+        console.log('📋 文本选择模式激活，暂停流式更新')
+        return
+      }
+      
+      textChunks.push(chunk)
+      
+      // 🎯 智能批量更新策略
       const now = Date.now()
-      const shouldForceUpdate = accumulatedText.length % BATCH_SIZE_THRESHOLD === 0
+      const totalLength = textChunks.reduce((sum, c) => sum + c.length, 0)
+      const shouldForceUpdate = totalLength >= BATCH_SIZE_THRESHOLD
       const shouldTimeUpdate = now - lastUpdateTime >= THROTTLE_INTERVAL
       
       if (shouldForceUpdate || shouldTimeUpdate) {
-        // 立即更新
         lastUpdateTime = now
         performUpdate()
       } else {
-        // 延迟更新：确保最后的内容也能显示
+        // 🚀 防闪烁：延迟最终更新，避免高频调用
         if (updateTimer) clearTimeout(updateTimer)
-        updateTimer = setTimeout(performUpdate, THROTTLE_INTERVAL)
+        updateTimer = setTimeout(() => {
+          if (textChunks.length > 0) {
+            performUpdate()
+          }
+        }, THROTTLE_INTERVAL)
       }
     }
-  }, [setMessages]) // 只依赖setMessages
+  }, [setMessages])
 
   // 处理消息提交
   const handleSubmit = useCallback(async (message: string) => {
     if (!message.trim()) return
 
-    // 添加用户消息
+    // 🚀 添加用户消息并实现窗口化
     const userMessage = createUserMessage(message.trim())
-    setMessages(prev => [...prev, userMessage])
+    setMessages(prev => {
+      const newMessages = [...prev, userMessage]
+      // 消息窗口化：超出限制时自动清理
+      if (newMessages.length > MAX_MESSAGES) {
+        console.log(`🧹 [消息清理] 用户消息导致超限，清理${newMessages.length - MAX_MESSAGES}条最早消息`)
+        return newMessages.slice(-MAX_MESSAGES)
+      }
+      return newMessages
+    })
     setInput('')
     setIsThinking(true)
 
     try {
       const trimmedMessage = message.trim()
       
-      // 预创建流式助手消息
+      // 🚀 预创建流式助手消息并实现窗口化
       let streamingMessage = createAssistantMessage([])
-      setMessages(prev => [...prev, streamingMessage])
+      setMessages(prev => {
+        const newMessages = [...prev, streamingMessage]
+        // 消息窗口化：超出限制时自动清理
+        if (newMessages.length > MAX_MESSAGES) {
+          console.log(`🧹 [消息清理] 流式消息导致超限，清理${newMessages.length - MAX_MESSAGES}条最早消息`)
+          return newMessages.slice(-MAX_MESSAGES)
+        }
+        return newMessages
+      })
       
       // 设置流式状态
       setStreamingMessageId(streamingMessage.uuid)
@@ -751,8 +796,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         </Box>
       </Box>
 
-      {/* Messages */}
-      <Box flexDirection="column" flexGrow={1}>
+      {/* 🚀 优化消息容器：移除flexGrow减少布局计算，提升性能 */}
+      <Box flexDirection="column">
         {normalizedMessages.map((message, index) => {
           // 只渲染用户和助手消息
           if (message.type === 'user' || message.type === 'assistant') {
@@ -795,6 +840,15 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
             onConfirm={handlePlanConfirmation}
             onCancel={handlePlanConfirmationCancel}
           />
+        </Box>
+      )}
+
+      {/* 🚀 文本选择模式提示 */}
+      {textSelectionMode && (
+        <Box marginTop={1} marginBottom={1}>
+          <Text color="yellow" backgroundColor="blue">
+            📋 文本选择模式已激活 - 流式更新已暂停，方便复制文本。按 Ctrl+P 退出。
+          </Text>
         </Box>
       )}
 

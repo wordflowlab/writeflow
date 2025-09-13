@@ -1,0 +1,97 @@
+<svg width="700" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="serenaBar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textBar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d97706;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="ragBar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="700" height="400" fill="#f8fafc"/>
+  
+  <!-- Title -->
+  <text x="350" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">
+    代码搜索精度对比分析
+  </text>
+  
+  <!-- Y-axis -->
+  <line x1="80" y1="60" x2="80" y2="320" stroke="#64748b" stroke-width="2"/>
+  <text x="25" y="65" font-family="Arial, sans-serif" font-size="12" fill="#64748b">100%</text>
+  <text x="30" y="105" font-family="Arial, sans-serif" font-size="12" fill="#64748b">90%</text>
+  <text x="30" y="145" font-family="Arial, sans-serif" font-size="12" fill="#64748b">80%</text>
+  <text x="30" y="185" font-family="Arial, sans-serif" font-size="12" fill="#64748b">70%</text>
+  <text x="30" y="225" font-family="Arial, sans-serif" font-size="12" fill="#64748b">60%</text>
+  <text x="30" y="265" font-family="Arial, sans-serif" font-size="12" fill="#64748b">50%</text>
+  <text x="30" y="305" font-family="Arial, sans-serif" font-size="12" fill="#64748b">40%</text>
+  
+  <!-- X-axis -->
+  <line x1="80" y1="320" x2="650" y2="320" stroke="#64748b" stroke-width="2"/>
+  
+  <!-- Grid lines -->
+  <line x1="80" y1="60" x2="650" y2="60" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="80" y1="100" x2="650" y2="100" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="80" y1="140" x2="650" y2="140" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="80" y1="180" x2="650" y2="180" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="80" y1="220" x2="650" y2="220" stroke="#e2e8f0" stroke-width="1"/>
+  <line x1="80" y1="260" x2="650" y2="260" stroke="#e2e8f0" stroke-width="1"/>
+  
+  <!-- Serena (LSP + AST) - 95% accuracy -->
+  <rect x="120" y="73" width="120" height="247" fill="url(#serenaBar)" rx="5"/>
+  <text x="180" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#064e3b">
+    Serena
+  </text>
+  <text x="180" y="355" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#064e3b">
+    (LSP + AST)
+  </text>
+  <text x="180" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#059669">
+    95%
+  </text>
+  
+  <!-- Codex/Gemini-CLI (Text Search) - 75% accuracy -->
+  <rect x="290" y="125" width="120" height="195" fill="url(#textBar)" rx="5"/>
+  <text x="350" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#92400e">
+    Codex/Gemini-CLI
+  </text>
+  <text x="350" y="355" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#92400e">
+    (文本搜索)
+  </text>
+  <text x="350" y="115" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#d97706">
+    75%
+  </text>
+  
+  <!-- Traditional RAG - 65% accuracy -->
+  <rect x="460" y="153" width="120" height="167" fill="url(#ragBar)" rx="5"/>
+  <text x="520" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#7f1d1d">
+    传统RAG
+  </text>
+  <text x="520" y="355" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#7f1d1d">
+    (向量搜索)
+  </text>
+  <text x="520" y="143" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#dc2626">
+    65%
+  </text>
+  
+  <!-- Advantages boxes -->
+  <rect x="90" y="375" width="150" height="20" fill="#dcfce7" rx="3"/>
+  <text x="165" y="387" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#166534">
+    符号级精度 • 零误报 • 关系理解
+  </text>
+  
+  <rect x="260" y="375" width="150" height="20" fill="#fef3c7" rx="3"/>
+  <text x="335" y="387" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#92400e">
+    高性能 • 易部署 • 正则支持
+  </text>
+  
+  <rect x="430" y="375" width="150" height="20" fill="#fecaca" rx="3"/>
+  <text x="505" y="387" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#7f1d1d">
+    大规模检索 • 语义相似 • 上下文
+  </text>
+</svg>

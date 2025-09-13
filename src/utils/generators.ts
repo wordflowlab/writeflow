@@ -69,14 +69,16 @@ export async function* all<A>(
     if (!done) {
       // 生成器还没完成，继续监听下一个值
       promises.add(next(generator))
-      // 如果有值就 yield 出去 - 这是实时显示的关键！
+      // 立即 yield 所有非空值 - 确保实时性
       if (value !== undefined) {
         yield value as A
       }
-    } else if (waiting.length > 0) {
+    } else {
       // 当前生成器完成了，如果还有等待的就启动新的
-      const nextGen = waiting.shift()!
-      promises.add(next(nextGen))
+      if (waiting.length > 0) {
+        const nextGen = waiting.shift()!
+        promises.add(next(nextGen))
+      }
     }
   }
 }

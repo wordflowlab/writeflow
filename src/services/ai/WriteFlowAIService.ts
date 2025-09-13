@@ -142,12 +142,18 @@ export class WriteFlowAIService {
    * 处理 AI 请求（支持流式和非流式）
    */
   async processRequest(request: AIRequest): Promise<AIResponse> {
-    // 🌟 如果启用了流式处理，使用新的 AsyncGenerator 流式实现
+    // 🌟 如果启用了流式处理，使用优化的流式实现
     if (request.stream && request.onToken) {
-      console.log('🌊 使用字符级流式处理...')
+      console.log('🌊 使用优化流式处理...')
       
-      let finalContent = ''
+      // 🚀 优化字符串处理：使用数组拼接减少内存开销
+      const contentChunks: string[] = []
       let finalResponse: AIResponse | null = null
+      
+      // 🚀 流量控制：限制处理频率，防止UI阻塞
+      let lastProcessTime = 0
+      const MIN_PROCESS_INTERVAL = 8 // 最小8ms间隔
+      let pendingChunks: string[] = []
       
       // 处理流式消息
       for await (const message of this.processAsyncStreamingRequest(request)) {
@@ -155,13 +161,40 @@ export class WriteFlowAIService {
         if ((message as any).type === 'character_delta') {
           const delta = (message as any).delta
           if (delta && request.onToken) {
-            request.onToken(delta)
-            finalContent += delta
+            contentChunks.push(delta)
+            pendingChunks.push(delta)
+            
+            // 流量控制：批量处理避免高频调用
+            const now = Date.now()
+            if (now - lastProcessTime >= MIN_PROCESS_INTERVAL || pendingChunks.length >= 5) {
+              request.onToken(pendingChunks.join(''))
+              pendingChunks = []
+              lastProcessTime = now
+            }
+          }
+        } else if (message.type === 'progress') {
+          // 🚀 处理进度消息 - 关键修复：确保Progress消息到达用户界面
+          const progressMsg = message as any
+          if (progressMsg.message && request.onToken) {
+            // 处理剩余的挂起chunks先
+            if (pendingChunks.length > 0) {
+              request.onToken(pendingChunks.join(''))
+              pendingChunks = []
+            }
+            // 立即推送Progress消息
+            request.onToken(progressMsg.message)
+            console.log('📋 [WriteFlowAIService] 推送Progress消息:', progressMsg.message.substring(0, 50))
           }
         } else if (message.type === 'ai_response') {
+          // 处理剩余的挂起chunks
+          if (pendingChunks.length > 0) {
+            request.onToken(pendingChunks.join(''))
+            pendingChunks = []
+          }
+          
           // 最终完整响应
           finalResponse = {
-            content: (message as any).content || finalContent,
+            content: (message as any).content || contentChunks.join(''),
             usage: (message as any).metadata ? {
               inputTokens: (message as any).metadata.tokensUsed || 0,
               outputTokens: (message as any).metadata.tokensUsed || 0
@@ -175,7 +208,7 @@ export class WriteFlowAIService {
       
       // 返回最终响应
       return finalResponse || {
-        content: finalContent,
+        content: contentChunks.join(''),
         usage: { inputTokens: 0, outputTokens: 0 },
         cost: 0,
         duration: 0,

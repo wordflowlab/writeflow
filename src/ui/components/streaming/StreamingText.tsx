@@ -53,7 +53,7 @@ export const StreamingText: React.FC<StreamingTextProps> = ({
   cursor = true,
   cursorChar = '▊',
   theme = 'dark',
-  maxFPS = 60,
+  maxFPS = 15, // 🚀 降低默认帧率以支持文本选择和复制
   bufferSize = 1024,
   smoothing = true,
   onComplete,
@@ -367,7 +367,7 @@ export const StreamingText: React.FC<StreamingTextProps> = ({
     lastRenderTimeRef.current = frameEndTime
   }
 
-  // 光标闪烁效果
+  // 🚀 优化光标闪烁效果 - 防UI闪烁
   useEffect(() => {
     if (!cursor || isComplete || error) {
       setShowCursor(false)
@@ -375,17 +375,20 @@ export const StreamingText: React.FC<StreamingTextProps> = ({
     }
 
     if (isStreaming) {
-      setShowCursor(true) // 流式传输时保持光标显示
+      // 🎯 流式传输时固定显示光标，避免闪烁干扰文本选择
+      setShowCursor(true)
       return
     }
 
-    // 非流式模式下的光标闪烁
+    // 🚀 非流式模式下的优化闪烁：降低闪烁频率
     const blinkCursor = () => {
       setShowCursor(prev => !prev)
-      cursorTimeoutRef.current = setTimeout(blinkCursor, 500)
+      // 🎯 增加闪烁间隔到800ms，减少UI更新频率
+      cursorTimeoutRef.current = setTimeout(blinkCursor, 800)
     }
 
-    cursorTimeoutRef.current = setTimeout(blinkCursor, 500)
+    // 延迟启动闪烁，给用户留出复制时间
+    cursorTimeoutRef.current = setTimeout(blinkCursor, 1000)
 
     return () => {
       if (cursorTimeoutRef.current) {

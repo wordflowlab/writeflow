@@ -106,15 +106,18 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
         updatedAt: todo.updatedAt || new Date()
       }))
 
+      // 🚀 实时状态输出：在保存前先输出变更分析
+      const changeAnalysis = this.analyzeChanges(oldTodos, todoList)
+      
       // 保存新的任务列表
       await this.todoManager.saveTodos(todoList)
       
       // 缓存最新数据供渲染使用
       this.cachedTodos = todoList
 
-      // 生成格式化的任务列表输出 - 参考 TodoToolsAdapter 实现
+      // 生成增强的格式化输出，包含实时变更信息
       const formattedTodos = this.renderFormattedTodos(todoList)
-      const successMessage = `Todos have been modified successfully. Ensure that you continue to use the todo list to track your progress. Please proceed with the current tasks if applicable\n\n${formattedTodos}`
+      const successMessage = `✅ 任务列表更新成功！${changeAnalysis}\n\n${formattedTodos}\n\n🔄 请继续使用任务列表跟踪您的进度并继续执行当前任务。`
 
       // 触发系统提醒事件
       this.emitTodoChangedEvent(oldTodos, todoList, context)
@@ -147,19 +150,35 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
     }
   }
 
-  // 渲染工具使用消息
+  // 🚀 Kode风格：渲染用户友好的Progress消息（完全无JSON）
   renderToolUseMessage(
     input: z.infer<typeof InputSchema>,
     options: { verbose: boolean }
   ): string {
     const { todos } = input
+    const stats = this.calculateStats(todos)
     
-    if (options.verbose) {
-      const stats = this.calculateStats(todos)
-      return `正在更新任务列表 (${stats.total} 个任务: ${stats.pending} 待处理, ${stats.inProgress} 进行中, ${stats.completed} 已完成)`
+    // 🌟 Kode风格：简洁、清晰、用户友好的Progress消息
+    let statusMessage = `📋 任务列表更新中...\n\n`
+    
+    // 显示统计信息（仿照Kode的TaskTool格式）
+    statusMessage += `📊 当前任务状态:\n`
+    statusMessage += `   ⏳ 待处理: ${stats.pending} 个\n`
+    statusMessage += `   🔄 进行中: ${stats.inProgress} 个\n`
+    statusMessage += `   ✅ 已完成: ${stats.completed} 个\n`
+    statusMessage += `   📈 总计: ${stats.total} 个任务\n`
+    
+    // 进度可视化（简化版，更用户友好）
+    if (stats.total > 0) {
+      const progress = Math.round((stats.completed / stats.total) * 100)
+      const filled = Math.floor(progress / 5)
+      const empty = 20 - filled
+      const progressBar = '█'.repeat(filled) + '░'.repeat(empty)
+      statusMessage += `\n📈 完成度: [${progressBar}] ${progress}%`
     }
     
-    return `正在更新任务列表 (${todos.length} 个任务)`
+    // 🚀 关键：绝对不包含任何JSON或技术细节
+    return statusMessage
   }
 
   // 生成格式化的任务列表文本输出 - 参考 TodoToolsAdapter 实现
@@ -176,6 +195,47 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
       inProgress: todos.filter(t => t.status === 'in_progress').length,
       completed: todos.filter(t => t.status === 'completed').length
     }
+  }
+
+  // 🚀 新增：分析任务变更，提供实时反馈
+  private analyzeChanges(oldTodos: Todo[], newTodos: Todo[]): string {
+    const changes: string[] = []
+    
+    // 分析数量变化
+    const oldCount = oldTodos.length
+    const newCount = newTodos.length
+    
+    if (newCount > oldCount) {
+      changes.push(`📈 新增了 ${newCount - oldCount} 个任务`)
+    } else if (newCount < oldCount) {
+      changes.push(`🗑️ 移除了 ${oldCount - newCount} 个任务`)
+    }
+    
+    // 分析状态变化
+    const statusChanges = this.analyzeStatusChanges(oldTodos, newTodos)
+    changes.push(...statusChanges)
+    
+    return changes.length > 0 ? `\n\n🔄 本次更新：\n   ${changes.join('\n   ')}` : ''
+  }
+
+  // 分析状态变化细节
+  private analyzeStatusChanges(oldTodos: Todo[], newTodos: Todo[]): string[] {
+    const changes: string[] = []
+    const newTodoMap = new Map(newTodos.map(t => [t.id, t]))
+    
+    oldTodos.forEach(oldTodo => {
+      const newTodo = newTodoMap.get(oldTodo.id)
+      if (newTodo && oldTodo.status !== newTodo.status) {
+        const statusEmoji = {
+          'pending': '⏳',
+          'in_progress': '🔄',
+          'completed': '✅'
+        }
+        changes.push(`${statusEmoji[newTodo.status] || '📝'} "${newTodo.content}" → ${newTodo.status}`)
+      }
+    })
+    
+    return changes
   }
 
   // 触发 Todo 变化事件
