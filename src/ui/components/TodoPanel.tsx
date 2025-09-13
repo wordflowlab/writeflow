@@ -50,7 +50,7 @@ function renderTodoTree(todos: Todo[]): React.ReactNode[] {
 // 折叠状态显示
 function CollapsedView({ stats }: { stats: TodoStats }) {
   const todoText = stats.total === 0 
-    ? 'Todos (No todos)' 
+    ? 'Todos (Ready for tasks)' 
     : `Todos (${stats.completed}/${stats.total})`
   
   return (
@@ -79,10 +79,15 @@ function ExpandedView({ todos, stats, status, elapsedSeconds }: {
       <Box flexDirection="column">
         <Box flexDirection="row" justifyContent="space-between">
           <Text color="gray">
-            📝 Todos (No todos)
+            📝 Todos (Ready for tasks)
           </Text>
           <Text color="gray" dimColor>
             Ctrl+T to hide
+          </Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text color="gray" dimColor>
+            💡 Start a task with AI to see todos appear here
           </Text>
         </Box>
       </Box>
@@ -115,6 +120,7 @@ function ExpandedView({ todos, stats, status, elapsedSeconds }: {
             onColorChange={setCurrentColor}
             elapsedSeconds={elapsedSeconds || 0}
             tokenCount={inProgressTask ? tokenCount : 0}
+            showTodoHint={!!inProgressTask}
           />
         </Box>
       </Box>
@@ -136,11 +142,7 @@ export function TodoPanel({
   status = 'idle', 
   elapsedSeconds = 0 
 }: TodoPanelProps) {
-  // Claude Code 风格：无 TODO 时完全不显示
-  if (stats.total === 0) {
-    return null
-  }
-
+  // 总是显示 TODO 面板，即使为空状态
   if (!isVisible) {
     return <CollapsedView stats={stats} />
   }

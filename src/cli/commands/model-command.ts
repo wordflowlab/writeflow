@@ -4,7 +4,7 @@
  */
 
 import { CommandResult } from '../../types/command'
-import { AgentContext } from '../../types/agent'
+import { AgentContext } from '../../types/agent.js'
 
 export const name = 'model'
 export const description = '配置和管理 AI 模型设置'

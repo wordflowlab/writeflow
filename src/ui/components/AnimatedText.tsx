@@ -7,9 +7,10 @@ interface AnimatedTextProps {
   onColorChange?: (color: string) => void
   elapsedSeconds?: number
   tokenCount?: number
+  showTodoHint?: boolean
 }
 
-export function AnimatedText({ text, isAnimated = false, onColorChange, elapsedSeconds = 0, tokenCount = 0 }: AnimatedTextProps) {
+export function AnimatedText({ text, isAnimated = false, onColorChange, elapsedSeconds = 0, tokenCount = 0, showTodoHint = false }: AnimatedTextProps) {
   const [currentColor, setCurrentColor] = useState('yellow')
 
   // 可用的随机颜色池
@@ -62,7 +63,7 @@ export function AnimatedText({ text, isAnimated = false, onColorChange, elapsedS
   
   // 构建执行信息
   const executionInfo = isAnimated && (elapsedSeconds > 0 || tokenCount > 0) 
-    ? ` (${elapsedSeconds}s, ${tokenCount} tokens • esc to interrupt • ctrl+t to hide todos)`
+    ? ` (${elapsedSeconds}s, ${tokenCount} tokens • esc to interrupt${showTodoHint ? ' • ctrl+t to hide todos' : ''})`
     : bracketContent
 
   return (

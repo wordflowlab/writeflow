@@ -29,7 +29,8 @@ import {
   createAssistantMessage,
   createTextBlock,
   isUserMessage,
-  isAssistantMessage
+  isAssistantMessage,
+  isTextBlock
 } from '../types/UIMessage.js'
 import { Message } from './components/messages/Message.js'
 
@@ -90,6 +91,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const [erroredToolUseIDs, setErroredToolUseIDs] = useState<Set<string>>(new Set())
   const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState<Set<string>>(new Set())
   const [unresolvedToolUseIDs, setUnresolvedToolUseIDs] = useState<Set<string>>(new Set())
+  
+  // 流式显示状态管理
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   
   // 获取可用工具
   const tools = useMemo(() => getAvailableTools(), [])
@@ -382,55 +386,61 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       let streamingMessage = createAssistantMessage([])
       setMessages(prev => [...prev, streamingMessage])
       
+      // 设置流式状态
+      setStreamingMessageId(streamingMessage.uuid)
+      
       // 智能文本缓冲器，用于处理 JSON 和纯文本混合
       let accumulatedText = ''
       let pendingTodoUpdate: any = null
 
-      // 流式处理回调
+      // 🎯 修复后的流式处理回调 - 保护markdown格式
       const onToken = (chunk: string) => {
+        console.log(`🌊 [REPL流式] 收到字符块: "${chunk}" (长度: ${chunk.length})`)
         accumulatedText += chunk
         
-        // 检查是否包含完整的 JSON TODO 更新 - 更安全的处理
-        // 只查找独立的 JSON 块，避免误匹配小说内容
-        const lines = accumulatedText.split('\n')
-        let jsonLineIndex = -1
-        let jsonContent = ''
+        // 智能分离JSON和内容 - 保护创意内容的markdown格式
+        let displayText = accumulatedText
+        let hasJsonUpdate = false
         
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim()
-          if (line.startsWith('{') && line.includes('"todos"') && line.endsWith('}')) {
+        // 检测并移除TODO JSON更新（在独立行中）
+        const lines = displayText.split('\n')
+        const filteredLines: string[] = []
+        
+        for (const line of lines) {
+          const trimmed = line.trim()
+          
+          // 检测完整的JSON TODO更新行
+          if (trimmed.startsWith('{') && trimmed.includes('"todos"') && trimmed.endsWith('}')) {
             try {
-              const todoData = JSON.parse(line)
+              const todoData = JSON.parse(trimmed)
               if (todoData.todos && Array.isArray(todoData.todos)) {
                 pendingTodoUpdate = todoData.todos
-                jsonLineIndex = i
-                jsonContent = line
-                break
+                hasJsonUpdate = true
+                continue // 跳过此行，不添加到显示内容
               }
             } catch (e) {
-              // 不是有效的 JSON，继续查找
+              // 不是有效的JSON，保留原始内容
             }
           }
+          
+          // 过滤明确的系统消息，但保护内容中的格式
+          if (trimmed.startsWith('AI: [调用 todo_write 工具]') ||
+              trimmed.startsWith('todo_write工具:') ||
+              trimmed.startsWith('🎯 **任务列表已更新**') ||
+              trimmed.startsWith('⎿')) {
+            continue // 跳过系统消息行
+          }
+          
+          // 保留所有其他内容，包括markdown格式
+          filteredLines.push(line)
         }
         
-        // 如果找到有效的 TODO JSON，从文本中移除
-        if (jsonLineIndex >= 0) {
-          lines.splice(jsonLineIndex, 1)
-          accumulatedText = lines.join('\n').trim()
-        }
+        // 重新组装显示文本，保留原始格式
+        displayText = filteredLines.join('\n').trim()
         
-        // 过滤工具调用相关信息 - 更精确的过滤
-        let filteredLines = accumulatedText.split('\n').filter(line => {
-          const trimmed = line.trim()
-          return !trimmed.startsWith('AI: [调用 todo_write 工具]') &&
-                 !trimmed.startsWith('todo_write工具:') &&
-                 !trimmed.startsWith('🎯 **任务列表已更新**') &&
-                 !trimmed.startsWith('⎿')
-        })
-        accumulatedText = filteredLines.join('\n').trim()
-        
-        // 更新消息显示（仅显示非 JSON 内容）
-        if (accumulatedText) {
+        // 实时更新消息显示 - 保护markdown结构
+        if (displayText) {
+          console.log(`🎯 [REPL更新] 更新显示，保护格式，长度: ${displayText.length}`)
           setMessages(prev => {
             const newMessages = [...prev]
             const lastMessage = newMessages[newMessages.length - 1]
@@ -440,7 +450,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
                 ...lastMessage,
                 message: {
                   ...lastMessage.message,
-                  content: [createTextBlock(accumulatedText)]
+                  content: [createTextBlock(displayText)]
                 }
               }
             }
@@ -455,43 +465,68 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         onToken
       })
       
-      // 用最终文本替换流式占位消息（如"思考中..."）
+      // 🎯 智能处理最终文本，强化markdown格式保护
       if (finalText && finalText.trim()) {
-        // 过滤最终文本中的工具调用信息 - 更精确的过滤
-        let filteredFinalLines = finalText.split('\n').filter(line => {
-          const trimmed = line.trim()
-          return !trimmed.startsWith('AI: [调用 todo_write 工具]') &&
-                 !trimmed.startsWith('todo_write工具:') &&
-                 !trimmed.startsWith('⎿')
-        })
-        let cleanedFinalText = filteredFinalLines.join('\n')
-        
-        // 更安全地移除 TODO 更新提示，只移除独立的行
-        const lines = cleanedFinalText.split('\n')
-        const filteredLines = lines.filter(line => {
-          const trimmedLine = line.trim()
-          // 只过滤明确的 TODO 系统消息，避免误删小说内容
-          return !trimmedLine.startsWith('🎯 **任务列表已更新**') && 
-                 !trimmedLine.match(/^\s*\{\s*"todos"\s*:\s*\[[\s\S]*?\]\s*\}\s*$/)
-        })
-        cleanedFinalText = filteredLines.join('\n').trim()
-        
-        if (cleanedFinalText) {
-          setMessages(prev => {
-            const newMessages = [...prev]
-            const last = newMessages[newMessages.length - 1]
-            if (isAssistantMessage(last)) {
+        setMessages(prev => {
+          const newMessages = [...prev]
+          const last = newMessages[newMessages.length - 1]
+          if (isAssistantMessage(last)) {
+            const currentContent = last.message.content[0]
+            const currentText = isTextBlock(currentContent) ? currentContent.text : ''
+            
+            // 检查当前内容是否需要更新
+            const shouldUpdate = !currentText || 
+                                currentText.trim() === '' ||
+                                currentText.includes('思考中...') ||
+                                currentText.includes('正在处理...')
+            
+            // 应用与onToken相同的过滤逻辑，确保一致性
+            const lines = finalText.split('\n')
+            const filteredLines: string[] = []
+            
+            for (const line of lines) {
+              const trimmed = line.trim()
+              
+              // 跳过JSON TODO更新行
+              if (trimmed.startsWith('{') && trimmed.includes('"todos"') && trimmed.endsWith('}')) {
+                try {
+                  const todoData = JSON.parse(trimmed)
+                  if (todoData.todos && Array.isArray(todoData.todos)) {
+                    continue // 跳过TODO JSON行
+                  }
+                } catch (e) {
+                  // 不是有效JSON，保留原始内容
+                }
+              }
+              
+              // 跳过系统消息行，保护创意内容
+              if (trimmed.startsWith('AI: [调用 todo_write 工具]') ||
+                  trimmed.startsWith('todo_write工具:') ||
+                  trimmed.startsWith('🎯 **任务列表已更新**') ||
+                  trimmed.startsWith('⎿')) {
+                continue
+              }
+              
+              // 保留所有其他内容，包括markdown格式
+              filteredLines.push(line)
+            }
+            
+            const cleanedText = filteredLines.join('\n').trim()
+            
+            if (shouldUpdate && cleanedText) {
+              console.log(`🎯 [最终文本] 更新内容，保护markdown格式，长度: ${cleanedText.length}`)
               newMessages[newMessages.length - 1] = {
                 ...last,
                 message: {
                   ...last.message,
-                  content: [createTextBlock(cleanedFinalText)]
+                  content: [createTextBlock(cleanedText)]
                 }
               }
             }
-            return newMessages
-          })
-        }
+            // 如果已有格式化内容且无需更新，完全保护现有格式
+          }
+          return newMessages
+        })
 
         // 若文本包含 TODO 更新的信号，则刷新面板
         if (/Todos have been modified|任务列表已更新|"todos"\s*:\s*\[/.test(finalText)) {
@@ -518,6 +553,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     } catch (error) {
       console.error('处理消息失败:', error)
       
+      // 清除流式状态（错误时也要清理）
+      setStreamingMessageId(null)
+      
       // 添加错误消息
       const errorMessage = createAssistantMessage([
         createTextBlock(`处理请求时发生错误: ${error instanceof Error ? error.message : '未知错误'}`)
@@ -525,6 +563,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsThinking(false)
+      // 清除流式状态
+      setStreamingMessageId(null)
     }
   }, [writeFlowApp, fetchTodos, updateTodoStats])
 
@@ -608,6 +648,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         {normalizedMessages.map((message, index) => {
           // 只渲染用户和助手消息
           if (message.type === 'user' || message.type === 'assistant') {
+            // 检查当前消息是否正在流式显示
+            const isStreaming = streamingMessageId === message.uuid
+            
             return (
               <Message
                 key={`${message.type}-${message.uuid}`}
@@ -627,6 +670,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
                 onCollapsibleFocus={setCollapsibleFocus}
                 focusedCollapsibleId={focusedCollapsibleId || undefined}
                 onNewCollapsibleContent={registerAndFocusNewCollapsible}
+                isStreaming={isStreaming}
+                streamingCursor={true}
               />
             )
           }

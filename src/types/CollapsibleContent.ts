@@ -129,11 +129,11 @@ export const CONTENT_TYPE_PATTERNS = {
 } as const
 
 // 自动折叠阈值配置
-export const AUTO_COLLAPSE_THRESHOLDS = {
+export const AUTO_COLLAPSE_THRESHOLDS: Record<string, number> = {
   lines: 20,              // 提高阈值从 8 -> 20，减少过度折叠
   characters: 800,        // 提高字符限制从 500 -> 800  
   codeBlockLines: 10,     // 提高代码块阈值从 6 -> 10
   toolOutputLines: 8,     // 提高工具输出阈值从 5 -> 8
   errorMessageLines: 5,   // 提高错误消息阈值从 3 -> 5
   creativeContentLines: 999999  // 创作内容永远不折叠
-} as const
+}

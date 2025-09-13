@@ -34,6 +34,8 @@ interface MessageProps {
   onCollapsibleFocus?: (id: string) => void
   focusedCollapsibleId?: string
   onNewCollapsibleContent?: (id: string) => void
+  isStreaming?: boolean // 新增：标识消息是否正在流式显示
+  streamingCursor?: boolean // 新增：是否显示流式光标
 }
 
 export function Message({
@@ -54,6 +56,8 @@ export function Message({
   onCollapsibleFocus,
   focusedCollapsibleId,
   onNewCollapsibleContent,
+  isStreaming = false,
+  streamingCursor = true,
 }: MessageProps): React.ReactNode {
   // 助手消息
   if (message.type === 'assistant') {
@@ -80,6 +84,8 @@ export function Message({
             onCollapsibleFocus={onCollapsibleFocus}
             focusedCollapsibleId={focusedCollapsibleId}
             onNewCollapsibleContent={onNewCollapsibleContent}
+            isStreaming={isStreaming}
+            streamingCursor={streamingCursor}
           />
         ))}
       </Box>
@@ -121,6 +127,8 @@ interface AssistantBlockProps {
   onCollapsibleFocus?: (id: string) => void
   focusedCollapsibleId?: string
   onNewCollapsibleContent?: (id: string) => void
+  isStreaming?: boolean // 新增：标识是否正在流式显示
+  streamingCursor?: boolean // 新增：是否显示流式光标
 }
 
 function AssistantBlock({
@@ -142,6 +150,8 @@ function AssistantBlock({
   onCollapsibleFocus,
   focusedCollapsibleId,
   onNewCollapsibleContent,
+  isStreaming = false,
+  streamingCursor = true,
 }: AssistantBlockProps): React.ReactNode {
   switch (block.type) {
     case 'text':
@@ -164,6 +174,8 @@ function AssistantBlock({
           onCollapsibleFocus={onCollapsibleFocus}
           isCollapsibleFocused={isBlockFocused}
           onNewCollapsibleContent={onNewCollapsibleContent}
+          isStreaming={isStreaming}
+          streamingCursor={streamingCursor}
         />
       )
     

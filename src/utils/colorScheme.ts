@@ -308,4 +308,9 @@ export const format = {
   info: createChalkStyles().info,
   dim: createChalkStyles().dim,
   highlight: createChalkStyles().highlight,
+  
+  // 新增流式消息格式化支持
+  bold: createChalkStyles().heading,
+  italic: createChalkStyles().quote,
+  keyword: createChalkStyles().primary,
 }

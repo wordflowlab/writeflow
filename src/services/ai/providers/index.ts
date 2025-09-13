@@ -1,5 +1,4 @@
 import type { ProviderAdapter } from './ProviderAdapter.js'
-import { DeepSeekAdapter } from './DeepSeekAdapter.js'
 import { OpenAIAdapter } from './OpenAIAdapter.js'
 
 class DefaultAdapter implements ProviderAdapter {
@@ -35,8 +34,6 @@ class DefaultAdapter implements ProviderAdapter {
 
 export function getProviderAdapter(provider: string | undefined): ProviderAdapter {
   switch ((provider || '').toLowerCase()) {
-    case 'deepseek':
-      return new DeepSeekAdapter()
     case 'openai':
     case 'oai':
       return new OpenAIAdapter()

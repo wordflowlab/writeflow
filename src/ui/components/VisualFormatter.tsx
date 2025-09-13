@@ -20,6 +20,7 @@ import {
   getBlockText
 } from '../../types/UIMessage.js'
 import type { CollapsibleContentType } from '../../types/CollapsibleContent.js'
+import { getContentAnalyzer } from '../../services/ai/content/ContentAnalyzer.js'
 
 interface VisualFormatterProps {
   block: ContentBlock
@@ -47,7 +48,7 @@ export function VisualFormatter({
     maxWidth: process.stdout.columns - 6
   })
 
-  // 检查是否应该使用可折叠显示
+  // 🎯 重构后的折叠策略 - 使用ContentAnalyzer统一检测
   const shouldUseCollapsible = () => {
     if (!enableCollapsible) return false
     
@@ -55,11 +56,20 @@ export function VisualFormatter({
     const lines = text.split('\n').length
     const chars = text.length
     
-    // 提高折叠阈值，减少过度折叠 - 移除LongContentBlock强制折叠
+    // 使用ContentAnalyzer检测创意内容，移除硬编码
+    const contentAnalyzer = getContentAnalyzer()
+    const isCreativeContent = contentAnalyzer.isCreativeContent(text)
+    
+    if (isCreativeContent) {
+      // 创意内容：更高的阈值，避免过度折叠
+      return lines > 50 || chars > 2000
+    }
+    
+    // 其他内容：提高折叠阈值，减少过度折叠
     return lines > 30 || chars > 1000
   }
 
-  // 检测内容类型
+  // 🎯 重构后的内容类型检测 - 统一使用ContentAnalyzer
   const detectContentType = (): CollapsibleContentType => {
     if (isLongContentBlock(block)) {
       return block.contentType
@@ -71,36 +81,34 @@ export function VisualFormatter({
     
     const text = getBlockText(block)
     
-    // 工具执行输出检测 - 更积极地识别工具输出
+    // 使用专业的ContentAnalyzer进行内容类型检测
+    const contentAnalyzer = getContentAnalyzer()
+    const detectedType = contentAnalyzer.detectContentType(text)
+    
+    // 如果ContentAnalyzer能识别，直接使用其结果
+    if (detectedType !== 'long-text') {
+      return detectedType
+    }
+    
+    // 仅保留必要的特殊情况检测（这些是UI特有的检测需求）
+    // 工具执行输出的UI特殊标识
     if (text.includes('🔧') || text.includes('Tools loaded:') || 
-        text.includes('matches') || text.includes('path') || 
-        text.includes('exec_') || text.includes('[Glob]') ||
-        text.includes('正在执行') || text.includes('工具执行') ||
-        /\.(js|ts|tsx|jsx|py|go|rs|java|cpp|c|h)/.test(text)) {
+        text.includes('正在执行') || text.includes('工具执行')) {
       return 'tool-execution'
     }
     
-    // 错误信息检测
-    if (text.includes('错误') || text.includes('Error') || text.includes('Exception')) {
-      return 'error-message'
-    }
-    
-    // 代码块检测
-    if (text.includes('```') || /^(function|const|let|var|class|interface)/.test(text)) {
-      return 'code-block'
-    }
-    
-    // 文件内容检测
+    // 文件内容的UI特殊标识  
     if (text.includes('📄') || text.startsWith('File:') || text.startsWith('文件:')) {
       return 'file-content'
     }
     
-    // 分析结果检测
-    if (text.includes('分析') || text.includes('Analysis') || text.includes('📊')) {
+    // 分析结果的UI特殊标识
+    if (text.includes('📊')) {
       return 'analysis-result'
     }
     
-    return 'long-text'
+    // 默认返回ContentAnalyzer的结果
+    return detectedType
   }
 
   // 生成标题

@@ -1,7 +1,7 @@
 import { Box, Text } from 'ink'
 import React from 'react'
 import { getTheme } from '../../utils/theme'
-import { useTerminalSize } from '../../hooks/useTerminalSize'
+import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 
 const PRODUCT_NAME = 'WriteFlow'
 const VERSION = '1.0.0'

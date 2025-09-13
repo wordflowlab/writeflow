@@ -22,6 +22,8 @@ interface AssistantTextMessageProps {
   onCollapsibleFocus?: (id: string) => void
   isCollapsibleFocused?: boolean
   onNewCollapsibleContent?: (id: string) => void // 新增：通知有新的可折叠内容
+  isStreaming?: boolean // 新增：标识是否正在流式显示
+  streamingCursor?: boolean // 新增：是否显示流式光标
 }
 
 export function AssistantTextMessage({
@@ -38,6 +40,8 @@ export function AssistantTextMessage({
   onCollapsibleFocus,
   isCollapsibleFocused = false,
   onNewCollapsibleContent,
+  isStreaming = false,
+  streamingCursor = true,
 }: AssistantTextMessageProps): React.ReactNode {
   const { columns } = useTerminalSize()
   const theme = getTheme()
@@ -147,11 +151,17 @@ export function AssistantTextMessage({
           flexDirection="column" 
           width={width || columns - 6}
         >
-          <RichTextRenderer 
-            content={block.text}
-            wrap={true}
-            preserveWhitespace={true}
-          />
+          <Box flexDirection="row">
+            <RichTextRenderer 
+              content={block.text}
+              wrap={true}
+              preserveWhitespace={true}
+            />
+            {/* 流式显示光标 - 在流式进行中显示闪烁光标 */}
+            {isStreaming && streamingCursor && (
+              <Text color={theme.claude || 'cyan'} dimColor={false}>●</Text>
+            )}
+          </Box>
         </Box>
       </Box>
       
