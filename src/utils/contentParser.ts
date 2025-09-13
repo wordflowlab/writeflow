@@ -3,6 +3,8 @@ import { marked, Token } from 'marked'
 import { highlight, supportsLanguage } from 'cli-highlight'
 import { getTheme } from './theme.js'
 
+import { debugLog, logError, logWarn, infoLog } from './log.js'
+
 export interface ParsedContent {
   type: string
   content: string
@@ -34,7 +36,7 @@ export function parseContent(
     const tokens = marked.lexer(content)
     return tokens.map(token => formatToken(token, 0, maxDepth)).flat()
   } catch (error) {
-    console.error('内容解析错误:', error)
+    logError('内容解析错误:', error)
     // 如果解析失败，返回原始文本
     return [{
       type: 'text',
@@ -97,7 +99,7 @@ function formatToken(
           highlightedCode = token.text // 原始代码，无高亮
         }
       } catch (error) {
-        console.error('代码高亮失败:', error)
+        logError('代码高亮失败:', error)
         highlightedCode = token.text
       }
 

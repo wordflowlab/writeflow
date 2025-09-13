@@ -5,6 +5,7 @@
 
 import { getMessageLogger } from '../messaging/MessageManager.js'
 import { ToolExecutionResult, ToolExecutionStatus } from '../../../tools/ToolOrchestrator.js'
+import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
 
 export enum ExecutionStage {
   PLANNING = 'planning',           // 计划阶段 - 分析需要执行的工具
@@ -239,20 +240,20 @@ export class InteractiveExecutionManager {
       category: 'plan-preview'
     })
 
-    console.log(`\n📊 计划概览:`)
-    console.log(`  标题: ${plan.title}`)
-    console.log(`  工具数量: ${plan.tools.length}`)
-    console.log(`  预计耗时: ${plan.estimatedTime}ms`)
-    console.log(`  风险级别: ${this.getRiskIcon(plan.riskLevel)} ${plan.riskLevel}`)
-    console.log(`  可撤销: ${plan.reversible ? '✅' : '❌'}`)
+    debugLog(`\n📊 计划概览:`)
+    debugLog(`  标题: ${plan.title}`)
+    debugLog(`  工具数量: ${plan.tools.length}`)
+    debugLog(`  预计耗时: ${plan.estimatedTime}ms`)
+    debugLog(`  风险级别: ${this.getRiskIcon(plan.riskLevel)} ${plan.riskLevel}`)
+    debugLog(`  可撤销: ${plan.reversible ? '✅' : '❌'}`)
 
-    console.log(`\n🔧 将要执行的工具:`)
+    debugLog(`\n🔧 将要执行的工具:`)
     plan.tools.forEach((tool, index) => {
       const riskIcon = this.getRiskIcon(tool.riskLevel)
-      console.log(`  ${index + 1}. ${tool.toolName} ${riskIcon}`)
-      console.log(`     ${tool.description}`)
+      debugLog(`  ${index + 1}. ${tool.toolName} ${riskIcon}`)
+      debugLog(`     ${tool.description}`)
       if (tool.previewAvailable) {
-        console.log(`     👁️  预览可用`)
+        debugLog(`     👁️  预览可用`)
       }
     })
   }
@@ -261,25 +262,25 @@ export class InteractiveExecutionManager {
    * 显示确认提示
    */
   private displayConfirmationPrompt(plan: ExecutionPlan): void {
-    console.log(`\n❓ 确认执行`)
-    console.log(`即将执行 ${plan.tools.length} 个工具，预计耗时 ${plan.estimatedTime}ms`)
-    console.log(`风险级别: ${this.getRiskIcon(plan.riskLevel)} ${plan.riskLevel}`)
-    console.log(`\n选项:`)
-    console.log(`  [Y] 继续执行`)
-    console.log(`  [P] 预览详情`) 
-    console.log(`  [M] 修改计划`)
-    console.log(`  [N] 取消执行`)
-    console.log(`\n请选择 (默认: Y): `)
+    debugLog(`\n❓ 确认执行`)
+    debugLog(`即将执行 ${plan.tools.length} 个工具，预计耗时 ${plan.estimatedTime}ms`)
+    debugLog(`风险级别: ${this.getRiskIcon(plan.riskLevel)} ${plan.riskLevel}`)
+    debugLog(`\n选项:`)
+    debugLog(`  [Y] 继续执行`)
+    debugLog(`  [P] 预览详情`) 
+    debugLog(`  [M] 修改计划`)
+    debugLog(`  [N] 取消执行`)
+    debugLog(`\n请选择 (默认: Y): `)
   }
 
   /**
    * 显示当前工具
    */
   private displayCurrentTool(tool: PlannedTool, current: number, total: number): void {
-    console.log(`\n[${current}/${total}] 🔧 ${tool.toolName}`)
-    console.log(`描述: ${tool.description}`)
-    console.log(`风险级别: ${this.getRiskIcon(tool.riskLevel)} ${tool.riskLevel}`)
-    console.log(`预计耗时: ${tool.estimatedTime}ms`)
+    debugLog(`\n[${current}/${total}] 🔧 ${tool.toolName}`)
+    debugLog(`描述: ${tool.description}`)
+    debugLog(`风险级别: ${this.getRiskIcon(tool.riskLevel)} ${tool.riskLevel}`)
+    debugLog(`预计耗时: ${tool.estimatedTime}ms`)
   }
 
   /**
@@ -290,15 +291,15 @@ export class InteractiveExecutionManager {
     const icon = success ? '✅' : '❌'
     const duration = result.endTime ? result.endTime - result.startTime : 0
     
-    console.log(`${icon} ${tool.toolName} - ${success ? '成功' : '失败'} (${duration}ms)`)
+    debugLog(`${icon} ${tool.toolName} - ${success ? '成功' : '失败'} (${duration}ms)`)
     
     if (!success && result.error) {
-      console.log(`   错误: ${result.error instanceof Error ? result.error.message : result.error}`)
+      debugLog(`   错误: ${result.error instanceof Error ? result.error.message : result.error}`)
     }
     
     if (success && result.result) {
       const preview = String(result.result).slice(0, 100)
-      console.log(`   结果: ${preview}${String(result.result).length > 100 ? '...' : ''}`)
+      debugLog(`   结果: ${preview}${String(result.result).length > 100 ? '...' : ''}`)
     }
   }
 
@@ -311,12 +312,12 @@ export class InteractiveExecutionManager {
     const successCount = results.filter(r => r.status === ToolExecutionStatus.COMPLETED).length
     const failCount = results.length - successCount
 
-    console.log(`\n📊 执行摘要`)
-    console.log(`计划: ${plan.title}`)
-    console.log(`总耗时: ${duration}ms`)
-    console.log(`成功: ${successCount}/${results.length}`)
+    debugLog(`\n📊 执行摘要`)
+    debugLog(`计划: ${plan.title}`)
+    debugLog(`总耗时: ${duration}ms`)
+    debugLog(`成功: ${successCount}/${results.length}`)
     if (failCount > 0) {
-      console.log(`失败: ${failCount}`)
+      debugLog(`失败: ${failCount}`)
     }
     
     this.messageLogger.systemInfo('执行计划完成', {
@@ -369,23 +370,23 @@ export class InteractiveExecutionManager {
    * 显示工具预览
    */
   private displayToolPreview(tool: PlannedTool): void {
-    console.log(`\n👁️  工具预览: ${tool.toolName}`)
-    console.log(`描述: ${tool.description}`)
-    console.log(`参数: ${JSON.stringify(tool.parameters, null, 2)}`)
-    console.log(`风险级别: ${this.getRiskIcon(tool.riskLevel)} ${tool.riskLevel}`)
-    console.log(`预计耗时: ${tool.estimatedTime}ms`)
+    debugLog(`\n👁️  工具预览: ${tool.toolName}`)
+    debugLog(`描述: ${tool.description}`)
+    debugLog(`参数: ${JSON.stringify(tool.parameters, null, 2)}`)
+    debugLog(`风险级别: ${this.getRiskIcon(tool.riskLevel)} ${tool.riskLevel}`)
+    debugLog(`预计耗时: ${tool.estimatedTime}ms`)
   }
 
   /**
    * 失败时的操作提示
    */
   private async promptForFailureAction(tool: PlannedTool, result: ToolExecutionResult): Promise<UserChoice> {
-    console.log(`\n❌ ${tool.toolName} 执行失败`)
-    console.log(`错误: ${result.error instanceof Error ? result.error.message : result.error}`)
-    console.log(`\n选项:`)
-    console.log(`  [R] 重试`)
-    console.log(`  [S] 跳过`)
-    console.log(`  [C] 取消执行`)
+    debugLog(`\n❌ ${tool.toolName} 执行失败`)
+    debugLog(`错误: ${result.error instanceof Error ? result.error.message : result.error}`)
+    debugLog(`\n选项:`)
+    debugLog(`  [R] 重试`)
+    debugLog(`  [S] 跳过`)
+    debugLog(`  [C] 取消执行`)
     
     // 模拟用户选择 - 在实际实现中会等待用户输入
     return UserChoice.SKIP
@@ -395,12 +396,12 @@ export class InteractiveExecutionManager {
    * 异常时的操作提示
    */
   private async promptForErrorAction(tool: PlannedTool, error: any): Promise<UserChoice> {
-    console.log(`\n💥 ${tool.toolName} 发生异常`)
-    console.log(`异常: ${error instanceof Error ? error.message : String(error)}`)
-    console.log(`\n选项:`)
-    console.log(`  [R] 重试`)
-    console.log(`  [S] 跳过`)  
-    console.log(`  [C] 取消执行`)
+    debugLog(`\n💥 ${tool.toolName} 发生异常`)
+    debugLog(`异常: ${error instanceof Error ? error.message : String(error)}`)
+    debugLog(`\n选项:`)
+    debugLog(`  [R] 重试`)
+    debugLog(`  [S] 跳过`)  
+    debugLog(`  [C] 取消执行`)
     
     // 模拟用户选择
     return UserChoice.SKIP

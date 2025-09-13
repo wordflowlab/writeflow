@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
 import { EnhancedWritingTool, ToolInput, ToolResult, ToolContext, PermissionResult, ToolConfig } from '../../types/tool.js'
 
 /**
@@ -56,7 +57,7 @@ export class LegacyToolAdapter implements EnhancedWritingTool {
         this.description = await this.externalTool.description()
       }
     } catch (error) {
-      console.warn(`Failed to load description for tool ${this.name}:`, error)
+      logWarn(`Failed to load description for tool ${this.name}:`, error)
       this.description = `${this.name} 工具`
     }
   }

@@ -2,6 +2,8 @@
 import fetch from 'node-fetch'
 import { parse } from 'node-html-parser'
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 export interface SearchResult {
   title: string
   snippet: string
@@ -85,7 +87,7 @@ const duckDuckGoProvider: SearchProvider = {
       return results
 
     } catch (error) {
-      console.error('DuckDuckGo 搜索错误:', error)
+      logError('DuckDuckGo 搜索错误:', error)
       throw new Error(`搜索失败: ${(error as Error).message}`)
     }
   }
@@ -121,11 +123,11 @@ const baiduProvider: SearchProvider = {
 
       // 百度搜索结果解析较为复杂，这里返回空结果
       // 在实际项目中可以使用百度搜索 API 或更完善的解析逻辑
-      console.warn('百度搜索提供商暂未完全实现')
+      logWarn('百度搜索提供商暂未完全实现')
       return []
 
     } catch (error) {
-      console.error('百度搜索错误:', error)
+      logError('百度搜索错误:', error)
       throw new Error(`百度搜索失败: ${(error as Error).message}`)
     }
   }

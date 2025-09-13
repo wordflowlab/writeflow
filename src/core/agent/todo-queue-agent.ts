@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { NOMainAgentEngine } from './nO-engine.js'
 import { H2AAsyncMessageQueue } from '../queue/h2A-queue.js'
 import { Message, MessageType, MessagePriority } from '../../types/message.js'
@@ -7,6 +8,7 @@ import { TodoManager } from '../../tools/TodoManager.js'
 import { ToolManager } from '../../tools/tool-manager.js'
 
 /**
+
  * TODO 队列代理
  * 基于 NOMainAgentEngine 专门处理 TODO 任务执行
  * 
@@ -42,21 +44,21 @@ export class TodoQueueAgent extends NOMainAgentEngine {
    * 自动获取所有待处理任务并排队执行
    */
   async startTodoQueueExecution(): Promise<void> {
-    console.log('[TodoQueueAgent] 启动 TODO 队列执行...')
+    debugLog('[TodoQueueAgent] 启动 TODO 队列执行...')
     
     try {
       // 获取所有待处理任务
       const pendingTodos = await this.todoManager.getTodosByStatus(TodoStatus.PENDING)
       
       if (pendingTodos.length === 0) {
-        console.log('[TodoQueueAgent] 没有待处理的任务')
+        debugLog('[TodoQueueAgent] 没有待处理的任务')
         return
       }
 
       // 按优先级排序任务
       const sortedTodos = this.prioritizeTodos(pendingTodos)
       
-      console.log(`[TodoQueueAgent] 发现 ${sortedTodos.length} 个待处理任务`)
+      debugLog(`[TodoQueueAgent] 发现 ${sortedTodos.length} 个待处理任务`)
 
       // 创建任务规划消息
       const planMessage: Message = this.createMessage(
@@ -85,7 +87,7 @@ export class TodoQueueAgent extends NOMainAgentEngine {
       }
 
     } catch (error) {
-      console.error('[TodoQueueAgent] 启动队列执行失败:', error)
+      logError('[TodoQueueAgent] 启动队列执行失败:', error)
     }
   }
 
@@ -127,7 +129,7 @@ export class TodoQueueAgent extends NOMainAgentEngine {
   private async *handleTodoPlan(message: Message): AsyncGenerator<AgentResponse> {
     const { todos, totalCount, estimatedDuration } = message.payload
     
-    console.log(`[TodoQueueAgent] 开始任务规划: ${totalCount} 个任务，预计用时 ${estimatedDuration} 分钟`)
+    debugLog(`[TodoQueueAgent] 开始任务规划: ${totalCount} 个任务，预计用时 ${estimatedDuration} 分钟`)
     
     yield {
       type: 'plan',
@@ -147,7 +149,7 @@ export class TodoQueueAgent extends NOMainAgentEngine {
   private async *handleTodoExecute(message: Message): AsyncGenerator<AgentResponse> {
     const { todo } = message.payload
     
-    console.log(`[TodoQueueAgent] 开始执行任务: ${todo.content}`)
+    debugLog(`[TodoQueueAgent] 开始执行任务: ${todo.content}`)
     
     // 记录执行开始
     this.currentExecutingTodo = todo
@@ -193,7 +195,7 @@ export class TodoQueueAgent extends NOMainAgentEngine {
       }
       
     } catch (error) {
-      console.error(`[TodoQueueAgent] 执行任务失败: ${todo.content}`, error)
+      logError(`[TodoQueueAgent] 执行任务失败: ${todo.content}`, error)
       
       // 更新执行记录
       const record = this.executionHistory.find(r => r.todo.id === todo.id)
@@ -286,7 +288,7 @@ export class TodoQueueAgent extends NOMainAgentEngine {
       }
       
     } catch (error) {
-      console.error('[TodoQueueAgent] 处理任务完成失败:', error)
+      logError('[TodoQueueAgent] 处理任务完成失败:', error)
     }
   }
 
@@ -326,7 +328,7 @@ export class TodoQueueAgent extends NOMainAgentEngine {
 ${prompt}`
 
       // 这里应该调用外部的 AI 服务来处理提示
-      console.log('[TodoQueueAgent] 生成任务执行提示:', todoPrompt.substring(0, 100) + '...')
+      debugLog('[TodoQueueAgent] 生成任务执行提示:', todoPrompt.substring(0, 100) + '...')
     }
   }
 
@@ -431,9 +433,9 @@ ${executionHistory.map((record, index) => {
     // 使用父类提供的 sendMessage 方法
     const success = await this.sendMessage(message)
     if (success) {
-      console.log('[TodoQueueAgent] 消息入队成功:', message.type)
+      debugLog('[TodoQueueAgent] 消息入队成功:', message.type)
     } else {
-      console.warn('[TodoQueueAgent] 消息入队失败:', message.type)
+      logWarn('[TodoQueueAgent] 消息入队失败:', message.type)
     }
   }
 
@@ -453,7 +455,7 @@ ${executionHistory.map((record, index) => {
    */
   public async completeCurrentTask(result: 'success' | 'failure' = 'success', summary?: string): Promise<void> {
     if (!this.currentExecutingTodo) {
-      console.warn('[TodoQueueAgent] 没有正在执行的任务')
+      logWarn('[TodoQueueAgent] 没有正在执行的任务')
       return
     }
 

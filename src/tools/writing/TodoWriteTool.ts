@@ -8,6 +8,8 @@ import { emitReminderEvent, TodoChangeEvent } from '../../services/SystemReminde
 import { getTodoWriteDescription, getTodoWritePrompt } from './todo-prompts.js'
 
 // 定义输入 Schema - 完全复刻 Claude Code 的结构
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 const TodoItemSchema = z.object({
   id: z.string().min(1, 'ID 不能为空'),
   content: z.string().min(1, '任务内容不能为空'),
@@ -270,23 +272,23 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
    */
   static renderTodoJSON(jsonContent: string): string | null {
     try {
-      console.log('🔍 尝试解析 TODO JSON...')
+      debugLog('🔍 尝试解析 TODO JSON...')
       // 尝试解析 JSON
       let data: any
       try {
         data = JSON.parse(jsonContent)
-        console.log('✅ JSON 解析成功')
+        debugLog('✅ JSON 解析成功')
       } catch (e) {
-        console.log('❌ JSON 解析失败:', (e as Error)?.message)
+        debugLog('❌ JSON 解析失败:', (e as Error)?.message)
         return null
       }
 
       // 检测是否为 todo 格式
       let todos: Todo[] = []
-      console.log('📋 检测 TODO 格式，数据类型:', typeof data, Array.isArray(data) ? '(数组)' : '')
+      debugLog('📋 检测 TODO 格式，数据类型:', typeof data, Array.isArray(data) ? '(数组)' : '')
       
       if (Array.isArray(data)) {
-        console.log(`📋 检测到数组，长度: ${data.length}`)
+        debugLog(`📋 检测到数组，长度: ${data.length}`)
         // 直接的 todo 数组
         // 检查每个项目的字段
         const isValidTodo = data.every((item, index) => {
@@ -295,7 +297,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
           const validStatus = ['pending', 'in_progress', 'completed'].includes(item.status)
           
           if (!hasContent || !hasStatus || !validStatus) {
-            console.log(`❌ 项目 ${index} 验证失败:`, {
+            debugLog(`❌ 项目 ${index} 验证失败:`, {
               hasContent,
               hasStatus,
               validStatus,
@@ -309,12 +311,12 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
         
         if (isValidTodo) {
           todos = data as Todo[]
-          console.log(`✅ 识别为有效的 TODO 数组，包含 ${todos.length} 个任务`)
+          debugLog(`✅ 识别为有效的 TODO 数组，包含 ${todos.length} 个任务`)
         } else {
-          console.log('❌ 数组不符合 TODO 格式要求')
+          debugLog('❌ 数组不符合 TODO 格式要求')
         }
       } else if (data && typeof data === 'object' && data.todos && Array.isArray(data.todos)) {
-        console.log(`📋 检测到包装格式，todos 长度: ${data.todos.length}`)
+        debugLog(`📋 检测到包装格式，todos 长度: ${data.todos.length}`)
         // 包装的 { todos: [...] } 格式
         if (data.todos.every((item: any) => 
           item && 
@@ -324,23 +326,23 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
           ['pending', 'in_progress', 'completed'].includes(item.status)
         )) {
           todos = data.todos as Todo[]
-          console.log(`✅ 识别为有效的包装 TODO 格式，包含 ${todos.length} 个任务`)
+          debugLog(`✅ 识别为有效的包装 TODO 格式，包含 ${todos.length} 个任务`)
         } else {
-          console.log('❌ 包装格式不符合 TODO 要求')
+          debugLog('❌ 包装格式不符合 TODO 要求')
         }
       } else {
-        console.log('❌ 数据结构不是预期的 TODO 格式')
+        debugLog('❌ 数据结构不是预期的 TODO 格式')
       }
 
       if (todos.length === 0) {
-        console.log('❌ 没有找到有效的 TODO 项')
+        debugLog('❌ 没有找到有效的 TODO 项')
         return null // 不是有效的 todo JSON
       }
 
       // 使用相同的渲染逻辑
-      console.log('🎨 开始格式化 TODO 列表...')
+      debugLog('🎨 开始格式化 TODO 列表...')
       const result = TodoWriteTool.formatTodosAsMarkdown(todos)
-      console.log(`📋 格式化完成，结果长度: ${result.length}`)
+      debugLog(`📋 格式化完成，结果长度: ${result.length}`)
       return result
 
     } catch (error) {

@@ -3,6 +3,8 @@ import { ShortTermMemory, TokenCalculator } from './ShortTermMemory.js'
 import { MidTermMemory, ConversationSummarizer } from './MidTermMemory.js'
 import { LongTermMemory, KnowledgeGraph } from './LongTermMemory.js'
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 export interface MemoryConfig {
   sessionId?: string
   autoCompress?: boolean
@@ -185,7 +187,7 @@ export class MemoryManager {
             }
           }
         } catch (error) {
-          console.error('知识提取失败:', error)
+          logError('知识提取失败:', error)
         }
       }
     }

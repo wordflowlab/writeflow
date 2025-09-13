@@ -1,5 +1,6 @@
 import { ArticleContext } from '../../types/agent.js'
 import { Message } from '../../types/message.js'
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { 
   ResearchItem, 
   DialogueItem, 
@@ -61,7 +62,7 @@ export class WU2ContextCompressor {
       }
     }
 
-    console.log(`[wU2] 触发上下文压缩: ${originalTokens} tokens > ${Math.floor(maxTokens * (this.config.threshold || 0.92))} tokens`)
+    debugLog(`[wU2] 触发上下文压缩: ${originalTokens} tokens > ${Math.floor(maxTokens * (this.config.threshold || 0.92))} tokens`)
 
     // 执行智能压缩
     const compressed = await this.performIntelligentCompression(context)
@@ -81,7 +82,7 @@ export class WU2ContextCompressor {
     // 记录压缩历史
     this.compressionHistory.push(result)
     
-    console.log(`[wU2] 压缩完成: ${originalTokens} -> ${compressedTokens} tokens (${(result.compressionRatio * 100).toFixed(1)}% 减少, ${compressionTime}ms)`)
+    debugLog(`[wU2] 压缩完成: ${originalTokens} -> ${compressedTokens} tokens (${(result.compressionRatio * 100).toFixed(1)}% 减少, ${compressionTime}ms)`)
     
     return { compressed, result }
   }

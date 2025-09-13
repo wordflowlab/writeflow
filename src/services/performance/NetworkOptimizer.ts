@@ -1,3 +1,5 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
  * WriteFlow 网络优化器
  * 专门优化网络请求和数据传输性能
@@ -442,7 +444,7 @@ export class NetworkOptimizer extends EventEmitter {
       
       this.updateCacheMetrics()
     } catch (error) {
-      console.warn('缓存响应失败:', error)
+      logWarn('缓存响应失败:', error)
     }
   }
 

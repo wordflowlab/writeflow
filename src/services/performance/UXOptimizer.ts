@@ -1,8 +1,10 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
  * WriteFlow 用户体验优化器
  * 专注于提升用户交互体验和视觉效果
  */
-
 import { EventEmitter } from 'events'
 import { getResponseStateManager } from '../streaming/ResponseStateManager.js'
 
@@ -171,7 +173,7 @@ export class UXOptimizer extends EventEmitter {
     // 应用初始优化
     this.applyInitialOptimizations()
     
-    console.log('🎨 用户体验优化器已启动')
+    debugLog('🎨 用户体验优化器已启动')
   }
 
   /**
@@ -186,7 +188,7 @@ export class UXOptimizer extends EventEmitter {
         this.userPreferences = { ...this.userPreferences, ...preferences }
       }
     } catch (error) {
-      console.warn('加载用户偏好失败:', error)
+      logWarn('加载用户偏好失败:', error)
     }
     
     // 应用偏好设置
@@ -494,7 +496,7 @@ export class UXOptimizer extends EventEmitter {
   private async applyOptimization(optimization: UXOptimization): Promise<void> {
     this.optimizations.push(optimization)
     
-    console.log(`🎨 应用UX优化: ${optimization.action}`)
+    debugLog(`🎨 应用UX优化: ${optimization.action}`)
     
     // 保持优化历史记录大小
     if (this.optimizations.length > 100) {
@@ -571,7 +573,7 @@ export class UXOptimizer extends EventEmitter {
         localStorage.setItem('writeflow-ux-preferences', JSON.stringify(this.userPreferences))
       }
     } catch (error) {
-      console.warn('保存用户偏好失败:', error)
+      logWarn('保存用户偏好失败:', error)
     }
     
     // 重新应用偏好设置

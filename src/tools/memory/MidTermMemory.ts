@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { Message, ConversationSummary } from '../../types/Memory.js'
 
 // 基于 Claude Code 的 8 段结构化总结算法
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 export class ConversationSummarizer {
   // 8段总结模板 - 完全复刻 Claude Code 的总结结构
   static readonly SUMMARY_TEMPLATE = {
@@ -207,7 +209,7 @@ export class MidTermMemory {
     try {
       mkdirSync(this.summariesDir, { recursive: true })
     } catch (error) {
-      console.error('创建中期记忆目录失败:', error)
+      logError('创建中期记忆目录失败:', error)
     }
   }
 
@@ -224,7 +226,7 @@ export class MidTermMemory {
       
       return validatedData
     } catch (error) {
-      console.error('加载中期记忆失败:', error)
+      logError('加载中期记忆失败:', error)
       return []
     }
   }
@@ -234,7 +236,7 @@ export class MidTermMemory {
       const data = JSON.stringify(summaries, null, 2)
       await fs.writeFile(this.summariesFile, data, { encoding: 'utf-8', flag: 'w' })
     } catch (error) {
-      console.error('保存中期记忆失败:', error)
+      logError('保存中期记忆失败:', error)
       throw error
     }
   }

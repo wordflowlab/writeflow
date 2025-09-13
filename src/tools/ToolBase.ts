@@ -1,7 +1,10 @@
 import { z } from 'zod'
 import { WriteFlowTool, ToolUseContext, PermissionResult, ValidationResult } from '../Tool.js'
 
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 /**
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+
  * 工具调用事件类型 - 采用现代化设计
  */
 export interface ToolCallEvent {
@@ -166,7 +169,7 @@ export abstract class ToolBase<
     try {
       return this.zodSchemaToJsonSchema(this.inputSchema)
     } catch (error) {
-      console.warn(`[${this.name}] JSON Schema 生成失败:`, error)
+      logWarn(`[${this.name}] JSON Schema 生成失败:`, error)
       return undefined
     }
   }
@@ -190,7 +193,7 @@ export abstract class ToolBase<
     } catch (error) {
       success = false
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`[${this.name}] 执行失败:`, errorMessage)
+      logError(`[${this.name}] 执行失败:`, errorMessage)
       
       yield {
         type: 'error',
@@ -201,7 +204,7 @@ export abstract class ToolBase<
     } finally {
       const duration = Date.now() - startTime
       if (context.options?.verbose) {
-        console.log(`[${this.name}] 执行${success ? '成功' : '失败'}, 耗时: ${duration}ms`)
+        debugLog(`[${this.name}] 执行${success ? '成功' : '失败'}, 耗时: ${duration}ms`)
       }
     }
   }

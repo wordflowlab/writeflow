@@ -5,7 +5,10 @@ import { ToolInterceptor, InterceptorConfig } from '../tools/ToolInterceptor.js'
 import { ExitPlanModeTool, ExitPlanModeResult } from '../tools/ExitPlanMode.js'
 import { WritingTool } from '../types/WritingTool.js'
 
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 /**
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+
  * Plan 模式状态
  */
 export interface PlanModeState {
@@ -128,7 +131,7 @@ export class PlanModeManager {
    * 进入 Plan 模式
    */
   async enterPlanMode(previousMode: PlanMode = PlanMode.Default): Promise<SystemReminder[]> {
-    console.log('🔄 正在进入 Plan 模式...')
+    debugLog('🔄 正在进入 Plan 模式...')
     
     // 更新权限管理器模式
     this.permissionManager.setCurrentMode(PlanMode.Plan)
@@ -147,7 +150,7 @@ export class PlanModeManager {
       this.events.onModeEnter(previousMode)
     }
 
-    console.log('✅ 已成功进入 Plan 模式')
+    debugLog('✅ 已成功进入 Plan 模式')
     // 返回空数组，不生成任何系统提醒以保持界面简洁
     return []
   }
@@ -161,7 +164,7 @@ export class PlanModeManager {
     result?: ExitPlanModeResult
     reminders: SystemReminder[]
   }> {
-    console.log('🔄 正在尝试退出 Plan 模式...')
+    debugLog('🔄 正在尝试退出 Plan 模式...')
     
     if (!this.state.isActive) {
       return {
@@ -206,7 +209,7 @@ export class PlanModeManager {
           this.events.onPlanApproval(true)
         }
 
-        console.log('✅ Plan 模式退出成功，计划已批准')
+        debugLog('✅ Plan 模式退出成功，计划已批准')
       } else {
         // 计划被拒绝，保持 Plan 模式
         this.state.currentPlan = plan
@@ -232,7 +235,7 @@ export class PlanModeManager {
           this.events.onPlanApproval(false, exitResult.message)
         }
 
-        console.log('⚠️ 计划需要改进，请根据反馈调整')
+        debugLog('⚠️ 计划需要改进，请根据反馈调整')
       }
 
       return {
@@ -243,7 +246,7 @@ export class PlanModeManager {
       }
 
     } catch (error) {
-      console.error('❌ 退出 Plan 模式时出错:', error)
+      logError('❌ 退出 Plan 模式时出错:', error)
       
       const errorReminder: SystemReminder = {
         type: 'permission_warning',
@@ -481,7 +484,7 @@ export class PlanModeManager {
         
       case 'keep_planning':
         // 保持 Plan 模式，不做任何操作
-        console.log('用户选择继续计划模式')
+        debugLog('用户选择继续计划模式')
         break
     }
   }

@@ -12,7 +12,7 @@
 import { getGlobalConfig, type ModelProfile } from '../../utils/config.js'
 import { getModelManager } from '../models/ModelManager.js'
 import { getModelCapabilities } from '../models/modelCapabilities.js'
-import { logError } from '../../utils/log.js'
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
 // 工具管理模块
 import { 
   getToolExecutionManager,
@@ -144,7 +144,7 @@ export class WriteFlowAIService {
   async processRequest(request: AIRequest): Promise<AIResponse> {
     // 🌟 如果启用了流式处理，使用优化的流式实现
     if (request.stream && request.onToken) {
-      console.log('🌊 使用优化流式处理...')
+      debugLog('🌊 使用优化流式处理...')
       
       // 🚀 优化字符串处理：使用数组拼接减少内存开销
       const contentChunks: string[] = []
@@ -183,7 +183,7 @@ export class WriteFlowAIService {
             }
             // 立即推送Progress消息
             request.onToken(progressMsg.message)
-            console.log('📋 [WriteFlowAIService] 推送Progress消息:', progressMsg.message.substring(0, 50))
+            debugLog('📋 [WriteFlowAIService] 推送Progress消息:', progressMsg.message.substring(0, 50))
           }
         } else if (message.type === 'ai_response') {
           // 处理剩余的挂起chunks
@@ -454,7 +454,7 @@ export class WriteFlowAIService {
       )
 
       if (hasUncompletedPrerequisites) {
-        console.warn(`⚠️ 任务顺序验证：尝试执行"${currentTaskType}"，但前置任务未完成`)
+        logWarn(`⚠️ 任务顺序验证：尝试执行"${currentTaskType}"，但前置任务未完成`)
         
         // 在系统提示中添加任务顺序提醒，而不是阻止执行
         const orderReminder = `
@@ -469,7 +469,7 @@ export class WriteFlowAIService {
       }
 
     } catch (error) {
-      console.warn('任务顺序验证失败，继续执行:', error)
+      logWarn('任务顺序验证失败，继续执行:', error)
       // 验证失败时不阻止执行，只记录警告
     }
   }
@@ -579,7 +579,7 @@ export class WriteFlowAIService {
       
       return optimizedPrompt
     } catch (error) {
-      console.warn('生成优化系统提示词失败，使用默认提示词:', error)
+      logWarn('生成优化系统提示词失败，使用默认提示词:', error)
       return request.systemPrompt || '你是 WriteFlow AI 写作助手，请帮助用户完成各种写作和分析任务。'
     }
   }
@@ -677,7 +677,7 @@ export class WriteFlowAIService {
     }
     
     if (!apiKey) {
-      console.warn(`找不到 ${providerName} 的 API 密钥`)
+      logWarn(`找不到 ${providerName} 的 API 密钥`)
       return null
     }
     

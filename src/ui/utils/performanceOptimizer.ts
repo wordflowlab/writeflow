@@ -1,4 +1,8 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
+
  * WriteFlow 流式输出性能优化器
  * 智能渲染频率控制和内容完整性保证
  */
@@ -103,7 +107,7 @@ export class RenderFrequencyController {
       }
       
     } catch (error) {
-      console.warn('渲染执行失败:', error)
+      logWarn('渲染执行失败:', error)
     }
     
     const endTime = performance.now()
@@ -169,11 +173,11 @@ export class RenderFrequencyController {
     if (currentFPS < targetFPS * 0.8) {
       // 性能不足，降低渲染频率
       this.targetFPS = Math.max(15, this.targetFPS - 5)
-      console.log(`性能自适应: 降低目标FPS至 ${this.targetFPS}`)
+      debugLog(`性能自适应: 降低目标FPS至 ${this.targetFPS}`)
     } else if (currentFPS > targetFPS * 1.2 && renderTime < 10) {
       // 性能充足，可以提高渲染频率
       this.targetFPS = Math.min(60, this.targetFPS + 5)
-      console.log(`性能自适应: 提高目标FPS至 ${this.targetFPS}`)
+      debugLog(`性能自适应: 提高目标FPS至 ${this.targetFPS}`)
     }
     
     // 启用跳帧策略
@@ -189,7 +193,7 @@ export class RenderFrequencyController {
     // 清空部分渲染队列，保留最新的渲染请求
     if (this.renderQueue.length > 3) {
       this.renderQueue = this.renderQueue.slice(-3)
-      console.log('启用跳帧策略，跳过部分渲染帧')
+      debugLog('启用跳帧策略，跳过部分渲染帧')
     }
   }
 
@@ -312,7 +316,7 @@ export class ContentIntegrityValidator {
     errorType: string
     repaired: boolean
   } {
-    console.warn(`检测到内容损坏 [${streamId}]: ${errorType}`)
+    logWarn(`检测到内容损坏 [${streamId}]: ${errorType}`)
     
     // 记录损坏历史
     this.corruptionHistory.push({
@@ -326,7 +330,7 @@ export class ContentIntegrityValidator {
     if (this.options.repairCorruption) {
       const repairedChunk = this.repairChunk(chunk, errorType)
       if (repairedChunk !== chunk) {
-        console.log(`已修复内容损坏 [${streamId}]: ${errorType}`)
+        debugLog(`已修复内容损坏 [${streamId}]: ${errorType}`)
         
         // 更新修复状态
         const lastEntry = this.corruptionHistory[this.corruptionHistory.length - 1]

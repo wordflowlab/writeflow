@@ -1,4 +1,8 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
+
  * WriteFlow 输出格式化管理器
  * 统一处理流式输出的格式化和显示
  */
@@ -109,7 +113,7 @@ export class OutputFormatter {
       }
 
     } catch (error) {
-      console.warn(`输出格式化失败: ${error}`)
+      logWarn(`输出格式化失败: ${error}`)
       return {
         content,
         hasCodeBlocks: false,

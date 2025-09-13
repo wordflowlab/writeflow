@@ -6,6 +6,8 @@ import { ToolUseContext, PermissionResult } from '../../../Tool.js'
 import { PROMPT } from './prompt.js'
 
 // 输入参数架构
+import { debugLog, logError, logWarn, infoLog } from './../../../utils/log.js'
+
 const WriteToolInputSchema = z.object({
   file_path: z.string().describe('要写入的文件的绝对路径'),
   content: z.string().describe('要写入文件的内容'),
@@ -128,7 +130,7 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
         const stats = statSync(filePath)
         actualSize = stats.size
       } catch (error) {
-        console.warn('无法验证文件写入结果:', error)
+        logWarn('无法验证文件写入结果:', error)
       }
 
       // 7. 构建结果

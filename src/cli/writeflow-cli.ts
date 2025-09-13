@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 import { Command } from 'commander'
 import chalk from 'chalk'
 import ora from 'ora'
@@ -105,7 +107,7 @@ export class WriteFlowCLI {
       this.startReactUI()
 
     } catch (error) {
-      console.error(chalk.red(`启动失败: ${(error as Error).message}`))
+      logError(chalk.red(`启动失败: ${(error as Error).message}`))
       process.exit(1)
     }
   }
@@ -125,12 +127,12 @@ export class WriteFlowCLI {
               resolve()
             }, 100)
           } catch (error) {
-            console.error(chalk.red('引导完成时出错:'), error)
+            logError(chalk.red('引导完成时出错:'), error)
             reject(error)
           }
         },
         onExit: () => {
-          console.log(chalk.yellow('\n👋 引导已取消，您可以随时运行 writeflow start 重新开始'))
+          debugLog(chalk.yellow('\n👋 引导已取消，您可以随时运行 writeflow start 重新开始'))
           process.exit(0)
         },
       })
@@ -164,8 +166,8 @@ export class WriteFlowCLI {
 
       render(replComponent)
     } catch (error) {
-      console.error(chalk.red('启动主界面失败:'), error)
-      console.log(chalk.yellow('请尝试重新运行 writeflow 或联系支持'))
+      logError(chalk.red('启动主界面失败:'), error)
+      debugLog(chalk.yellow('请尝试重新运行 writeflow 或联系支持'))
       process.exit(1)
     }
   }
@@ -180,8 +182,8 @@ export class WriteFlowCLI {
     }
 
     // 显示简化版Logo
-    console.log(`${displayMiniLogo()} ${chalk.gray('AI Writing Assistant')}`)
-    console.log()
+    debugLog(`${displayMiniLogo()} ${chalk.gray('AI Writing Assistant')}`)
+    debugLog('')
 
     const spinner = ora(`执行命令: ${command}`).start()
 
@@ -190,11 +192,11 @@ export class WriteFlowCLI {
       const result = await this.app.executeCommand(command, options)
       
       spinner.succeed('命令执行完成')
-      console.log(result)
+      debugLog(result)
 
     } catch (error) {
       spinner.fail('命令执行失败')
-      console.error(chalk.red((error as Error).message))
+      logError(chalk.red((error as Error).message))
       process.exit(1)
     }
   }
@@ -210,20 +212,20 @@ export class WriteFlowCLI {
       if (options.set) {
         const [key, value] = options.set.split('=')
         await this.app.setConfig(key, value)
-        console.log(chalk.green(`配置已设置: ${key} = ${value}`))
+        debugLog(chalk.green(`配置已设置: ${key} = ${value}`))
       } else if (options.get) {
         const value = await this.app.getConfig(options.get)
-        console.log(`${options.get}: ${value}`)
+        debugLog(`${options.get}: ${value}`)
       } else if (options.list) {
         const config = await this.app.getAllConfig()
-        console.log(chalk.cyan('当前配置:'))
-        console.log(JSON.stringify(config, null, 2))
+        debugLog(chalk.cyan('当前配置:'))
+        debugLog(JSON.stringify(config, null, 2))
       } else {
-        console.log(chalk.yellow('请指定配置操作: --set, --get, 或 --list'))
+        debugLog(chalk.yellow('请指定配置操作: --set, --get, 或 --list'))
       }
 
     } catch (error) {
-      console.error(chalk.red((error as Error).message))
+      logError(chalk.red((error as Error).message))
       process.exit(1)
     }
   }
@@ -236,8 +238,8 @@ export class WriteFlowCLI {
       await this.app.initialize()
       const status = await this.app.getSystemStatus()
 
-      console.log(chalk.cyan.bold('📊 WriteFlow 系统状态'))
-      console.log(chalk.gray('─'.repeat(40)))
+      debugLog(chalk.cyan.bold('📊 WriteFlow 系统状态'))
+      debugLog(chalk.gray('─'.repeat(40)))
 
       const simple = { ...status }
       // 特殊结构字段友好打印
@@ -246,28 +248,28 @@ export class WriteFlowCLI {
 
       Object.entries(simple).forEach(([key, value]) => {
         const displayKey = key.replace(/([A-Z])/g, ' $1').toLowerCase()
-        console.log(`${displayKey}: ${chalk.green(String(value))}`)
+        debugLog(`${displayKey}: ${chalk.green(String(value))}`)
       })
 
       // 打印 context 摘要
       if ((status as any).context) {
         const ctx = (status as any).context
-        console.log(chalk.gray('\nContext'))
-        console.log(`  tokens: ${chalk.green(`${ctx.currentTokens}/${ctx.maxTokens}`)} (${(ctx.utilizationRatio*100).toFixed(1)}%)`)
-        if (ctx.lastCompression) console.log(`  last compression: ${chalk.green(new Date(ctx.lastCompression).toLocaleString())}`)
+        debugLog(chalk.gray('\nContext'))
+        debugLog(`  tokens: ${chalk.green(`${ctx.currentTokens}/${ctx.maxTokens}`)} (${(ctx.utilizationRatio*100).toFixed(1)}%)`)
+        if (ctx.lastCompression) debugLog(`  last compression: ${chalk.green(new Date(ctx.lastCompression).toLocaleString())}`)
       }
 
       // 打印 memory 摘要
       if ((status as any).memory) {
         const mem = (status as any).memory
-        console.log(chalk.gray('\nMemory'))
-        console.log(`  short-term: ${chalk.green(`${mem.shortTerm.messages} msgs, ${mem.shortTerm.tokens} tokens`)}`)
-        console.log(`  mid-term: ${chalk.green(`${mem.midTerm.summaries} summaries, ${mem.midTerm.sessions} sessions`)}`)
-        console.log(`  long-term: ${chalk.green(`${mem.longTerm.knowledge} knowledge, ${mem.longTerm.topics} topics`)}`)
+        debugLog(chalk.gray('\nMemory'))
+        debugLog(`  short-term: ${chalk.green(`${mem.shortTerm.messages} msgs, ${mem.shortTerm.tokens} tokens`)}`)
+        debugLog(`  mid-term: ${chalk.green(`${mem.midTerm.summaries} summaries, ${mem.midTerm.sessions} sessions`)}`)
+        debugLog(`  long-term: ${chalk.green(`${mem.longTerm.knowledge} knowledge, ${mem.longTerm.topics} topics`)}`)
       }
 
     } catch (error) {
-      console.error(chalk.red((error as Error).message))
+      logError(chalk.red((error as Error).message))
       process.exit(1)
     }
   }
@@ -279,7 +281,7 @@ export class WriteFlowCLI {
     try {
       await this.program.parseAsync()
     } catch (error) {
-      console.error(chalk.red(`WriteFlow CLI 错误: ${(error as Error).message}`))
+      logError(chalk.red(`WriteFlow CLI 错误: ${(error as Error).message}`))
       process.exit(1)
     }
   }

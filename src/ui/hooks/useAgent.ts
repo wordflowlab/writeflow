@@ -2,6 +2,8 @@ import { useState, useCallback, useRef } from 'react'
 import { WriteFlowApp } from '../../cli/writeflow-app.js'
 import { InputMode } from '../types/index.js'
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 interface AgentExecution {
   id: string
   type: 'command' | 'bash' | 'memory'
@@ -130,9 +132,9 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
       const memoryManager = writeFlowApp.getMemoryManager()
       if (memoryManager) {
         await memoryManager.addMessage('system', `📝 用户笔记: ${note}`, { type: 'user_note' })
-        console.log(`📝 笔记已保存到记忆系统: ${note}`)
+        debugLog(`📝 笔记已保存到记忆系统: ${note}`)
       } else {
-        console.log(`📝 保存笔记: ${note}`)
+        debugLog(`📝 保存笔记: ${note}`)
       }
       
       updateExecution(execution.id, {

@@ -1,4 +1,7 @@
+import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+
 /**
+
  * 消息管理器 - 采用标准架构的消息分类机制
  * 提供统一的消息处理、分类和展示系统
  */
@@ -133,11 +136,11 @@ export class MessageManager {
       case MessageType.SYSTEM_ERROR:
       case MessageType.AI_ERROR:
       case MessageType.TOOL_ERROR:
-        console.error(formatted)
+        logError(formatted)
         break
       
       case MessageType.SYSTEM_WARNING:
-        console.warn(formatted)
+        logWarn(formatted)
         break
       
       case MessageType.DEBUG:
@@ -148,7 +151,7 @@ export class MessageManager {
         break
       
       default:
-        console.log(formatted)
+        debugLog(formatted)
         break
     }
   }
@@ -371,10 +374,10 @@ export class MessageManager {
    */
   displaySummary(): void {
     const summary = this.generateMessageSummary()
-    console.log('\n' + (this.displayOptions.enableColors 
+    debugLog('\n' + (this.displayOptions.enableColors 
       ? format.title('📊 消息摘要', 2)
       : '📊 消息摘要'))
-    console.log(summary)
+    debugLog(summary)
   }
 
   /**

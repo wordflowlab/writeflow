@@ -6,7 +6,7 @@
 import EventEmitter from 'events'
 import { getModelCapabilities } from '../models/modelCapabilities.js'
 import { getModelManager } from '../models/ModelManager.js'
-import { logError } from '../../utils/log.js'
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
 import { createStreamAdapterFromModel, StreamChunk, StreamAdapter } from './index.js'
 
 export interface StreamingConfig {
@@ -419,7 +419,7 @@ export class StreamingService extends EventEmitter {
       this.retryCount++
       const delay = (this.config.retryDelay || 1000) * Math.pow(2, this.retryCount - 1) // 指数退避
       
-      console.log(`🔄 流式请求失败，${delay}ms 后进行第 ${this.retryCount} 次重试`)
+      debugLog(`🔄 流式请求失败，${delay}ms 后进行第 ${this.retryCount} 次重试`)
       
       // 清理当前适配器
       this.cleanup()

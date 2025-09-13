@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { KnowledgeEntry, MemoryPriority } from '../../types/Memory.js'
 
 // 知识图谱构建器 - 基于 Claude Code 的知识管理
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 export class KnowledgeGraph {
   static generateKnowledgeId(): string {
     return `knowledge-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
@@ -126,7 +128,7 @@ export class LongTermMemory {
     try {
       mkdirSync(this.knowledgeDir, { recursive: true })
     } catch (error) {
-      console.error('创建长期记忆目录失败:', error)
+      logError('创建长期记忆目录失败:', error)
     }
   }
 
@@ -143,7 +145,7 @@ export class LongTermMemory {
       
       return validatedData
     } catch (error) {
-      console.error('加载长期记忆失败:', error)
+      logError('加载长期记忆失败:', error)
       return []
     }
   }
@@ -153,7 +155,7 @@ export class LongTermMemory {
       const data = JSON.stringify(entries, null, 2)
       await fs.writeFile(this.knowledgeFile, data, { encoding: 'utf-8', flag: 'w' })
     } catch (error) {
-      console.error('保存长期记忆失败:', error)
+      logError('保存长期记忆失败:', error)
       throw error
     }
   }

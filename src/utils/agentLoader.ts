@@ -1,3 +1,5 @@
+import { debugLog, logError, logWarn, infoLog } from './log.js'
+
 /**
  * Agent 配置加载器
  * 动态加载和管理 WriteFlow 的专用 Agent
@@ -188,10 +190,10 @@ export class AgentLoader {
         }
 
         if (!loaded) {
-          console.warn(`无法加载工具 ${toolName}: 未找到对应的工具类`)
+          logWarn(`无法加载工具 ${toolName}: 未找到对应的工具类`)
         }
       } catch (error) {
-        console.warn(`无法加载工具 ${toolName}:`, error)
+        logWarn(`无法加载工具 ${toolName}:`, error)
       }
     }
   }

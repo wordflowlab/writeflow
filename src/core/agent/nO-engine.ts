@@ -1,5 +1,6 @@
 import { H2AAsyncMessageQueue } from '../queue/h2A-queue.js'
 import { Message, MessageType } from '../../types/message.js'
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import {
   AgentResponse,
   AgentContext,
@@ -65,7 +66,7 @@ export class NOMainAgentEngine {
    * 异步生成器，持续处理消息
    */
   async *run(): AsyncGenerator<AgentResponse> {
-    console.log('[nO] WriteFlow Agent 引擎启动...')
+    debugLog('[nO] WriteFlow Agent 引擎启动...')
     this.isRunning = true
     this.currentContext.currentState = AgentState.Processing
 
@@ -82,7 +83,7 @@ export class NOMainAgentEngine {
 
           currentMessage = message
 
-          console.log(`[nO] 处理消息: ${message.type} from ${message.source}`)
+          debugLog(`[nO] 处理消息: ${message.type} from ${message.source}`)
 
           // 2. 检查 Plan 模式状态
           const planState = await this.checkPlanMode(message)
@@ -102,7 +103,7 @@ export class NOMainAgentEngine {
         }
       }
     } catch (error) {
-      console.error('[nO] Agent 引擎致命错误:', error)
+      logError('[nO] Agent 引擎致命错误:', error)
       yield {
         type: 'error',
         content: `Agent 引擎错误: ${(error as Error).message}`
@@ -229,7 +230,7 @@ export class NOMainAgentEngine {
    * 处理权限旁路模式
    */
   private async *handleBypassMode(message: Message): AsyncGenerator<AgentResponse> {
-    console.warn('[nO] 权限旁路模式激活')
+    logWarn('[nO] 权限旁路模式激活')
 
     yield {
       type: 'success',
@@ -351,7 +352,7 @@ export class NOMainAgentEngine {
    * 错误处理
    */
   private async *handleError(error: Error): AsyncGenerator<AgentResponse> {
-    console.error('[nO] Agent 错误:', error)
+    logError('[nO] Agent 错误:', error)
     if (this.currentContext.statistics) {
       this.currentContext.statistics.errorCount++
     }
@@ -418,7 +419,7 @@ export class NOMainAgentEngine {
    * 停止 Agent 引擎
    */
   stop(): void {
-    console.log('[nO] 停止 Agent 引擎...')
+    debugLog('[nO] 停止 Agent 引擎...')
     this.isRunning = false
     this.currentContext.currentState = AgentState.Idle
     this.messageQueue.close()

@@ -1,7 +1,10 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 /**
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+
  * AI 配置接口
  */
 export interface AIProjectConfig {
@@ -230,7 +233,7 @@ export class AIConfigLoader {
       this.configCache.set(cacheKey, mergedConfig)
 
     } catch (error) {
-      console.error('保存配置失败:', error)
+      logError('保存配置失败:', error)
       throw new Error(`配置保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
@@ -297,7 +300,7 @@ export class AIConfigLoader {
     // 检查是否已存在配置
     const configPath = path.join(root, '.writeflow.json')
     if (await this.fileExists(configPath)) {
-      console.log('WriteFlow 配置文件已存在')
+      debugLog('WriteFlow 配置文件已存在')
       return
     }
 
@@ -310,7 +313,7 @@ export class AIConfigLoader {
       await fs.writeFile(guidePath, this.getDefaultGuide(), 'utf-8')
     }
 
-    console.log('WriteFlow 项目配置已初始化')
+    debugLog('WriteFlow 项目配置已初始化')
   }
 }
 

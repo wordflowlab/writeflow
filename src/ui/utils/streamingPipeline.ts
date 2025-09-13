@@ -1,4 +1,8 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
+
  * WriteFlow 流式输出管道系统
  * 实现实时格式化和双缓冲渲染
  */
@@ -267,7 +271,7 @@ export class StreamingPipeline extends EventEmitter {
       }
 
     } catch (error) {
-      console.warn(`流式格式化失败 [${streamId}]:`, error)
+      logWarn(`流式格式化失败 [${streamId}]:`, error)
       buffer.formatted = buffer.content // 降级到原始内容
       this.emit('error', streamId, error)
     }

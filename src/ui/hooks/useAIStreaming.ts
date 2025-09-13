@@ -1,4 +1,8 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
+
  * WriteFlow AI 流式处理 Hook
  * 集成 AI 服务与流式 UI 组件
  */
@@ -99,7 +103,7 @@ export function useAIStreaming(options: AIStreamingOptions = {}) {
    */
   const ask = useCallback(async (prompt: string, overrideOptions?: Partial<AIStreamingOptions>) => {
     if (state.isLoading || state.isStreaming) {
-      console.warn('AI 请求正在进行中，请稍候...')
+      logWarn('AI 请求正在进行中，请稍候...')
       return
     }
 
@@ -217,7 +221,7 @@ export function useAIStreaming(options: AIStreamingOptions = {}) {
    */
   const continueStream = useCallback(async (additionalPrompt: string) => {
     if (!state.response || !state.isComplete) {
-      console.warn('没有可续写的内容')
+      logWarn('没有可续写的内容')
       return
     }
 

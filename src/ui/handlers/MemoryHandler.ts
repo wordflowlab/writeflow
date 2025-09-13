@@ -1,6 +1,8 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 interface MemoryNote {
   id: string
   content: string
@@ -80,7 +82,7 @@ export class MemoryHandler {
     try {
       await fs.writeFile(this.memoryFile, JSON.stringify(this.notes, null, 2))
     } catch (error) {
-      console.error('保存笔记失败:', error)
+      logError('保存笔记失败:', error)
     }
   }
 

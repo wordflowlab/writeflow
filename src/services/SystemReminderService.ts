@@ -1,7 +1,9 @@
 import { Todo, TodoStatus } from '../types/Todo.js'
 import { TodoManager } from '../tools/TodoManager.js'
 
+import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
 /**
+
  * 系统提醒消息接口
  */
 export interface ReminderMessage {
@@ -178,7 +180,7 @@ export class SystemReminderService {
         }
       }
     } catch (error) {
-      console.error('Error dispatching todo event:', error)
+      logError('Error dispatching todo event:', error)
     }
 
     return null
@@ -335,7 +337,7 @@ export class SystemReminderService {
       try {
         callback(context)
       } catch (error) {
-        console.error(`Error in event listener for ${event}:`, error)
+        logError(`Error in event listener for ${event}:`, error)
       }
     })
   }

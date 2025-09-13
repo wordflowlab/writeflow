@@ -1,6 +1,8 @@
 import chalk from 'chalk'
 
 // 基础 ANSI 去除与显示宽度计算（简版，处理 CJK 与 emoji）
+import { debugLog, logError, logWarn, infoLog } from './log.js'
+
 const ANSI_REGEX = /\x1B\[[0-9;]*m/g
 
 function stripAnsi(input: string): string {
@@ -109,9 +111,9 @@ export function displayWelcomeBanner(): void {
 
   const lines = [title, '', subtitle, hint, '', chalk.gray(hr), '', tip]
 
-  console.log(top)
+  debugLog(top)
   for (const line of lines) {
-    console.log(left + pad(line) + right)
+    debugLog(left + pad(line) + right)
   }
-  console.log(bottom)
+  debugLog(bottom)
 }

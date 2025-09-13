@@ -19,9 +19,32 @@ export enum LogLevel {
 }
 
 /**
+ * 获取环境变量控制的日志级别
+ */
+function getLogLevelFromEnv(): LogLevel {
+  // 完全静默模式
+  if (process.env.WRITEFLOW_QUIET === 'true') {
+    return LogLevel.ERROR
+  }
+  
+  // 调试模式
+  if (process.env.WRITEFLOW_DEBUG === 'true' || process.env.DEBUG === 'true') {
+    return LogLevel.DEBUG
+  }
+  
+  // 详细模式
+  if (process.env.WRITEFLOW_DEBUG_STREAM === 'verbose') {
+    return LogLevel.DEBUG
+  }
+  
+  // 默认只显示错误，保持控制台干净
+  return LogLevel.ERROR
+}
+
+/**
  * 当前日志级别
  */
-let currentLogLevel = LogLevel.INFO
+let currentLogLevel = getLogLevelFromEnv()
 
 /**
  * 设置日志级别
@@ -67,6 +90,25 @@ export function logDebug(message: string, data?: any): void {
 }
 
 /**
+ * 便捷调试日志函数 - 用于替换debugLog
+ * 只在调试模式下输出，生产环境零性能开销
+ */
+export function debugLog(message: string, ...args: any[]): void {
+  if (currentLogLevel >= LogLevel.DEBUG) {
+    console.log(message, ...args)
+  }
+}
+
+/**
+ * 便捷信息日志函数 - 用于重要的用户反馈
+ */
+export function infoLog(message: string, ...args: any[]): void {
+  if (currentLogLevel >= LogLevel.INFO) {
+    console.log(message, ...args)
+  }
+}
+
+/**
  * 创建子日志器
  */
 export function createLogger(prefix: string) {
@@ -75,5 +117,6 @@ export function createLogger(prefix: string) {
     warn: (message: string, data?: any) => logWarn(`${prefix}: ${message}`, data),
     info: (message: string, data?: any) => logInfo(`${prefix}: ${message}`, data),
     debug: (message: string, data?: any) => logDebug(`${prefix}: ${message}`, data),
+    debugLog: (message: string, ...args: any[]) => debugLog(`${prefix}: ${message}`, ...args),
   }
 }

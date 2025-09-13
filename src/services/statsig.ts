@@ -1,3 +1,5 @@
+import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
+
 /**
  * WriteFlow 简化版本的 Statsig 服务
  * 提供基本的事件记录接口，但不进行实际的数据收集
@@ -7,7 +9,7 @@
 export function logEvent(eventName: string, data?: Record<string, any>): void {
   // 在开发模式下可以输出到控制台，生产环境下静默
   if (process.env.NODE_ENV === 'development' || process.argv.includes('--debug')) {
-    console.log(`[WriteFlow Event] ${eventName}`, data ? JSON.stringify(data) : '')
+    debugLog(`[WriteFlow Event] ${eventName}`, data ? JSON.stringify(data) : '')
   }
   
   // WriteFlow 暂时不需要实际的分析数据收集

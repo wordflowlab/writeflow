@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
  * WriteFlow 流式服务使用示例
  * 演示各种流式 AI 服务的使用方法
@@ -18,7 +20,7 @@ import {
  * 示例1: 基础流式服务使用
  */
 async function example1_BasicStreaming() {
-  console.log('\n🔥 示例1: 基础流式服务使用')
+  debugLog('\n🔥 示例1: 基础流式服务使用')
   
   const streamingService = getStreamingService()
   
@@ -29,21 +31,21 @@ async function example1_BasicStreaming() {
     }
     
     if (response.reasoning) {
-      console.log('\n💭 推理:', response.reasoning)
+      debugLog('\n💭 推理:', response.reasoning)
     }
   })
   
   // 监听完成事件
   streamingService.on('complete', (response: StreamingResponse) => {
-    console.log('\n\n✅ 流式完成!')
-    console.log(`📊 使用统计: ${response.usage?.inputTokens}→${response.usage?.outputTokens} tokens`)
-    console.log(`💰 成本: $${response.cost?.toFixed(6)}`)
-    console.log(`⏱️ 耗时: ${response.duration}ms`)
+    debugLog('\n\n✅ 流式完成!')
+    debugLog(`📊 使用统计: ${response.usage?.inputTokens}→${response.usage?.outputTokens} tokens`)
+    debugLog(`💰 成本: $${response.cost?.toFixed(6)}`)
+    debugLog(`⏱️ 耗时: ${response.duration}ms`)
   })
   
   // 监听错误
   streamingService.on('error', (error: Error) => {
-    console.error('❌ 流式错误:', error.message)
+    logError('❌ 流式错误:', error.message)
   })
   
   try {
@@ -54,7 +56,7 @@ async function example1_BasicStreaming() {
       temperature: 0.7
     })
   } catch (error) {
-    console.error('启动流式服务失败:', error)
+    logError('启动流式服务失败:', error)
   }
 }
 
@@ -62,7 +64,7 @@ async function example1_BasicStreaming() {
  * 示例2: 兼容性流式 AI 服务
  */
 async function example2_CompatibleStreaming() {
-  console.log('\n🔥 示例2: 兼容性流式 AI 服务')
+  debugLog('\n🔥 示例2: 兼容性流式 AI 服务')
   
   const streamingAIService = getStreamingAIService()
   
@@ -71,13 +73,13 @@ async function example2_CompatibleStreaming() {
   })
   
   streamingAIService.on('complete', (response) => {
-    console.log('\n\n✅ AI 请求完成!')
-    console.log(`📄 完整内容长度: ${response.content.length} 字符`)
-    console.log(`🤖 使用模型: ${response.model}`)
+    debugLog('\n\n✅ AI 请求完成!')
+    debugLog(`📄 完整内容长度: ${response.content.length} 字符`)
+    debugLog(`🤖 使用模型: ${response.model}`)
   })
   
   streamingAIService.on('error', (error) => {
-    console.error('\n❌ AI 服务错误:', error.message)
+    logError('\n❌ AI 服务错误:', error.message)
   })
   
   try {
@@ -88,7 +90,7 @@ async function example2_CompatibleStreaming() {
       maxTokens: 150
     })
   } catch (error) {
-    console.error('处理流式请求失败:', error)
+    logError('处理流式请求失败:', error)
   }
 }
 
@@ -96,22 +98,22 @@ async function example2_CompatibleStreaming() {
  * 示例3: 便捷流式函数使用
  */
 async function example3_ConvenienceFunctions() {
-  console.log('\n🔥 示例3: 便捷流式函数使用')
+  debugLog('\n🔥 示例3: 便捷流式函数使用')
   
   try {
-    console.log('\n📡 方法: askAIStreamComplete')
+    debugLog('\n📡 方法: askAIStreamComplete')
     const completeResponse = await askAIStreamComplete("什么是微服务架构？", {
       model: 'deepseek-reasoner',
       maxTokens: 150,
       temperature: 0.3
     })
     
-    console.log('✅ 完整响应接收完毕:')
-    console.log(completeResponse.content)
-    console.log(`📊 Token 使用: ${completeResponse.usage.inputTokens}→${completeResponse.usage.outputTokens}`)
+    debugLog('✅ 完整响应接收完毕:')
+    debugLog(completeResponse.content)
+    debugLog(`📊 Token 使用: ${completeResponse.usage.inputTokens}→${completeResponse.usage.outputTokens}`)
     
   } catch (error) {
-    console.error('便捷函数使用失败:', error)
+    logError('便捷函数使用失败:', error)
   }
 }
 
@@ -119,7 +121,7 @@ async function example3_ConvenienceFunctions() {
  * 示例4: 智谱 AI (GLM) 流式服务
  */
 async function example4_ZhipuStreaming() {
-  console.log('\n🔥 示例4: 智谱 AI (GLM) 流式服务')
+  debugLog('\n🔥 示例4: 智谱 AI (GLM) 流式服务')
   
   const streamingService = getStreamingService()
   
@@ -130,13 +132,13 @@ async function example4_ZhipuStreaming() {
   })
   
   streamingService.on('complete', (response: StreamingResponse) => {
-    console.log('\n\n✅ 智谱 AI 流式完成!')
-    console.log(`📊 使用统计: ${response.usage?.inputTokens}→${response.usage?.outputTokens} tokens`)
-    console.log(`💰 成本: $${response.cost?.toFixed(6)}`)
+    debugLog('\n\n✅ 智谱 AI 流式完成!')
+    debugLog(`📊 使用统计: ${response.usage?.inputTokens}→${response.usage?.outputTokens} tokens`)
+    debugLog(`💰 成本: $${response.cost?.toFixed(6)}`)
   })
   
   streamingService.on('error', (error: Error) => {
-    console.error('❌ 智谱 AI 流式错误:', error.message)
+    logError('❌ 智谱 AI 流式错误:', error.message)
   })
   
   try {
@@ -147,7 +149,7 @@ async function example4_ZhipuStreaming() {
       temperature: 0.7
     })
   } catch (error) {
-    console.error('智谱 AI 流式服务失败:', error)
+    logError('智谱 AI 流式服务失败:', error)
   }
 }
 
@@ -155,7 +157,7 @@ async function example4_ZhipuStreaming() {
  * 示例5: Kimi/Moonshot 流式服务
  */
 async function example5_KimiStreaming() {
-  console.log('\n🔥 示例5: Kimi/Moonshot 流式服务')
+  debugLog('\n🔥 示例5: Kimi/Moonshot 流式服务')
   
   const streamingAIService = getStreamingAIService()
   
@@ -164,13 +166,13 @@ async function example5_KimiStreaming() {
   })
   
   streamingAIService.on('complete', (response) => {
-    console.log('\n\n✅ Kimi 请求完成!')
-    console.log(`📄 完整内容长度: ${response.content.length} 字符`)
-    console.log(`🤖 使用模型: ${response.model}`)
+    debugLog('\n\n✅ Kimi 请求完成!')
+    debugLog(`📄 完整内容长度: ${response.content.length} 字符`)
+    debugLog(`🤖 使用模型: ${response.model}`)
   })
   
   streamingAIService.on('error', (error) => {
-    console.error('\n❌ Kimi 服务错误:', error.message)
+    logError('\n❌ Kimi 服务错误:', error.message)
   })
   
   try {
@@ -181,7 +183,7 @@ async function example5_KimiStreaming() {
       maxTokens: 150
     })
   } catch (error) {
-    console.error('Kimi 流式请求失败:', error)
+    logError('Kimi 流式请求失败:', error)
   }
 }
 
@@ -189,22 +191,22 @@ async function example5_KimiStreaming() {
  * 示例6: Qwen 流式服务
  */
 async function example6_QwenStreaming() {
-  console.log('\n🔥 示例6: Qwen/通义千问 流式服务')
+  debugLog('\n🔥 示例6: Qwen/通义千问 流式服务')
   
   try {
-    console.log('\n📡 方法: askAIStreamComplete with Qwen')
+    debugLog('\n📡 方法: askAIStreamComplete with Qwen')
     const completeResponse = await askAIStreamComplete("什么是大型语言模型？请简要介绍。", {
       model: 'qwen-turbo',
       maxTokens: 200,
       temperature: 0.5
     })
     
-    console.log('✅ Qwen 完整响应接收完毕:')
-    console.log(completeResponse.content)
-    console.log(`📊 Token 使用: ${completeResponse.usage.inputTokens}→${completeResponse.usage.outputTokens}`)
+    debugLog('✅ Qwen 完整响应接收完毕:')
+    debugLog(completeResponse.content)
+    debugLog(`📊 Token 使用: ${completeResponse.usage.inputTokens}→${completeResponse.usage.outputTokens}`)
     
   } catch (error) {
-    console.error('Qwen 流式函数使用失败:', error)
+    logError('Qwen 流式函数使用失败:', error)
   }
 }
 
@@ -212,15 +214,15 @@ async function example6_QwenStreaming() {
  * 运行所有示例
  */
 async function runAllExamples() {
-  console.log('🚀 WriteFlow 扩展流式服务使用示例\n')
+  debugLog('🚀 WriteFlow 扩展流式服务使用示例\n')
   
-  console.log('⚠️  注意: 示例需要有效的 API 密钥和模型配置')
-  console.log('   请确保设置了相应的环境变量:')
-  console.log('   - ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, OPENAI_API_KEY (原有)')
-  console.log('   - ZHIPU_API_KEY (智谱 AI)')
-  console.log('   - KIMI_API_KEY, MOONSHOT_API_KEY (Kimi)')
-  console.log('   - QWEN_API_KEY (通义千问)')
-  console.log('   或在模型配置中设置了 API 密钥\n')
+  debugLog('⚠️  注意: 示例需要有效的 API 密钥和模型配置')
+  debugLog('   请确保设置了相应的环境变量:')
+  debugLog('   - ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, OPENAI_API_KEY (原有)')
+  debugLog('   - ZHIPU_API_KEY (智谱 AI)')
+  debugLog('   - KIMI_API_KEY, MOONSHOT_API_KEY (Kimi)')
+  debugLog('   - QWEN_API_KEY (通义千问)')
+  debugLog('   或在模型配置中设置了 API 密钥\n')
   
   const examples = [
     { name: '基础流式服务', fn: example1_BasicStreaming },
@@ -235,28 +237,28 @@ async function runAllExamples() {
     const example = examples[i]
     
     try {
-      console.log(`\n${'='.repeat(50)}`)
-      console.log(`▶️  正在运行: ${example.name}`)
-      console.log('='.repeat(50))
+      debugLog(`\n${'='.repeat(50)}`)
+      debugLog(`▶️  正在运行: ${example.name}`)
+      debugLog('='.repeat(50))
       
       await example.fn()
       
     } catch (error) {
-      console.error(`❌ ${example.name} 执行失败:`, (error as Error).message)
+      logError(`❌ ${example.name} 执行失败:`, (error as Error).message)
     }
     
     if (i < examples.length - 1) {
-      console.log('\n⏱️  等待 2 秒后继续下一个示例...')
+      debugLog('\n⏱️  等待 2 秒后继续下一个示例...')
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
   
-  console.log('\n🎉 所有示例执行完成！')
+  debugLog('\n🎉 所有示例执行完成！')
 }
 
 // 如果直接运行此文件，执行所有示例
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runAllExamples().catch(console.error)
+  runAllExamples().catch(logError)
 }
 
 export { 

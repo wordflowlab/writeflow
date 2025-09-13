@@ -1,9 +1,12 @@
 /**
+
+
  * WriteFlow 成本跟踪器
  * 提供实时成本监控和预算控制，支持多模型成本统计
  */
 
 import { formatDuration } from '../utils/format.js'
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 
 // 成本跟踪状态
 interface CostState {
@@ -235,16 +238,16 @@ function checkCostThresholds(): void {
 
   // 检查每日限制
   if (dailyCost > thresholds.dailyLimit * thresholds.emergencyThreshold) {
-    console.log(`🚨 紧急警告: 今日成本 ${formatCost(dailyCost)} 已接近限制 ${formatCost(thresholds.dailyLimit)}`)
+    debugLog(`🚨 紧急警告: 今日成本 ${formatCost(dailyCost)} 已接近限制 ${formatCost(thresholds.dailyLimit)}`)
   } else if (dailyCost > thresholds.dailyLimit * thresholds.warningThreshold) {
-    console.log(`⚠️  警告: 今日成本 ${formatCost(dailyCost)} 接近限制 ${formatCost(thresholds.dailyLimit)}`)
+    debugLog(`⚠️  警告: 今日成本 ${formatCost(dailyCost)} 接近限制 ${formatCost(thresholds.dailyLimit)}`)
   }
 
   // 检查月度限制
   if (monthlyCost > thresholds.monthlyLimit * thresholds.emergencyThreshold) {
-    console.log(`🚨 紧急警告: 本月成本 ${formatCost(monthlyCost)} 已接近限制 ${formatCost(thresholds.monthlyLimit)}`)
+    debugLog(`🚨 紧急警告: 本月成本 ${formatCost(monthlyCost)} 已接近限制 ${formatCost(thresholds.monthlyLimit)}`)
   } else if (monthlyCost > thresholds.monthlyLimit * thresholds.warningThreshold) {
-    console.log(`⚠️  警告: 本月成本 ${formatCost(monthlyCost)} 接近限制 ${formatCost(thresholds.monthlyLimit)}`)
+    debugLog(`⚠️  警告: 本月成本 ${formatCost(monthlyCost)} 接近限制 ${formatCost(thresholds.monthlyLimit)}`)
   }
 }
 
@@ -319,7 +322,7 @@ export function saveCostSummaryOnExit(): void {
   }
   
   // TODO: 在适当的地方保存到配置文件
-  console.log('会话结束统计:', summary)
+  debugLog('会话结束统计:', summary)
 }
 
 // 进程退出时自动保存

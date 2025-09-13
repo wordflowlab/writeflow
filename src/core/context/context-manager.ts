@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { WU2ContextCompressor } from './wU2-compressor.js'
 import { ArticleContext } from '../../types/agent.js'
 import { Message } from '../../types/message.js'
@@ -54,7 +55,7 @@ export class ContextManager {
     
     // 检查是否需要压缩
     if (this.compressor.shouldCompress(this.context)) {
-      console.log('[ContextManager] 触发上下文压缩')
+      debugLog('[ContextManager] 触发上下文压缩')
       const { compressed } = await this.compressor.compress(this.context)
       this.context = compressed
     }
@@ -124,7 +125,7 @@ export class ContextManager {
   clearContext(): void {
     this.context = this.initializeContext()
     this.snapshots = []
-    console.log('[ContextManager] 上下文已清理')
+    debugLog('[ContextManager] 上下文已清理')
   }
 
   /**

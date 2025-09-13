@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
 import { WritingTool as LegacyWritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { WritingTool as ModernWritingTool, ToolUseContext } from '../../types/WritingTool.js'
 import { TodoWriteTool } from './TodoWriteTool.js'
@@ -7,6 +8,7 @@ import { Todo, TodoStatus } from '../../types/Todo.js'
 import { z } from 'zod'
 
 /**
+
  * TodoTools 适配器
  * 将现代的 WritingTool 接口适配到传统的 WritingTool 接口
  * 这样可以让新的 TodoWriteTool 和 TodoReadTool 与现有系统集成
@@ -95,7 +97,7 @@ class TodoToolAdapter implements LegacyWritingTool {
       const validation = await this.modernTool.validateInput(input, context)
       return validation.result
     } catch (error) {
-      console.error('输入验证失败:', error)
+      logError('输入验证失败:', error)
       return false
     }
   }

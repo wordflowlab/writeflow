@@ -1,4 +1,8 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
+
  * WriteFlow Markdown 渲染器
  * 基于 Claude Code 风格的终端 Markdown 渲染
  */
@@ -40,7 +44,7 @@ export function renderMarkdown(content: string, options: MarkdownRenderOptions =
 
     return rendered.trim()
   } catch (error) {
-    console.warn(`Markdown 渲染失败: ${error}`)
+    logWarn(`Markdown 渲染失败: ${error}`)
     return formatInlineCode(content)
   }
 }

@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { Message, CompressionThreshold } from '../../types/Memory.js'
 
 // Token 计算工具 - 基于 Claude Code 的 token 估算
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 export class TokenCalculator {
   private static readonly AVG_CHARS_PER_TOKEN = 4
   private static readonly CONTEXT_LIMIT = 200000 // 200K tokens Claude限制
@@ -61,7 +63,7 @@ export class ShortTermMemory {
     try {
       mkdirSync(this.messagesDir, { recursive: true })
     } catch (error) {
-      console.error('创建短期记忆目录失败:', error)
+      logError('创建短期记忆目录失败:', error)
     }
   }
 
@@ -90,7 +92,7 @@ export class ShortTermMemory {
         tokens: item.tokens || TokenCalculator.estimateTokens(item.content)
       }))
     } catch (error) {
-      console.error('加载短期记忆失败:', error)
+      logError('加载短期记忆失败:', error)
       return []
     }
   }
@@ -101,7 +103,7 @@ export class ShortTermMemory {
       await fs.writeFile(this.sessionFile, data, { encoding: 'utf-8', flag: 'w' })
       this.messages = messages
     } catch (error) {
-      console.error('保存短期记忆失败:', error)
+      logError('保存短期记忆失败:', error)
       throw error
     }
   }

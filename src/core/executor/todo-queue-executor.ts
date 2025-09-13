@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { TodoQueueAgent } from '../agent/todo-queue-agent.js'
 import { Todo, TodoStatus } from '../../types/Todo.js'
 import { TodoManager } from '../../tools/TodoManager.js'
@@ -354,13 +355,13 @@ export class TodoQueueExecutor {
           console.debug(prefix, message, ...args)
           break
         case 'info':
-          console.log(prefix, message, ...args)
+          debugLog(prefix, message, ...args)
           break
         case 'warn':
-          console.warn(prefix, message, ...args)
+          logWarn(`${prefix} ${message}`, args.length > 0 ? args[0] : undefined)
           break
         case 'error':
-          console.error(prefix, message, ...args)
+          logError(`${prefix} ${message}`, args.length > 0 ? args[0] : undefined)
           break
       }
     }

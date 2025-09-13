@@ -1,4 +1,7 @@
+import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+
 /**
+
  * 响应处理器
  * 提供统一的流式和非流式响应处理接口
  */
@@ -174,7 +177,7 @@ export class ResponseHandler {
       })
       return result.content
     } catch (error) {
-      console.warn('响应格式化失败:', error)
+      logWarn('响应格式化失败:', error)
       return content
     }
   }

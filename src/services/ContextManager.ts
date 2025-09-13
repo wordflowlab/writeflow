@@ -1,3 +1,5 @@
+import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
+
 /**
  * 智能上下文管理器
  * 优化token消费，实现上下文窗口管理和压缩
@@ -135,7 +137,7 @@ export class ContextManager {
     this.window.currentTokens = newTokenCount
     this.window.compressionRatio = newTokenCount / this.window.currentTokens || 1
     
-    console.log(`🗜️  上下文压缩完成: ${totalEntries} → ${newEntries.length} 条目, token数: ${this.window.currentTokens} → ${newTokenCount}`)
+    debugLog(`🗜️  上下文压缩完成: ${totalEntries} → ${newEntries.length} 条目, token数: ${this.window.currentTokens} → ${newTokenCount}`)
   }
   
   /**

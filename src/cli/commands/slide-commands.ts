@@ -3,6 +3,7 @@
  * 通过 Agent 系统动态加载，避免污染主工具列表
  */
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
 import { AgentLoader } from '../../utils/agentLoader.js'
@@ -539,7 +540,7 @@ ${dependencyCheck.solutions.map(solution => `- ${solution}`).join('\n')}
 
     // 启动 Slidev
     const absolutePath = resolve(targetFile)
-    console.log(`🚀 正在启动 Slidev 预览：${absolutePath}`)
+    debugLog(`🚀 正在启动 Slidev 预览：${absolutePath}`)
     
     try {
       // 检查是否需要自动打开浏览器
@@ -688,7 +689,7 @@ function listAvailableSlides(): string {
     
     searchDir('.')
   } catch (error) {
-    console.warn('搜索文件时出错:', error)
+    logWarn('搜索文件时出错:', error)
     
     // 备用方式：仅检查当前目录
     try {
@@ -771,7 +772,7 @@ function getSlidesHistory(): Array<{file: string, timestamp: number}> {
       return JSON.parse(readFileSync(historyFile, 'utf-8'))
     }
   } catch (error) {
-    console.warn('读取历史记录失败:', error)
+    logWarn('读取历史记录失败:', error)
   }
   return []
 }
@@ -794,7 +795,7 @@ function addToSlidesHistory(filePath: string): void {
     const historyFile = join(process.cwd(), '.writeflow-slides-history.json')
     writeFileSync(historyFile, JSON.stringify(trimmedHistory, null, 2), 'utf-8')
   } catch (error) {
-    console.warn('保存历史记录失败:', error)
+    logWarn('保存历史记录失败:', error)
   }
 }
 

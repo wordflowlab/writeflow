@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { AIWritingConfig } from '../../types/writing.js'
 
@@ -155,7 +156,7 @@ export class AnthropicClientTool implements WritingTool {
     } catch (error) {
       // 如果API调用失败，回退到模拟响应
       if (process.env.NODE_ENV !== 'test') {
-        console.warn('Anthropic API 调用失败，使用模拟响应:', error instanceof Error ? error.message : String(error))
+        logWarn('Anthropic API 调用失败，使用模拟响应:', error instanceof Error ? error.message : String(error))
       }
       
       const mockResponse = this.generateMockResponse(params, Date.now() - startTime)

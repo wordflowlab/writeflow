@@ -1,13 +1,16 @@
 import chalk from 'chalk'
 
+import { debugLog, logError, logWarn, infoLog } from './log.js'
 /**
+import { debugLog, logError, logWarn, infoLog } from './log.js'
+
  * 显示WriteFlow的彩色ASCII Logo（CLI版本）
  */
 export function displayCLILogo(): void {
-  console.log()
+  debugLog('')
   
   // WriteFlow ASCII 艺术 - 使用chalk渐变色彩
-  console.log(
+  debugLog(
     chalk.cyan('██   ██ ') +
     chalk.hex('#40E0D0')('████  ') +
     chalk.hex('#4169E1')('███ ') +
@@ -19,7 +22,7 @@ export function displayCLILogo(): void {
     chalk.hex('#FFB6C1')('██   ██'),
   )
   
-  console.log(
+  debugLog(
     chalk.cyan('██   ██ ') +
     chalk.hex('#40E0D0')('█   █ ') +
     chalk.hex('#4169E1')(' █  ') +
@@ -31,7 +34,7 @@ export function displayCLILogo(): void {
     chalk.hex('#FFB6C1')('██   ██'),
   )
   
-  console.log(
+  debugLog(
     chalk.cyan('██ █ ██ ') +
     chalk.hex('#40E0D0')('████  ') +
     chalk.hex('#4169E1')(' █  ') +
@@ -43,7 +46,7 @@ export function displayCLILogo(): void {
     chalk.hex('#FFB6C1')('██ █ ██'),
   )
   
-  console.log(
+  debugLog(
     chalk.cyan('██ █ ██ ') +
     chalk.hex('#40E0D0')('█ █   ') +
     chalk.hex('#4169E1')(' █  ') +
@@ -55,7 +58,7 @@ export function displayCLILogo(): void {
     chalk.hex('#FFB6C1')('██ █ ██'),
   )
   
-  console.log(
+  debugLog(
     chalk.cyan('███████ ') +
     chalk.hex('#40E0D0')('█  █  ') +
     chalk.hex('#4169E1')('███ ') +
@@ -68,9 +71,9 @@ export function displayCLILogo(): void {
   )
   
   // 副标题
-  console.log()
-  console.log(chalk.gray.dim('        ✍️ AI Writing Assistant'))
-  console.log()
+  debugLog('')
+  debugLog(chalk.gray.dim('        ✍️ AI Writing Assistant'))
+  debugLog('')
 }
 
 /**

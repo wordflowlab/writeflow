@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { Message, MessageType, QueueMetrics } from '../../types/message.js'
 
 /**
@@ -135,7 +136,7 @@ export class H2AAsyncMessageQueue {
       const moveCount = Math.floor(this.backpressureThreshold / 2)
       this.secondaryBuffer = this.primaryBuffer.splice(moveCount)
       
-      console.warn(`[h2A] 背压触发: 移动 ${moveCount} 个消息到副缓冲区`)
+      logWarn(`[h2A] 背压触发: 移动 ${moveCount} 个消息到副缓冲区`)
     }
   }
 

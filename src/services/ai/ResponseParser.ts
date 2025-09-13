@@ -1,4 +1,7 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
  * AI 响应解析器
  * 将 AI 服务返回的字符串响应解析成结构化的 ContentBlock 数组
  * 遵循模块化架构，分离工具调用和文本内容
@@ -44,7 +47,7 @@ export function parseAIResponse(response: string): ParsedResponse {
         textContent = textContent.replace(match.json, '').trim()
       } catch (error) {
         // JSON 解析失败，当作文本处理
-        console.warn('工具调用 JSON 解析失败:', error)
+        logWarn('工具调用 JSON 解析失败:', error)
       }
     }
     

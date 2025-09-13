@@ -3,6 +3,8 @@ import { AgentContext } from '../../types/agent.js'
 import { Message, MessageType } from '../../types/message.js'
 import { NOMainAgentEngine } from '../agent/nO-engine.js'
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 export type ExecuteCommandFn = (command: string, agentContext?: AgentContext) => Promise<{
   success: boolean
   error?: string
@@ -53,7 +55,7 @@ export class CoreEngineAdapter {
       } catch (e) {
         // 最小容错：记录即可
         // eslint-disable-next-line no-console
-        console.warn('[CoreEngineAdapter] 处理消息失败:', (e as Error)?.message || e)
+        logWarn('[CoreEngineAdapter] 处理消息失败:', (e as Error)?.message || e)
       }
     }
   }

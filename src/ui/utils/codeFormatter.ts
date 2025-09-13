@@ -1,4 +1,8 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
+
  * WriteFlow 代码格式化器
  * 基于 Claude Code 风格的语法高亮和格式化系统
  */
@@ -53,7 +57,7 @@ export function formatCode(code: string, options: CodeFormatOptions = {}): Forma
     }
   } catch (error) {
     // 高亮失败时使用原始代码
-    console.warn(`代码高亮失败: ${error}`)
+    logWarn(`代码高亮失败: ${error}`)
     highlightedCode = code
   }
 

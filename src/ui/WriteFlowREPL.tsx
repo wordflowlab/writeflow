@@ -7,6 +7,7 @@ import { Box, Text } from 'ink'
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
+import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
 import { PromptInput } from './components/PromptInput.js'
 import { TodoPanel } from './components/TodoPanel.js'
 import { PlanModeConfirmation, ConfirmationOption } from './components/PlanModeConfirmation.js'
@@ -69,7 +70,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     enableGlobalShortcuts: true,
     onStateChange: (event) => {
       // 可以在这里添加状态变化的日志或其他处理逻辑
-      console.log(`🔧 可折叠内容 ${event.contentId} ${event.collapsed ? '已折叠' : '已展开'}`)
+      debugLog(`🔧 可折叠内容 ${event.contentId} ${event.collapsed ? '已折叠' : '已展开'}`)
     }
   })
   const [input, setInput] = useState('')
@@ -111,7 +112,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     try {
       return writeFlowApp.getAllCommands()
     } catch (error) {
-      console.warn('Failed to get commands:', error)
+      logWarn('Failed to get commands:', error)
       return []
     }
   }, [writeFlowApp])
@@ -127,7 +128,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   // 🚀 键盘快捷键：Ctrl+P 切换文本选择模式
   useModeShortcuts({
     onModeCycle: () => setTextSelectionMode(v => {
-      console.log(`📋 文本选择模式: ${v ? '关闭' : '开启'}`)
+      debugLog(`📋 文本选择模式: ${v ? '关闭' : '开启'}`)
       return !v
     })
   })
@@ -148,7 +149,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       setShowPlanConfirmation(false)
       setPendingPlan('')
     } catch (error) {
-      console.error('处理 Plan 模式确认失败:', error)
+      logError('处理 Plan 模式确认失败:', error)
       setShowPlanConfirmation(false)
     }
   }, [writeFlowApp, pendingPlan])
@@ -163,7 +164,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     if (isThinking) return // 在处理中时不允许切换模式
 
     // 调试日志：显示切换前的状态
-    console.log('🔄 模式切换开始:', {
+    debugLog('🔄 模式切换开始:', {
       currentMode,
       appInPlanMode: writeFlowApp.isInPlanMode(),
       hasCurrentPlan: !!writeFlowApp.getCurrentPlan?.()
@@ -187,7 +188,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
               const exitResult = await writeFlowApp.exitPlanMode(currentPlan)
               if (!exitResult) {
                 // 退出失败，但仍允许强制切换到AcceptEdits模式
-                console.warn('Plan模式退出被拒绝，但允许强制切换')
+                logWarn('Plan模式退出被拒绝，但允许强制切换')
                 // 直接设置应用层状态为非Plan模式
                 const planManager = writeFlowApp.getPlanModeManager()
                 if (planManager) {
@@ -196,14 +197,14 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
               }
             } else {
               // 没有计划内容，直接强制退出
-              console.log('没有计划内容，强制退出Plan模式')
+              debugLog('没有计划内容，强制退出Plan模式')
               const planManager = writeFlowApp.getPlanModeManager()
               if (planManager) {
                 planManager.reset()
               }
             }
           } catch (error) {
-            console.error('退出Plan模式异常，强制重置:', error)
+            logError('退出Plan模式异常，强制重置:', error)
             // 异常情况下强制重置
             const planManager = writeFlowApp.getPlanModeManager()
             if (planManager) {
@@ -219,10 +220,10 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       }
       
       setCurrentMode(nextMode)
-      console.log(`🔄 模式切换: ${currentMode} → ${nextMode}`)
+      debugLog(`🔄 模式切换: ${currentMode} → ${nextMode}`)
       
     } catch (error) {
-      console.error('模式切换失败:', error)
+      logError('模式切换失败:', error)
       
       // 状态恢复逻辑：确保UI状态与应用层一致
       const actualPlanMode = writeFlowApp.isInPlanMode()
@@ -234,7 +235,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       }
       
       // 通知用户
-      console.warn('模式切换失败，已恢复到正确状态')
+      logWarn('模式切换失败，已恢复到正确状态')
     }
   }, [currentMode, isThinking, writeFlowApp, pendingPlan])
 
@@ -243,7 +244,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     onModeCycle: handleModeCycle,
     onExitPlanMode: currentMode === PlanMode.Plan ? async () => {
       try {
-        console.log('ESC键强制退出Plan模式')
+        debugLog('ESC键强制退出Plan模式')
         
         // 直接强制重置，不管是否有计划内容
         const planManager = writeFlowApp.getPlanModeManager()
@@ -255,9 +256,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         setCurrentMode(PlanMode.Default)
         setPlanModeStartTime(0)
         
-        console.log('Plan模式已强制退出')
+        debugLog('Plan模式已强制退出')
       } catch (error) {
-        console.error('ESC强制退出失败:', error)
+        logError('ESC强制退出失败:', error)
         // 即使出错也要重置UI状态
         setCurrentMode(PlanMode.Default)
         setPlanModeStartTime(0)
@@ -269,11 +270,11 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const fetchTodos = useCallback(async () => {
     try {
       const todoManager = (writeFlowApp as any).getTodoManager?.()
-      console.log('🔍 TODO Manager:', todoManager ? 'found' : 'not found')
+      debugLog('🔍 TODO Manager:', todoManager ? 'found' : 'not found')
       if (todoManager) {
         const todosData = await (todoManager.getAllTodos?.() || todoManager.getTodos?.() || [])
         const list = Array.isArray(todosData) ? todosData : []
-        console.log('📝 TODOs loaded:', list.length, 'items')
+        debugLog('📝 TODOs loaded:', list.length, 'items')
         setTodos(list)
         updateTodoStats(list)
         setShowTodos(prev => prev || list.length > 0)
@@ -283,17 +284,17 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           const { TodoManager } = await import('../tools/TodoManager.js')
           const manager = new TodoManager(process.env.WRITEFLOW_SESSION_ID)
           const list = await manager.getAllTodos()
-          console.log('📝 Fallback TODOs loaded:', list.length, 'items')
+          debugLog('📝 Fallback TODOs loaded:', list.length, 'items')
           setTodos(list)
           updateTodoStats(list)
           setShowTodos(prev => prev || list.length > 0)
         } catch (e) {
-          console.log('📝 TODO Manager 未找到，使用空数组')
+          debugLog('📝 TODO Manager 未找到，使用空数组')
           setTodos([])
         }
       }
     } catch (error) {
-      console.warn('获取 TODOs 失败:', error)
+      logWarn('获取 TODOs 失败:', error)
       setTodos([])
     }
   }, [writeFlowApp])
@@ -313,7 +314,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   }, [])
 
   useEffect(() => {
-    console.log('🚀 WriteFlowREPL 组件初始化')
+    debugLog('🚀 WriteFlowREPL 组件初始化')
     fetchTodos()
     
     // 检查初始的Plan模式状态
@@ -342,12 +343,12 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     const handleThinking = (thinkingText: string) => {
       if (thinkingText && thinkingText.trim()) {
         // 创建思考消息，但不显示在主对话中
-        console.log('💭 AI 思考:', thinkingText)
+        debugLog('💭 AI 思考:', thinkingText)
       }
     }
 
     const handlePlanModeChanged = (data: { isActive: boolean; approved?: boolean; reminders?: any[] }) => {
-      console.log('🔄 Plan mode changed:', data)
+      debugLog('🔄 Plan mode changed:', data)
       if (data.isActive) {
         setCurrentMode(PlanMode.Plan)
         setPlanModeStartTime(Date.now())
@@ -365,7 +366,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     }
 
     const handleExitPlanMode = (plan: string) => {
-      console.log('📋 Exit plan mode requested with plan length:', plan.length)
+      debugLog('📋 Exit plan mode requested with plan length:', plan.length)
       setPendingPlan(plan)
       setShowPlanConfirmation(true)
     }
@@ -420,7 +421,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           displayText.includes('"todos":[') ||
           /\{\s*"type"\s*:\s*"tool_use"/g.test(displayText)) {
         
-        console.log(`🔍 [UI过滤] 检测到JSON工具调用数据，执行Kode风格过滤...`)
+        debugLog(`🔍 [UI过滤] 检测到JSON工具调用数据，执行Kode风格过滤...`)
         
         // 🌟 Kode风格：激进过滤策略 - 宁可过度过滤也不能泄露技术细节
         displayText = displayText
@@ -443,7 +444,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
             )
             
             if (isJsonToolCall) {
-              console.log(`🔍 [UI过滤] 过滤JSON行:`, trimmed.substring(0, 100) + '...')
+              debugLog(`🔍 [UI过滤] 过滤JSON行:`, trimmed.substring(0, 100) + '...')
               return false
             }
             
@@ -452,7 +453,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           .join('\n')
           .trim()
           
-        console.log(`✅ [UI过滤] JSON过滤完成，内容长度: ${displayText.length}`)
+        debugLog(`✅ [UI过滤] JSON过滤完成，内容长度: ${displayText.length}`)
       }
       
       // 📦 高效状态更新
@@ -493,7 +494,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         // 🚀 性能监控：记录处理耗时
         const processingTime = Date.now() - startTime
         if (processingTime > 20) {
-          console.warn(`⚠️ UI更新耗时: ${processingTime}ms, 内容长度: ${displayText.length}`)
+          logWarn(`⚠️ UI更新耗时: ${processingTime}ms, 内容长度: ${displayText.length}`)
         }
       }
     }
@@ -504,7 +505,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       
       // 🎯 文本选择模式下暂停更新，避免干扰复制操作
       if (textSelectionMode) {
-        console.log('📋 文本选择模式激活，暂停流式更新')
+        debugLog('📋 文本选择模式激活，暂停流式更新')
         return
       }
       
@@ -541,7 +542,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       const newMessages = [...prev, userMessage]
       // 消息窗口化：超出限制时自动清理
       if (newMessages.length > MAX_MESSAGES) {
-        console.log(`🧹 [消息清理] 用户消息导致超限，清理${newMessages.length - MAX_MESSAGES}条最早消息`)
+        debugLog(`🧹 [消息清理] 用户消息导致超限，清理${newMessages.length - MAX_MESSAGES}条最早消息`)
         return newMessages.slice(-MAX_MESSAGES)
       }
       return newMessages
@@ -558,7 +559,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         const newMessages = [...prev, streamingMessage]
         // 消息窗口化：超出限制时自动清理
         if (newMessages.length > MAX_MESSAGES) {
-          console.log(`🧹 [消息清理] 流式消息导致超限，清理${newMessages.length - MAX_MESSAGES}条最早消息`)
+          debugLog(`🧹 [消息清理] 流式消息导致超限，清理${newMessages.length - MAX_MESSAGES}条最早消息`)
           return newMessages.slice(-MAX_MESSAGES)
         }
         return newMessages
@@ -613,7 +614,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
                     continue // 跳过TODO JSON行
                   }
                   if (jsonData.type === 'tool_use') {
-                    console.log(`🛡️ [最终清理] 过滤tool_use JSON`)
+                    debugLog(`🛡️ [最终清理] 过滤tool_use JSON`)
                     continue // 跳过tool_use JSON行
                   }
                 } catch (e) {
@@ -623,7 +624,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
               
               // 🛡️ 额外保护：检测不完整的工具调用JSON模式
               if (trimmed.includes('{"type":"tool_use"') || trimmed.includes('"id":"call_')) {
-                console.log(`🛡️ [最终清理] 过滤不完整的工具调用JSON`)
+                debugLog(`🛡️ [最终清理] 过滤不完整的工具调用JSON`)
                 continue
               }
               
@@ -648,7 +649,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           
           // 🚀 优化最终文本日志：仅在调试模式下输出
           if (process.env.WRITEFLOW_DEBUG_STREAM === 'verbose') {
-            console.log(`🎯 [最终文本] 更新内容，保护markdown格式，长度: ${cleanedText.length}`)
+            debugLog(`🎯 [最终文本] 更新内容，保护markdown格式，长度: ${cleanedText.length}`)
           }
           
           // 🔧 高效更新：只修改最后一条消息
@@ -682,12 +683,12 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
             updateTodoStats(pendingTodoUpdate)
           }
         } catch (error) {
-          console.error('处理 TODO 更新失败:', error)
+          logError('处理 TODO 更新失败:', error)
         }
       }
 
     } catch (error) {
-      console.error('处理消息失败:', error)
+      logError('处理消息失败:', error)
       
       // 清除流式状态（错误时也要清理）
       setStreamingMessageId(null)
@@ -720,7 +721,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     })
   }, [messages])
 
-  // console.log('🎨 WriteFlowREPL 渲染中，todos.length:', todos.length, 'messages.length:', messages.length)
+  // debugLog('🎨 WriteFlowREPL 渲染中，todos.length:', todos.length, 'messages.length:', messages.length)
   
   // 计算动态状态文案
   const activityStatus: 'idle' | 'working' | 'executing' =
@@ -743,8 +744,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     // 自动设置为焦点，这样用户可以立即使用 Ctrl+R
     setCollapsibleFocus(contentId)
     
-    console.log(`🔧 已注册并聚焦新的可折叠内容: ${contentId}`)
-    console.log(`💡 提示: 按 Ctrl+R 展开详细内容`)
+    debugLog(`🔧 已注册并聚焦新的可折叠内容: ${contentId}`)
+    debugLog(`💡 提示: 按 Ctrl+R 展开详细内容`)
   }, [registerCollapsible, setCollapsibleFocus])
   
   // 🚀 React性能优化 - 活动状态计算memo化

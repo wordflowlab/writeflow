@@ -1,8 +1,10 @@
 /**
+
  * 流式显示组件 - 采用现代化的实时UI更新机制
  * 处理 AsyncGenerator 消息流并提供优雅的终端展示
  */
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { getStreamingFormatter, formatStreamMessage } from '../formatting/StreamingFormatter.js'
 import type { StreamMessage } from '../../services/ai/streaming/AsyncStreamingManager.js'
 
@@ -93,7 +95,7 @@ export class StreamingDisplay {
         }
       }
     } catch (error) {
-      console.error('流式处理错误:', error)
+      logError('流式处理错误:', error)
       await this.processMessage({
         type: 'error',
         message: `流式处理异常: ${error instanceof Error ? error.message : String(error)}`,
@@ -196,7 +198,7 @@ export class StreamingDisplay {
         process.stdout.write('\n') // 完成后换行
       }
     } else {
-      console.log(formatted)
+      debugLog(formatted)
     }
   }
 
@@ -252,7 +254,7 @@ export class StreamingDisplay {
     
     // 显示完成状态
     if (!this.options.compactMode) {
-      console.log('\n✨ 流式处理完成')
+      debugLog('\n✨ 流式处理完成')
     }
   }
 
@@ -285,14 +287,14 @@ export class StreamingDisplay {
    */
   showActiveTools(): void {
     if (this.state.activeTools.size === 0) {
-      console.log('没有正在执行的工具')
+      debugLog('没有正在执行的工具')
       return
     }
 
-    console.log('\n正在执行的工具:')
+    debugLog('\n正在执行的工具:')
     for (const [key, message] of this.state.activeTools) {
       const formatted = formatStreamMessage(message)
-      console.log(`  ${formatted}`)
+      debugLog(`  ${formatted}`)
     }
   }
 
@@ -303,14 +305,14 @@ export class StreamingDisplay {
     const recentMessages = this.state.messageHistory.slice(-limit)
     
     if (recentMessages.length === 0) {
-      console.log('没有历史消息')
+      debugLog('没有历史消息')
       return
     }
 
-    console.log('\n消息历史:')
+    debugLog('\n消息历史:')
     for (const message of recentMessages) {
       const formatted = formatStreamMessage(message)
-      console.log(`  ${formatted}`)
+      debugLog(`  ${formatted}`)
     }
   }
 
@@ -324,7 +326,7 @@ export class StreamingDisplay {
     this.state.activeTools.clear()
     this.state.progressState.clear()
     
-    console.log('\n⚠️ 流式处理已中断')
+    debugLog('\n⚠️ 流式处理已中断')
   }
 
   /**

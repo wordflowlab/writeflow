@@ -1,4 +1,8 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
+
  * WriteFlow 性能优化器
  * 实时监控和动态优化流式渲染性能
  */
@@ -127,7 +131,7 @@ export class PerformanceOptimizer extends EventEmitter {
     if (this.isMonitoring) return
     
     this.isMonitoring = true
-    console.log('🚀 启动性能监控系统')
+    debugLog('🚀 启动性能监控系统')
     
     // 立即进行一次采样
     this.collectMetrics()
@@ -156,7 +160,7 @@ export class PerformanceOptimizer extends EventEmitter {
       this.monitoringTimer = undefined
     }
     
-    console.log('⏹️ 停止性能监控系统')
+    debugLog('⏹️ 停止性能监控系统')
     this.emit('monitoring-stopped', {
       timestamp: Date.now(),
       appliedOptimizations: this.appliedOptimizations.length
@@ -191,7 +195,7 @@ export class PerformanceOptimizer extends EventEmitter {
       await this.analyzeAndOptimize(metrics)
       
     } catch (error) {
-      console.error('性能指标收集失败:', error)
+      logError('性能指标收集失败:', error)
       this.emit('collection-error', error)
     }
   }
@@ -496,7 +500,7 @@ export class PerformanceOptimizer extends EventEmitter {
   private async applyOptimization(optimization: OptimizationAction): Promise<void> {
     this.appliedOptimizations.push(optimization)
     
-    console.log(`🔧 应用性能优化: ${optimization.reason}`)
+    debugLog(`🔧 应用性能优化: ${optimization.reason}`)
     
     this.emit('optimization-applied', optimization)
     
@@ -548,7 +552,7 @@ export class PerformanceOptimizer extends EventEmitter {
     }
     
     this.appliedOptimizations = []
-    console.log('🔄 重置所有性能优化')
+    debugLog('🔄 重置所有性能优化')
     
     this.emit('optimizations-reset', {
       timestamp: Date.now()

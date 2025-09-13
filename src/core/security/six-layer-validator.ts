@@ -1,3 +1,4 @@
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { 
   SecurityRequest, 
   SecurityResponse, 
@@ -54,7 +55,7 @@ export class SixLayerSecurityValidator {
       for (const layer of this.layers) {
         if (!layer.enabled) continue
 
-        console.log(`[Security] 执行 ${layer.name} 验证...`)
+        debugLog(`[Security] 执行 ${layer.name} 验证...`)
         
         const result = await layer.validate(request)
         
@@ -80,7 +81,7 @@ export class SixLayerSecurityValidator {
         }
       }
 
-      console.log(`[Security] 六层验证通过 (${Date.now() - startTime}ms)`)
+      debugLog(`[Security] 六层验证通过 (${Date.now() - startTime}ms)`)
       
       return {
         allowed: true,
@@ -90,7 +91,7 @@ export class SixLayerSecurityValidator {
       }
       
     } catch (error) {
-      console.error('[Security] 验证过程出错:', error)
+      logError('[Security] 验证过程出错:', error)
       
       return {
         allowed: false,

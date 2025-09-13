@@ -5,6 +5,8 @@ import { randomBytes } from 'crypto'
 import { getCwd } from './state.js'
 
 // 简单的工具函数替代 lodash
+import { debugLog, logError, logWarn, infoLog } from './log.js'
+
 function cloneDeep<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') return obj
   if (obj instanceof Date) return new Date(obj.getTime()) as any
@@ -338,7 +340,7 @@ export const getGlobalConfig: (() => GlobalConfig) & { cache: { clear: () => voi
         },
       }
     } catch (error) {
-      console.error('解析全局配置失败:', error)
+      logError('解析全局配置失败:', error)
       return cloneDeep(DEFAULT_GLOBAL_CONFIG)
     }
   }
@@ -368,7 +370,7 @@ export const getProjectConfig = memoize((): ProjectConfig => {
       ...config,
     }
   } catch (error) {
-    console.error('解析项目配置失败:', error)
+    logError('解析项目配置失败:', error)
     return defaultConfigForProject(cwd)
   }
 })
@@ -384,7 +386,7 @@ export function saveGlobalConfig(config: GlobalConfig): void {
     // 清除memoization缓存
     getGlobalConfig.cache.clear?.()
   } catch (error) {
-    console.error('保存全局配置失败:', error)
+    logError('保存全局配置失败:', error)
     throw error
   }
 }
@@ -400,7 +402,7 @@ export function saveProjectConfig(config: ProjectConfig): void {
     // 清除memoization缓存
     getProjectConfig.cache.clear?.()
   } catch (error) {
-    console.error('保存项目配置失败:', error)
+    logError('保存项目配置失败:', error)
     throw error
   }
 }

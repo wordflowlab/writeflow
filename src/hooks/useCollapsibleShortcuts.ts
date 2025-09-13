@@ -3,6 +3,7 @@
  * 管理全局的可折叠内容交互逻辑
  */
 
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useInput } from 'ink'
 import type { 
@@ -213,7 +214,7 @@ export function useCollapsibleShortcuts({
         toggleCollapsible(lastId)
         
         // 添加调试信息
-        console.log(`🔧 自动选择并切换最后一个可折叠内容: ${lastId}`)
+        debugLog(`🔧 自动选择并切换最后一个可折叠内容: ${lastId}`)
       }
       return
     }

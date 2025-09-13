@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { Todo, TodoStatus, TodoPriority, CreateTodoParams, UpdateTodoParams, TodoStats } from '../types/Todo.js'
 
 // Zod Schema 验证 - 基于 Claude Code 的严格验证
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+
 const TodoStatusSchema = z.enum(['pending', 'in_progress', 'completed'])
 const TodoPrioritySchema = z.enum(['high', 'medium', 'low'])
 
@@ -45,7 +47,7 @@ export class TodoStorage {
     try {
       await fs.mkdir(this.todosDir, { recursive: true })
     } catch (error) {
-      console.error('创建 todos 目录失败:', error)
+      logError('创建 todos 目录失败:', error)
     }
   }
 
@@ -53,7 +55,7 @@ export class TodoStorage {
     try {
       fsSync.mkdirSync(this.todosDir, { recursive: true })
     } catch (error) {
-      console.error('同步创建 todos 目录失败:', error)
+      logError('同步创建 todos 目录失败:', error)
     }
   }
 
@@ -86,7 +88,7 @@ export class TodoStorage {
         priority: item.priority as TodoPriority,
       }))
     } catch (error) {
-      console.error('加载 Todo 数据失败:', error)
+      logError('加载 Todo 数据失败:', error)
       return []
     }
   }
@@ -101,7 +103,7 @@ export class TodoStorage {
         flag: 'w',  // 确保原子写入
       })
     } catch (error) {
-      console.error('保存 Todo 数据失败:', error)
+      logError('保存 Todo 数据失败:', error)
       throw error
     }
   }

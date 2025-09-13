@@ -2,6 +2,8 @@ import { Todo, TodoStatus, TodoPriority, CreateTodoParams, UpdateTodoParams, Tod
 import { TodoStorage } from './TodoStorage.js'
 import { STATUS_PRIORITIES, TASK_PRIORITIES } from '../types/Todo.js'
 
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+
 export class TodoManager {
   private storage: TodoStorage
 
@@ -207,7 +209,7 @@ export class TodoManager {
       await this.storage.saveTodos(todos)
       return true
     } catch (error) {
-      console.error('导入 Todo 数据失败:', error)
+      logError('导入 Todo 数据失败:', error)
       return false
     }
   }

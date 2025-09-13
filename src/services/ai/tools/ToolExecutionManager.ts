@@ -1,3 +1,5 @@
+import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+
 /**
  * 工具执行管理器
  * 负责管理AI请求中的工具调用逻辑
@@ -425,7 +427,7 @@ export class ToolExecutionManager {
     try {
       return getAvailableTools().map(tool => tool.name)
     } catch (error) {
-      console.warn('获取可用工具列表失败:', error)
+      logWarn('获取可用工具列表失败:', error)
       return ['Read', 'Grep', 'Glob', 'Bash', 'todo_write', 'todo_read']
     }
   }
@@ -438,7 +440,7 @@ export class ToolExecutionManager {
       const tool = getTool(toolName)
       return tool || null
     } catch (error) {
-      console.warn(`获取工具 ${toolName} 信息失败:`, error)
+      logWarn(`获取工具 ${toolName} 信息失败:`, error)
       return null
     }
   }

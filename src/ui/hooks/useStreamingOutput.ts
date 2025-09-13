@@ -1,8 +1,9 @@
 /**
+
  * WriteFlow 流式输出 Hook
  * 为组件提供流式输出能力的 React Hook
  */
-
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { getStreamingPipeline, StreamChunk, RenderBuffer, StreamingPipeline } from '../utils/streamingPipeline.js'
 
@@ -127,7 +128,7 @@ export function useStreamingOutput(options: StreamingOutputOptions): {
       onChunk?.(chunk)
       
       if (debug) {
-        console.log(`[Stream ${streamId}] Chunk:`, {
+        debugLog(`[Stream ${streamId}] Chunk:`, {
           type: chunk.type,
           length: chunk.content.length,
           index: chunk.index,
@@ -160,7 +161,7 @@ export function useStreamingOutput(options: StreamingOutputOptions): {
       onComplete?.(buffer.content)
       
       if (debug) {
-        console.log(`[Stream ${streamId}] Completed:`, {
+        debugLog(`[Stream ${streamId}] Completed:`, {
           contentLength: buffer.content.length,
           renderTime: Date.now() - startTimeRef.current
         })
@@ -258,7 +259,7 @@ export function useStreamingOutput(options: StreamingOutputOptions): {
     }
 
     if (debug) {
-      console.log(`[Stream ${streamId}] Paused`)
+      debugLog(`[Stream ${streamId}] Paused`)
     }
   }, [streamId, debug])
 
@@ -268,7 +269,7 @@ export function useStreamingOutput(options: StreamingOutputOptions): {
     isPausedRef.current = false
     
     if (debug) {
-      console.log(`[Stream ${streamId}] Resumed`)
+      debugLog(`[Stream ${streamId}] Resumed`)
     }
   }, [state.isStreaming, state.isComplete, streamId, debug])
 
@@ -294,7 +295,7 @@ export function useStreamingOutput(options: StreamingOutputOptions): {
     isPausedRef.current = false
 
     if (debug) {
-      console.log(`[Stream ${streamId}] Reset`)
+      debugLog(`[Stream ${streamId}] Reset`)
     }
   }, [streamId, debug])
 
@@ -310,7 +311,7 @@ export function useStreamingOutput(options: StreamingOutputOptions): {
     resetStream()
 
     if (debug) {
-      console.log(`[Stream ${streamId}] Terminated`)
+      debugLog(`[Stream ${streamId}] Terminated`)
     }
   }, [streamId, resetStream, debug])
 

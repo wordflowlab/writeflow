@@ -1,7 +1,9 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { AIWritingConfig } from '../../types/writing.js'
 
 /**
+
  * GLM-4.5 Client 工具
  * 基于 OpenAI 兼容协议的 GLM-4.5 API 客户端
  */
@@ -131,7 +133,7 @@ export class GLMClientTool implements WritingTool {
     } catch (error) {
       // 如果API调用失败，回退到模拟响应
       if (process.env.NODE_ENV !== 'test') {
-        console.warn('GLM-4.5 API 调用失败，使用模拟响应:', error instanceof Error ? error.message : String(error))
+        logWarn('GLM-4.5 API 调用失败，使用模拟响应:', error instanceof Error ? error.message : String(error))
       }
       
       const mockResponse = {

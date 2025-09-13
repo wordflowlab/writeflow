@@ -1,7 +1,9 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { AIWritingConfig } from '../../types/writing.js'
 
 /**
+
  * Deepseek Client 工具
  * 基于 OpenAI 兼容协议的 Deepseek API 客户端
  */
@@ -128,12 +130,12 @@ export class DeepseekClientTool implements WritingTool {
           function: func
         }))
         requestBody.tool_choice = "auto" // DeepSeek 支持 "auto", "none", 或具体工具名
-        // console.log('🔧 DeepSeek 原生工具定义:', JSON.stringify(requestBody.tools, null, 2))
+        // debugLog('🔧 DeepSeek 原生工具定义:', JSON.stringify(requestBody.tools, null, 2))
       }
 
-      // console.log('🔍 发送给 DeepSeek 的消息数量:', params.messages.length)
-      // console.log('🔍 第一条消息:', JSON.stringify(params.messages[0], null, 2))
-      // console.log('🔍 请求体:', JSON.stringify(requestBody, null, 2))
+      // debugLog('🔍 发送给 DeepSeek 的消息数量:', params.messages.length)
+      // debugLog('🔍 第一条消息:', JSON.stringify(params.messages[0], null, 2))
+      // debugLog('🔍 请求体:', JSON.stringify(requestBody, null, 2))
 
       const response = await fetch((this.config.apiBaseUrl || 'https://api.deepseek.com') + '/v1/chat/completions', {
         method: 'POST',
@@ -150,16 +152,16 @@ export class DeepseekClientTool implements WritingTool {
 
       const completion = await response.json()
 
-      // console.log('📥 DeepSeek API 响应状态:', completion.choices[0]?.finish_reason)
-      // console.log('📥 DeepSeek 响应内容长度:', completion.choices[0]?.message?.content?.length || 0)
-      // console.log('📥 完整响应:', JSON.stringify(completion, null, 2))
+      // debugLog('📥 DeepSeek API 响应状态:', completion.choices[0]?.finish_reason)
+      // debugLog('📥 DeepSeek 响应内容长度:', completion.choices[0]?.message?.content?.length || 0)
+      // debugLog('📥 完整响应:', JSON.stringify(completion, null, 2))
       
       // 处理完整响应内容
       const choice = completion.choices[0]
       const hasToolCalls = choice?.message?.tool_calls && choice.message.tool_calls.length > 0
       
       // if (hasToolCalls) {
-      //   console.log('🎯 DeepSeek 检测到工具调用:', choice.message.tool_calls.map((tc: any) => tc.function.name).join(', '))
+      //   debugLog('🎯 DeepSeek 检测到工具调用:', choice.message.tool_calls.map((tc: any) => tc.function.name).join(', '))
       // }
       
       // 提取 thinking 内容（如果存在）
@@ -213,7 +215,7 @@ export class DeepseekClientTool implements WritingTool {
       // 如果API调用失败，回退到模拟响应
       // 仅在开发模式下输出错误信息
       if (process.env.NODE_ENV === 'development') {
-        console.warn('DeepSeek API 调用失败，回退到模拟响应:', error instanceof Error ? error.message : String(error))
+        logWarn('DeepSeek API 调用失败，回退到模拟响应:', error instanceof Error ? error.message : String(error))
       }
       
       const mockResponse = this.generateMockResponse(params, Date.now() - startTime)

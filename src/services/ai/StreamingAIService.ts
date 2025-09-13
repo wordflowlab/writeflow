@@ -1,4 +1,7 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
+
  * WriteFlow 流式 AI 服务
  * 集成新的流式 UI 组件系统
  */
@@ -98,7 +101,7 @@ export class StreamingAIService extends WriteFlowAIService {
       }
 
     } catch (error) {
-      console.error(`流式 AI 请求失败 [${streamId}]:`, error)
+      logError(`流式 AI 请求失败 [${streamId}]:`, error)
       
       // 清理流
       this.cleanupStream(streamId)
@@ -184,7 +187,7 @@ export class StreamingAIService extends WriteFlowAIService {
       }
 
     } catch (error) {
-      console.warn(`实时格式化失败 [${streamId}]:`, error)
+      logWarn(`实时格式化失败 [${streamId}]:`, error)
     }
   }
 
@@ -239,7 +242,7 @@ export class StreamingAIService extends WriteFlowAIService {
       this.cleanupStream(streamId)
       
     } catch (error) {
-      console.warn(`流完成处理失败 [${streamId}]:`, error)
+      logWarn(`流完成处理失败 [${streamId}]:`, error)
     }
   }
 

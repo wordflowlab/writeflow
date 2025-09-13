@@ -3,6 +3,7 @@
  * 基于最佳实践的工具编排设计，提供统一的工具调用管理
  */
 
+import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
 import { z } from 'zod'
 import { WriteFlowTool, ToolUseContext, PermissionResult } from '../Tool.js'
 import { ToolCallEvent, ToolBase } from './ToolBase.js'
@@ -107,7 +108,7 @@ export class ToolOrchestrator {
     this.tools.set(tool.name, tool)
     
     if (this.config.enableLogging) {
-      console.log(`🔧 工具已注册: ${tool.name} (${tool.isReadOnly() ? '只读' : '可写'})`)
+      debugLog(`🔧 工具已注册: ${tool.name} (${tool.isReadOnly() ? '只读' : '可写'})`)
     }
   }
 

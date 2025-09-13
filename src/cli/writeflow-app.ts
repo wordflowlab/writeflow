@@ -26,6 +26,8 @@ import { SlashCommand } from '../types/command.js'
 // 工具系统
 import { ToolManager } from '../tools/tool-manager.js'
 import { TodoWriteTool } from '../tools/writing/TodoWriteTool.js'
+import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+
 import {
   OutlineGeneratorTool,
   ContentRewriterTool,
@@ -271,10 +273,10 @@ TODO 管理规范：
       }
 
       this.isInitialized = true
-      console.log(chalk.green('✅ WriteFlow 初始化完成'))
+      debugLog(chalk.green('✅ WriteFlow 初始化完成'))
 
     } catch (error) {
-      console.error(chalk.red(`初始化失败: ${(error as Error).message}`))
+      logError(chalk.red(`初始化失败: ${(error as Error).message}`))
       throw error
     }
   }
@@ -309,7 +311,7 @@ TODO 管理规范：
       )
       adapter.start().catch((e: unknown) => {
         const err = e as Error
-        console.warn('[CoreEngineAdapter] 异常:', err?.message || e)
+        logWarn('[CoreEngineAdapter] 异常:', err?.message || e)
       })
     }
 
@@ -321,7 +323,7 @@ TODO 管理规范：
       }
       this.startAgentLoop().catch((e: unknown) => {
         const err = e as Error
-        console.warn('[nO] Agent 循环异常:', err?.message || e)
+        logWarn('[nO] Agent 循环异常:', err?.message || e)
       })
     }
 
@@ -451,11 +453,11 @@ TODO 管理规范：
       },
       {
         onModeEnter: (previousMode) => {
-          console.log('📋 已进入 Plan 模式')
+          debugLog('📋 已进入 Plan 模式')
           this.emit('plan-mode-enter', { previousMode })
         },
         onModeExit: (nextMode, approved) => {
-          console.log(`🔄 已退出 Plan 模式，计划${approved ? '已批准' : '被拒绝'}`)
+          debugLog(`🔄 已退出 Plan 模式，计划${approved ? '已批准' : '被拒绝'}`)
           this.emit('plan-mode-exit', { nextMode, approved })
         },
         onPlanUpdate: (plan) => {
@@ -490,7 +492,7 @@ TODO 管理规范：
       prompt: chalk.cyan('writeflow> '),
     })
 
-    console.log(chalk.yellow('💡 提示: 输入 /help 查看可用命令，输入 /exit 退出'))
+    debugLog(chalk.yellow('💡 提示: 输入 /help 查看可用命令，输入 /exit 退出'))
     rl.prompt()
 
     rl.on('line', async (input) => {
@@ -502,7 +504,7 @@ TODO 管理规范：
       }
 
       if (trimmedInput === '/exit' || trimmedInput === '/quit') {
-        console.log(chalk.yellow('👋 再见！'))
+        debugLog(chalk.yellow('👋 再见！'))
         rl.close()
         return
       }
@@ -511,15 +513,15 @@ TODO 管理规范：
         if (trimmedInput.startsWith('/')) {
           // 执行斜杠命令
           const result = await this.executeCommand(trimmedInput)
-          console.log(result)
+          debugLog(result)
         } else {
           // 自由对话模式
           const response = await this.handleFreeTextInput(trimmedInput)
-          console.log(chalk.blue(response))
+          debugLog(chalk.blue(response))
         }
 
       } catch (error) {
-        console.error(chalk.red(`错误: ${(error as Error).message}`))
+        logError(chalk.red(`错误: ${(error as Error).message}`))
       }
 
       rl.prompt()
@@ -571,7 +573,7 @@ TODO 管理规范：
       // 特殊处理：如果是plan命令，先进入Plan模式
       if (command.startsWith('/plan')) {
         if (!this.isInPlanMode()) {
-          console.log('🔄 执行 /plan 命令，自动进入 Plan 模式')
+          debugLog('🔄 执行 /plan 命令，自动进入 Plan 模式')
           await this.enterPlanMode()
         }
       }
@@ -628,7 +630,7 @@ TODO 管理规范：
         }
       }
     } catch (e) {
-      console.warn('[Context] 更新上下文失败，继续执行:', (e as Error).message)
+      logWarn('[Context] 更新上下文失败，继续执行:', (e as Error).message)
     }
 
     // 检查是否已经被中断
@@ -726,7 +728,7 @@ ${this.projectWritingConfig}`
           return intercept.processedResponse
         }
       } catch (e) {
-        console.warn('[AI] 拦截/解析工具调用失败，使用原始响应:', (e as Error)?.message)
+        logWarn('[AI] 拦截/解析工具调用失败，使用原始响应:', (e as Error)?.message)
       }
 
       // 直接返回响应内容，TODO 显示由 TodoPanel 处理
@@ -781,7 +783,7 @@ ${this.projectWritingConfig}`
 ${systemPrompt}`
         }
 
-        console.log('📋 Plan 模式已激活')
+        debugLog('📋 Plan 模式已激活')
       }
 
       // 获取记忆上下文（如果可用）
@@ -826,7 +828,7 @@ ${systemPrompt}`
             contextualPrompt = `${contextInfo  }当前请求:\n${  input}`
           }
         } catch (error) {
-          console.warn('获取记忆上下文失败，使用原始输入:', error)
+          logWarn('获取记忆上下文失败，使用原始输入:', error)
         }
       }
 
@@ -861,7 +863,7 @@ ${systemPrompt}`
             }
           }
         } catch (e) {
-          console.warn('[Plan Mode] 工具调用处理失败:', (e as Error)?.message)
+          logWarn('[Plan Mode] 工具调用处理失败:', (e as Error)?.message)
         }
       }
 
@@ -872,14 +874,14 @@ ${systemPrompt}`
         // 检查是否需要压缩
         const compressionCheck = await this.memoryManager.checkCompressionNeeded()
         if (compressionCheck.needed) {
-          console.log(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
+          debugLog(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
         }
       }
 
       return response.content
 
     } catch (error) {
-      console.warn('AI对话失败，回退到意图检测:', error)
+      logWarn('AI对话失败，回退到意图检测:', error)
       return this.fallbackToIntentDetection(input)
     }
   }
@@ -951,7 +953,7 @@ ${systemPrompt}`
         const userConfig = JSON.parse(configContent)
         this.config = { ...this.config, ...userConfig }
       } catch (error) {
-        console.warn(chalk.yellow(`配置文件加载失败: ${(error as Error).message}`))
+        logWarn(chalk.yellow(`配置文件加载失败: ${(error as Error).message}`))
       }
     }
   }
@@ -1092,10 +1094,10 @@ ${systemPrompt}`
           }
         }
         if (secResp.warnings?.length) {
-          console.warn('[Security warnings]', secResp.warnings.join(' | '))
+          logWarn('[Security warnings]', secResp.warnings.join(' | '))
         }
       } catch (e) {
-        console.warn('[Security] 校验异常，阻断执行:', (e as Error).message)
+        logWarn('[Security] 校验异常，阻断执行:', (e as Error).message)
         return {
           success: false,
           content: '❌ 安全校验异常，已阻断执行',
@@ -1105,7 +1107,7 @@ ${systemPrompt}`
     }
     // 特殊处理 exit_plan_mode 工具
     if (toolName === 'exit_plan_mode') {
-      console.log('🔄 执行 exit_plan_mode 工具，计划内容长度:', input.plan?.length || 0)
+      debugLog('🔄 执行 exit_plan_mode 工具，计划内容长度:', input.plan?.length || 0)
 
       // 确保计划内容存在
       if (!input.plan || input.plan.trim().length === 0) {
@@ -1146,7 +1148,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     toolCalls?: Array<{ toolName: string; input: any }>
     thinkingContent?: string
   }> {
-    console.log('🔍 开始拦截工具调用，响应类型:', typeof aiResponse)
+    debugLog('🔍 开始拦截工具调用，响应类型:', typeof aiResponse)
 
     let shouldIntercept = false
     let processedResponse = ''
@@ -1160,13 +1162,13 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     if (typeof aiResponse === 'object' && aiResponse !== null && !Array.isArray(aiResponse)) {
       if ((aiResponse as any).content) {
         responseToProcess = (aiResponse as any).content
-        console.log('📦 从包装对象中提取 content')
+        debugLog('📦 从包装对象中提取 content')
       }
     }
 
     // 处理结构化响应（content 数组）
     if (Array.isArray(responseToProcess)) {
-      console.log('📦 处理结构化响应，内容块数量:', responseToProcess.length)
+      debugLog('📦 处理结构化响应，内容块数量:', responseToProcess.length)
 
       for (const block of responseToProcess) {
         if (block.type === 'text') {
@@ -1176,7 +1178,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
           const thinkingMatch = textContent.match(/<thinking>([\s\S]*?)<\/thinking>/i)
           if (thinkingMatch) {
             thinkingContent = thinkingMatch[1].trim()
-            console.log('🧠 提取到 thinking 内容，长度:', thinkingContent?.length || 0)
+            debugLog('🧠 提取到 thinking 内容，长度:', thinkingContent?.length || 0)
             textContent = textContent.replace(thinkingMatch[0], '').trim()
           }
 
@@ -1186,25 +1188,25 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
           const toolName = block.name
           const input = block.input
 
-          console.log('🎯 检测到工具调用:', toolName)
+          debugLog('🎯 检测到工具调用:', toolName)
 
           if (toolName === 'ExitPlanMode' && input?.plan) {
             toolCalls.push({ toolName: 'exit_plan_mode', input })
-            console.log('📋 ExitPlanMode 计划内容长度:', input.plan.length)
+            debugLog('📋 ExitPlanMode 计划内容长度:', input.plan.length)
             this.emit('exit-plan-mode', input.plan)
           } else if (toolName === 'todo_write') {
             // TodoWrite 更新任务列表
             toolCalls.push({ toolName: 'todo_write', input })
-            console.log('🗒️  todo_write 调用已拦截，转交 todo_write 工具执行')
+            debugLog('🗒️  todo_write 调用已拦截，转交 todo_write 工具执行')
           } else if (toolName === 'TodoRead' || toolName === 'todo_read') {
             toolCalls.push({ toolName: 'todo_read', input })
-            console.log('📖  TodoRead 调用已拦截，转交 todo_read 工具执行')
+            debugLog('📖  TodoRead 调用已拦截，转交 todo_read 工具执行')
           }
         }
       }
     } else if (typeof aiResponse === 'string') {
       // 处理传统的文本响应（向后兼容）
-      console.log('📝 处理传统文本响应，长度:', aiResponse.length)
+      debugLog('📝 处理传统文本响应，长度:', aiResponse.length)
 
       // 使用 provider 适配器处理内联标记
       try {
@@ -1244,7 +1246,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
           if (pattern.source.includes('ExitPlanMode')) {
             const planContent = match[1].trim()
             toolCalls.push({ toolName: 'exit_plan_mode', input: { plan: planContent } })
-            console.log('🎯 检测到传统 ExitPlanMode 工具调用')
+            debugLog('🎯 检测到传统 ExitPlanMode 工具调用')
             this.emit('exit-plan-mode', planContent)
             processedResponse = aiResponse.replace(match[0], '')
           } else {
@@ -1255,11 +1257,11 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
               const cleaned = rawTodos.replace(/^```[a-zA-Z]*\n?/,'').replace(/```\s*$/,'')
               parsed = JSON.parse(cleaned)
             } catch (e) {
-              console.warn('⚠️  解析传统 TodoWrite 参数失败，按原始文本传递:', (e as Error).message)
+              logWarn('⚠️  解析传统 TodoWrite 参数失败，按原始文本传递:', (e as Error).message)
             }
             const input = parsed ? { todos: parsed } : { todos: rawTodos }
             toolCalls.push({ toolName: 'todo_write', input })
-            console.log('🎯 检测到传统 todo_write 工具调用')
+            debugLog('🎯 检测到传统 todo_write 工具调用')
             processedResponse = aiResponse.replace(match[0], '')
           }
         }
@@ -1270,7 +1272,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       }
     }
 
-    console.log('✅ 拦截结果:', { shouldIntercept, hasThinking: !!thinkingContent, toolCallsCount: toolCalls.length })
+    debugLog('✅ 拦截结果:', { shouldIntercept, hasThinking: !!thinkingContent, toolCallsCount: toolCalls.length })
 
     return {
       shouldIntercept,
@@ -1316,7 +1318,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
               await this.executeToolWithEvents('exit_plan_mode', { plan: (resp as any).metadata.plan })
             }
           } catch (err) {
-            console.warn('[Agent Bridge] 工具拦截/闭环失败:', (err as Error)?.message || err)
+            logWarn('[Agent Bridge] 工具拦截/闭环失败:', (err as Error)?.message || err)
           }
 
           if (!intercepted && process.env.WRITEFLOW_AGENT_PROMPT_TO_AI === 'true') {
@@ -1324,14 +1326,14 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
               const content = await this.processAIQuery([{ role: 'user', content: resp.content }], resp.allowedTools)
               this.emit('agent-ai-result', content)
             } catch (err) {
-              console.warn('[nO] Agent prompt->AI 失败:', (err as Error)?.message || err)
+              logWarn('[nO] Agent prompt->AI 失败:', (err as Error)?.message || err)
             }
           }
         }
       }
     } catch (e) {
       const err = e as Error
-      console.warn('[nO] Agent 循环结束:', err?.message || e)
+      logWarn('[nO] Agent 循环结束:', err?.message || e)
     }
   }
 
@@ -1346,7 +1348,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       
       if (await fs.access(writeflowConfigPath).then(() => true).catch(() => false)) {
         this.projectWritingConfig = await fs.readFile(writeflowConfigPath, 'utf-8')
-        console.log(chalk.blue('📋 已加载项目写作配置: WRITEFLOW.md'))
+        debugLog(chalk.blue('📋 已加载项目写作配置: WRITEFLOW.md'))
       }
     } catch (error) {
       // 配置文件不存在或读取失败，静默处理
@@ -1365,7 +1367,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
       }
     } catch (e) {
       const err = e as Error
-      console.warn('[h2A] 消费循环结束:', err?.message || e)
+      logWarn('[h2A] 消费循环结束:', err?.message || e)
     }
   }
 
@@ -1378,7 +1380,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     }
     
     const reminders = await this.planModeManager.enterPlanMode()
-    console.log('✅ 已成功进入 Plan 模式')
+    debugLog('✅ 已成功进入 Plan 模式')
     
     // 通知UI更新状态
     this.emit('plan-mode-changed', {

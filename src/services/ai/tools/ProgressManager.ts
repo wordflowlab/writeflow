@@ -1,3 +1,5 @@
+import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+
 /**
  * 进度管理器 - 实现渐进式工具执行展示
  * 提供实时的工具执行状态和进度反馈
@@ -256,9 +258,9 @@ export class ProgressManager {
     
     if (this.displayOptions.enableColors) {
       const coloredMessage = this.colorizeLogMessage(message, type)
-      console.log(`   ${prefix} ${coloredMessage}`)
+      debugLog(`   ${prefix} ${coloredMessage}`)
     } else {
-      console.log(`   ${prefix} ${message}`)
+      debugLog(`   ${prefix} ${message}`)
     }
   }
 

@@ -1,4 +1,7 @@
+import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+
 /**
+
  * OpenAI 提供商实现
  * 支持 OpenAI GPT 模型的标准调用和流式调用
  */
@@ -215,7 +218,7 @@ export class OpenAIProvider {
           process.stderr.write(`\n${formatter.formatSuccess(`包含 ${formatted.codeBlockCount} 个代码块的内容已输出`)}\n`)
         }
       } catch (formatError) {
-        console.warn(`最终格式化失败: ${formatError}`)
+        logWarn(`最终格式化失败: ${formatError}`)
       }
     }
     

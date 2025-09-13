@@ -1,4 +1,7 @@
+import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+
 /**
+
  * 流式处理统一管理器
  * 整合现有 StreamingService，提供统一的流式处理接口
  */
@@ -269,7 +272,7 @@ export class StreamingManager {
    * 处理性能警告事件
    */
   private handlePerformanceWarning(warning: PerformanceWarningEvent): void {
-    console.warn(`流式性能警告 [${warning.streamId}]:`, warning.message)
+    logWarn(`流式性能警告 [${warning.streamId}]:`, warning.message)
     
     // 可以在这里实现自动优化措施
     if (warning.type === 'buffer_overflow' && warning.autoActions?.length) {

@@ -3,6 +3,8 @@ import { PlanModeManager, PlanModeState, PlanModeEvents } from '../../modes/Plan
 import { SystemReminder } from '../../tools/SystemReminderInjector.js'
 import { PlanMode } from '../../types/agent.js'
 
+import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+
 export interface ModeState {
   currentMode: UIMode
   planText?: string
@@ -37,11 +39,11 @@ export class ModeManager {
     // 初始化 Plan 模式管理器
     const planModeEvents: PlanModeEvents = {
       onModeEnter: (previousMode) => {
-        console.log(`📋 Plan 模式激活，从 ${previousMode} 模式切换`)
+        debugLog(`📋 Plan 模式激活，从 ${previousMode} 模式切换`)
         this.syncPlanModeState()
       },
       onModeExit: (nextMode, approved) => {
-        console.log(`📋 Plan 模式退出，切换到 ${nextMode} 模式，计划${approved ? '已批准' : '被拒绝'}`)
+        debugLog(`📋 Plan 模式退出，切换到 ${nextMode} 模式，计划${approved ? '已批准' : '被拒绝'}`)
         this.syncPlanModeState()
       },
       onPlanUpdate: (plan) => {
@@ -49,7 +51,7 @@ export class ModeManager {
         this.notify()
       },
       onPlanApproval: (approved, reason) => {
-        console.log(`📋 计划${approved ? '批准' : '拒绝'}${reason ? `: ${reason}` : ''}`)
+        debugLog(`📋 计划${approved ? '批准' : '拒绝'}${reason ? `: ${reason}` : ''}`)
         this.syncPlanModeState()
       },
       onSystemReminder: (reminder) => {
@@ -132,19 +134,19 @@ export class ModeManager {
         const reminders = await this.planModeManager.enterPlanMode(planModeToAgentMode)
         this.state.systemReminders.push(...reminders)
         this.syncPlanModeState()
-        console.log('🚀 进入计划模式 - 只读分析')
+        debugLog('🚀 进入计划模式 - 只读分析')
         break
         
       case UIMode.AcceptEdits:
         // 进入自动接受模式时的设置
         this.state.autoAcceptEnabled = true
-        console.log('✅ 进入自动接受编辑模式')
+        debugLog('✅ 进入自动接受编辑模式')
         break
         
       case UIMode.BypassPermissions:
         // 进入绕过权限模式时的设置
         this.state.bypassPermissions = true
-        console.log('🔓 进入绕过权限模式 - 谨慎使用')
+        debugLog('🔓 进入绕过权限模式 - 谨慎使用')
         break
         
       case UIMode.Default:
@@ -157,7 +159,7 @@ export class ModeManager {
           this.state.planText = undefined
         }
         
-        console.log('🎯 回到默认模式')
+        debugLog('🎯 回到默认模式')
         break
     }
   }

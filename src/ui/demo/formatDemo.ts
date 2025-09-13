@@ -1,3 +1,5 @@
+import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+
 /**
  * WriteFlow 输出格式化演示
  * 测试新的格式化系统功能
@@ -14,7 +16,7 @@ const testContent = `# WriteFlow 代码格式化演示
 
 \`\`\`javascript
 function greetUser(name) {
-  console.log(\`Hello, \${name}!\`)
+  debugLog(\`Hello, \${name}!\`)
   return true
 }
 
@@ -69,66 +71,66 @@ class UserService {
 这个演示展示了 WriteFlow 强大的格式化能力！`
 
 export function runFormatDemo(): void {
-  console.log('🚀 WriteFlow 输出格式化演示开始\n')
+  debugLog('🚀 WriteFlow 输出格式化演示开始\n')
   
   // 测试深色主题
-  console.log('='.repeat(60))
-  console.log('📱 深色主题演示')
-  console.log('='.repeat(60))
+  debugLog('='.repeat(60))
+  debugLog('📱 深色主题演示')
+  debugLog('='.repeat(60))
   
   const darkFormatter = getOutputFormatter({ theme: 'dark' })
   const darkFormatted = darkFormatter.formatStreamOutput(testContent)
   
-  console.log(darkFormatted.content)
-  console.log(darkFormatter.formatSuccess(`✨ 深色主题格式化完成！包含 ${darkFormatted.codeBlockCount} 个代码块，耗时 ${darkFormatted.renderTime}ms`))
+  debugLog(darkFormatted.content)
+  debugLog(darkFormatter.formatSuccess(`✨ 深色主题格式化完成！包含 ${darkFormatted.codeBlockCount} 个代码块，耗时 ${darkFormatted.renderTime}ms`))
   
-  console.log('\n' + '='.repeat(60))
-  console.log('☀️ 浅色主题演示')
-  console.log('='.repeat(60))
+  debugLog('\n' + '='.repeat(60))
+  debugLog('☀️ 浅色主题演示')
+  debugLog('='.repeat(60))
   
   // 测试浅色主题
   const lightFormatter = getOutputFormatter({ theme: 'light' })
   const lightFormatted = lightFormatter.formatStreamOutput(testContent)
   
-  console.log(lightFormatted.content)
-  console.log(lightFormatter.formatSuccess(`✨ 浅色主题格式化完成！包含 ${lightFormatted.codeBlockCount} 个代码块，耗时 ${lightFormatted.renderTime}ms`))
+  debugLog(lightFormatted.content)
+  debugLog(lightFormatter.formatSuccess(`✨ 浅色主题格式化完成！包含 ${lightFormatted.codeBlockCount} 个代码块，耗时 ${lightFormatted.renderTime}ms`))
   
-  console.log('\n' + '='.repeat(60))
-  console.log('🔧 其他格式化功能演示')
-  console.log('='.repeat(60))
+  debugLog('\n' + '='.repeat(60))
+  debugLog('🔧 其他格式化功能演示')
+  debugLog('='.repeat(60))
   
   // 测试其他格式化功能
   const formatter = getOutputFormatter()
   
-  console.log(formatter.formatProgress('正在处理文件', { current: 3, total: 10 }))
-  console.log(formatter.formatFileOperation('create', 'src/components/NewComponent.tsx'))
-  console.log(formatter.formatFileOperation('update', 'src/utils/helper.ts'))
-  console.log(formatter.formatFileOperation('delete', 'src/old/LegacyCode.js'))
-  console.log(formatter.formatWarning('发现过时的依赖包'))
-  console.log(formatter.formatError('构建过程中发生错误'))
+  debugLog(formatter.formatProgress('正在处理文件', { current: 3, total: 10 }))
+  debugLog(formatter.formatFileOperation('create', 'src/components/NewComponent.tsx'))
+  debugLog(formatter.formatFileOperation('update', 'src/utils/helper.ts'))
+  debugLog(formatter.formatFileOperation('delete', 'src/old/LegacyCode.js'))
+  debugLog(formatter.formatWarning('发现过时的依赖包'))
+  debugLog(formatter.formatError('构建过程中发生错误'))
   
   // 测试文件差异
   const oldCode = `function hello(name) {
-  console.log("Hello " + name);
+  debugLog("Hello " + name);
 }`
 
   const newCode = `function hello(name) {
-  console.log(\`Hello, \${name}!\`);
+  debugLog(\`Hello, \${name}!\`);
   return true;
 }`
   
-  console.log('\n📊 文件差异演示:')
+  debugLog('\n📊 文件差异演示:')
   const diff = formatter.formatFileDiff(oldCode, newCode, 'hello.js')
-  console.log(diff)
+  debugLog(diff)
   
   // 主题管理器演示
-  console.log('\n🎨 主题管理器演示:')
+  debugLog('\n🎨 主题管理器演示:')
   const themeManager = getThemeManager()
-  console.log(`当前主题: ${themeManager.getThemeName()}`)
-  console.log(`是否深色主题: ${themeManager.isDarkTheme()}`)
-  console.log(`可用主题: ${themeManager.listThemes().join(', ')}`)
+  debugLog(`当前主题: ${themeManager.getThemeName()}`)
+  debugLog(`是否深色主题: ${themeManager.isDarkTheme()}`)
+  debugLog(`可用主题: ${themeManager.listThemes().join(', ')}`)
   
-  console.log('\n🎉 演示完成！WriteFlow 输出格式化系统已就绪。')
+  debugLog('\n🎉 演示完成！WriteFlow 输出格式化系统已就绪。')
 }
 
 // 如果直接运行此文件，执行演示

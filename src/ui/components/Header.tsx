@@ -31,9 +31,6 @@ export function Header({ mode, projectName = 'WriteFlow', version = getVersion()
         </Text>
         <Text color="gray"> v{version}</Text>
       </Box>
-      <Text color="gray" dimColor>
-        基于 Claude Code 架构
-      </Text>
     </Box>
   )
 }
