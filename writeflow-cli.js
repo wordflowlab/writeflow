@@ -19,6 +19,24 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+// 简单的日志实现 - 避免导入 TypeScript 文件
+function debugLog(message, ...args) {
+  if (process.env.WRITEFLOW_DEBUG === 'true' || process.env.DEBUG === 'true') {
+    console.log(message, ...args);
+  }
+}
+
+function logError(message, error) {
+  console.error(`[ERROR] ${message}`, error || '');
+}
+
+function logWarn(message, data) {
+  console.warn(`[WARN] ${message}`, data || '');
+}
+
+function infoLog(message, ...args) {
+  console.log(message, ...args);
+}
 
 // ES 模块中的 __dirname 替代方案
 const __filename = fileURLToPath(import.meta.url);
@@ -37,7 +55,6 @@ const isWindows = process.platform === 'win32';
  */
 function tryDistVersion() {
   if (fs.existsSync(distEntry)) {
-    console.log('✅ 使用编译版本 (Windows 友好)');
     
     const child = spawn(process.execPath, [distEntry, ...args], {
       stdio: 'inherit',
@@ -55,8 +72,8 @@ function tryDistVersion() {
     });
 
     child.on('error', (error) => {
-      console.warn(`⚠️  编译版本启动失败: ${error.message}`);
-      console.log('🔄 尝试开发环境启动...');
+      debugLog(`⚠️  编译版本启动失败: ${error.message}`);
+      debugLog('🔄 尝试开发环境启动...');
       tryTsxVersion();
     });
 
@@ -73,7 +90,7 @@ function tryTsxVersion() {
   try {
     execSync('tsx --version', { stdio: 'ignore' });
     
-    console.log('✅ 使用开发环境 (tsx + TypeScript)');
+    debugLog('✅ 使用开发环境 (tsx + TypeScript)');
     
     const child = spawn('tsx', [srcEntry, ...args], {
       stdio: 'inherit',
@@ -182,7 +199,7 @@ function main() {
     }
     
     // 优先级2: 尝试 tsx 开发版本
-    console.log('📝 编译版本不存在，使用开发模式...');
+    debugLog('📝 编译版本不存在，使用开发模式...');
     if (tryTsxVersion()) {
       return;
     }

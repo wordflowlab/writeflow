@@ -67,6 +67,8 @@ export function displayCLILogo(): void {
     chalk.hex('#FF69B4')('████  ') +
     chalk.hex('#FFB6C1')('███████'),
   )
+  
+  console.log()
 
 }
 
