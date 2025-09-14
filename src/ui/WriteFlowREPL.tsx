@@ -8,6 +8,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
 import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
+import { getVersion } from '../utils/version.js'
 import { PromptInput } from './components/PromptInput.js'
 import { TodoPanel } from './components/TodoPanel.js'
 import { PlanModeConfirmation, ConfirmationOption } from './components/PlanModeConfirmation.js'
@@ -812,7 +813,10 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       {/* Header */}
       <Box flexDirection="row" alignItems="center" marginBottom={1}>
         <Text color="cyan" bold>
-          ✨ {PRODUCT_NAME}
+          ✨ {PRODUCT_NAME} 
+        </Text>
+        <Text color={theme.success} dimColor>
+          v{getVersion()}
         </Text>
         <Box marginLeft={2}>
           <Text color={theme.dimText}>

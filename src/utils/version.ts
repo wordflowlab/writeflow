@@ -1,24 +1,46 @@
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync, readdirSync } from 'fs'
 import { dirname, join } from 'path'
 
 // 硬编码版本号作为最终后备
-const FALLBACK_VERSION = '2.5.3'
+const FALLBACK_VERSION = '2.21.4'
 
 // 获取WriteFlow包的根目录
 function getWriteFlowRoot(): string {
   // 方法1: 尝试从当前模块路径定位（编译后）
   try {
     // 在编译后的环境中，尝试通过模块路径定位
-    const possiblePaths = [
-      // 全局安装路径
+    const possiblePaths = []
+    
+    // NVM 全局安装路径（动态获取）
+    if (process.env.NVM_BIN) {
+      possiblePaths.push(join(dirname(process.env.NVM_BIN), 'lib', 'node_modules', 'writeflow'))
+    }
+    
+    // 尝试查找 NVM 路径下的所有 Node.js 版本
+    if (process.env.HOME) {
+      try {
+        const nvmPath = join(process.env.HOME, '.nvm/versions/node')
+        if (existsSync(nvmPath)) {
+          const nodeVersions = readdirSync(nvmPath)
+          for (const version of nodeVersions) {
+            possiblePaths.push(join(nvmPath, version, 'lib', 'node_modules', 'writeflow'))
+          }
+        }
+      } catch (error) {
+        // 忽略错误，继续其他路径
+      }
+    }
+    
+    // 标准全局安装路径
+    possiblePaths.push(
       '/opt/homebrew/lib/node_modules/writeflow',
       '/usr/local/lib/node_modules/writeflow',
       '/usr/lib/node_modules/writeflow',
       // 本地安装路径 
       join(process.cwd(), 'node_modules', 'writeflow'),
       // 开发环境路径
-      process.cwd(),
-    ]
+      process.cwd()
+    )
     
     for (const path of possiblePaths) {
       const packagePath = join(path, 'package.json')
