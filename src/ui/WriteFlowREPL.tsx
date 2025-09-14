@@ -12,6 +12,7 @@ import { PromptInput } from './components/PromptInput.js'
 import { TodoPanel } from './components/TodoPanel.js'
 import { PlanModeConfirmation, ConfirmationOption } from './components/PlanModeConfirmation.js'
 import { ShortcutHints } from './components/ShortcutHints.js'
+import { ModelConfig } from './components/ModelConfig.js'
 import { useTodoShortcuts, useModeShortcuts } from '../hooks/useKeyboardShortcuts.js'
 import { useCollapsibleShortcuts } from '../hooks/useCollapsibleShortcuts.js'
 import { Todo, TodoStats, TodoStatus } from '../types/Todo.js'
@@ -553,6 +554,29 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     try {
       const trimmedMessage = message.trim()
       
+      // 🔧 检测 slash command
+      if (trimmedMessage.startsWith('/')) {
+        try {
+          // 执行 slash command
+          const commandResult = await writeFlowApp.executeCommand(trimmedMessage)
+          
+          // 添加命令结果消息
+          const commandResultMessage = createAssistantMessage([
+            createTextBlock(commandResult)
+          ])
+          setMessages(prev => [...prev, commandResultMessage])
+          
+          return // 早期返回，不继续处理为自由文本
+        } catch (error) {
+          // 如果命令执行失败，添加错误消息
+          const errorMessage = createAssistantMessage([
+            createTextBlock(`命令执行失败: ${error instanceof Error ? error.message : '未知错误'}`)
+          ])
+          setMessages(prev => [...prev, errorMessage])
+          return
+        }
+      }
+      
       // 🚀 预创建流式助手消息并实现窗口化
       let streamingMessage = createAssistantMessage([])
       setMessages(prev => {
@@ -895,22 +919,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
 
       {/* Model Config Modal */}
       {showModelConfig && (
-        <Box
-          justifyContent="center"
-          alignItems="center"
-          marginTop={2}
-        >
-          <Box
-            borderStyle="round"
-            borderColor={theme.claude}
-            padding={1}
-            width={60}
-          >
-            {/* ModelConfig component would go here */}
-            <Text>模型配置界面</Text>
-            <Text color={theme.dimText}>按 Ctrl+C 关闭</Text>
-          </Box>
-        </Box>
+        <ModelConfig
+          onClose={() => setShowModelConfig(false)}
+        />
       )}
     </Box>
   )

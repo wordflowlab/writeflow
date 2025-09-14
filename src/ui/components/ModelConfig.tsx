@@ -1,8 +1,16 @@
 import { Box, Text, useInput } from 'ink'
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import * as React from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import figures from 'figures'
-import { getGlobalConfig, ModelPointerType, setModelPointer } from '../../utils/config.js'
+import { getTheme } from '../../utils/theme.js'
+import {
+  getGlobalConfig,
+  saveGlobalConfig,
+  ModelPointerType,
+  setModelPointer,
+} from '../../utils/config.js'
 import { getModelManager } from '../../services/models/ModelManager.js'
+import { ModelSelector } from './ModelSelector.js'
 import { ModelListManager } from './ModelListManager.js'
 
 type Props = {
@@ -21,11 +29,16 @@ type ModelPointerSetting = {
 
 export function ModelConfig({ onClose }: Props): React.ReactNode {
   const config = getGlobalConfig()
+  const theme = getTheme()
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [showModelSelector, setShowModelSelector] = useState(false)
   const [showModelListManager, setShowModelListManager] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [isDeleteMode, setIsDeleteMode] = useState(false)
-  const selectedIndexRef = useRef(selectedIndex)
+  const [currentPointer, setCurrentPointer] = useState<ModelPointerType | null>(
+    null,
+  )
+  const [refreshKey, setRefreshKey] = useState(0) // 添加刷新键来强制更新
+  const [isDeleteMode, setIsDeleteMode] = useState(false) // 保留用于清空指针的删除模式
+  const selectedIndexRef = useRef(selectedIndex) // 用ref保持焦点状态
 
   const modelManager = getModelManager()
 
@@ -34,19 +47,24 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
     selectedIndexRef.current = selectedIndex
   }, [selectedIndex])
 
-  // 获取可用模型列表
+  // Get available models for cycling (memoized) - without "Add New Model" option
   const availableModels = React.useMemo((): Array<{
     id: string
     name: string
   }> => {
-    const profiles = modelManager.getAllProfiles()
-    return profiles.filter(p => p.isActive).map(p => ({ 
-      id: p.modelName, 
-      name: p.name || p.modelName 
-    }))
-  }, [modelManager, refreshKey])
+    try {
+      const profiles = modelManager.getAllProfiles()
+      return profiles.filter(p => p.isActive).map(p => ({ 
+        id: p.modelName, 
+        name: p.name || p.modelName 
+      }))
+    } catch (error) {
+      console.error('获取模型列表失败:', error)
+      return []
+    }
+  }, [modelManager, refreshKey]) // 依赖refreshKey来强制更新
 
-  // 创建菜单项
+  // 创建菜单项：模型指针 + 管理操作
   const menuItems = React.useMemo(() => {
     const modelSettings: ModelPointerSetting[] = [
       {
@@ -69,12 +87,13 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
       },
       {
         id: 'reasoning',
-        label: '推理模型 (Reasoning)', 
+        label: '推理模型 (Reasoning)',
         description: '用于复杂推理和分析任务的模型',
         value: config.modelPointers?.reasoning || '',
         options: availableModels,
         type: 'modelPointer' as const,
-        onChange: (value: string) => handleModelPointerChange('reasoning', value),
+        onChange: (value: string) =>
+          handleModelPointerChange('reasoning', value),
       },
       {
         id: 'quick',
@@ -87,7 +106,7 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
       },
     ]
 
-    // 添加管理操作
+    // 添加管理操作项
     return [
       ...modelSettings,
       {
@@ -106,136 +125,42 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
     pointer: ModelPointerType,
     modelId: string,
   ) => {
+    // Direct model assignment
     setModelPointer(pointer, modelId)
+    // Force re-render to show updated assignment
     setRefreshKey(prev => prev + 1)
   }
 
   const handleManageModels = () => {
+    // Launch ModelListManager for model library management
     setShowModelListManager(true)
   }
 
   const handleModelConfigurationComplete = () => {
+    // Model configuration is complete, return to model config screen
+    setShowModelSelector(false)
     setShowModelListManager(false)
+    setCurrentPointer(null)
+    // 触发组件刷新，重新加载可用模型列表
     setRefreshKey(prev => prev + 1)
-    // 重新聚焦到管理模型库选项
+    // 将焦点重置到 "Manage Model Library" 选项
     const manageIndex = menuItems.findIndex(item => item.id === 'manage-models')
     if (manageIndex !== -1) {
       setSelectedIndex(manageIndex)
     }
   }
 
-  // 检查是否需要自动配置
-  const shouldShowQuickSetup = React.useMemo(() => {
-    return availableModels.length === 0 && 
-           (process.env.DEEPSEEK_API_KEY || 
-            process.env.ANTHROPIC_API_KEY || 
-            process.env.OPENAI_API_KEY ||
-            process.env.KIMI_API_KEY)
-  }, [availableModels.length])
-
-  // 自动配置基于环境变量的模型
-  const handleQuickSetup = useCallback(() => {
-    try {
-      const profiles = modelManager.getAllProfiles()
-      
-      // 基于环境变量添加模型配置
-      if (process.env.DEEPSEEK_API_KEY && !profiles.find(p => p.provider === 'deepseek')) {
-        modelManager.addModelProfile({
-          name: 'DeepSeek Chat',
-          provider: 'deepseek',
-          modelName: 'deepseek-chat',
-          apiKey: process.env.DEEPSEEK_API_KEY,
-          maxTokens: 4096,
-          contextLength: 128000,
-          isActive: true,
-          createdAt: Date.now()
-        })
-        setModelPointer('main', 'deepseek-chat')
-      }
-      
-      if (process.env.ANTHROPIC_API_KEY && !profiles.find(p => p.provider === 'anthropic')) {
-        modelManager.addModelProfile({
-          name: 'Claude Opus 4.1',
-          provider: 'anthropic',
-          modelName: 'claude-opus-4-1-20250805',
-          apiKey: process.env.ANTHROPIC_API_KEY,
-          maxTokens: 4096,
-          contextLength: 200000,
-          isActive: true,
-          createdAt: Date.now()
-        })
-        if (!config.modelPointers?.main) {
-          setModelPointer('main', 'claude-opus-4-1-20250805')
-        }
-      }
-      
-      if (process.env.OPENAI_API_KEY && !profiles.find(p => p.provider === 'openai')) {
-        modelManager.addModelProfile({
-          name: 'GPT-4',
-          provider: 'openai',
-          modelName: 'gpt-4o',
-          apiKey: process.env.OPENAI_API_KEY,
-          maxTokens: 4096,
-          contextLength: 128000,
-          isActive: true,
-          createdAt: Date.now()
-        })
-        if (!config.modelPointers?.main) {
-          setModelPointer('main', 'gpt-4o')
-        }
-      }
-      
-      if (process.env.KIMI_API_KEY && !profiles.find(p => p.provider === 'kimi')) {
-        modelManager.addModelProfile({
-          name: 'Kimi Chat',
-          provider: 'kimi',
-          modelName: 'kimi-chat',
-          apiKey: process.env.KIMI_API_KEY,
-          maxTokens: 4096,
-          contextLength: 200000,
-          isActive: true,
-          createdAt: Date.now()
-        })
-        if (!config.modelPointers?.main) {
-          setModelPointer('main', 'kimi-chat')
-        }
-      }
-      
-      setRefreshKey(prev => prev + 1)
-      
-    } catch (error) {
-      console.error('自动配置失败:', error)
-    }
-  }, [modelManager, config.modelPointers])
-
-  // 处理键盘输入
+  // Handle keyboard input - completely following Config component pattern
   const handleInput = useCallback(
     (input: string, key: any) => {
-      // 如果在快速设置界面
-      if (shouldShowQuickSetup) {
-        if (key.return) {
-          handleQuickSetup()
-          return
-        } else if (key.escape) {
-          // 跳过快速设置，进入手动配置
-          setRefreshKey(prev => prev + 1) // 强制重新渲染
-          return
-        }
-        return
-      }
-
       if (key.escape) {
         if (isDeleteMode) {
-          setIsDeleteMode(false)
-        } else if (showModelListManager) {
-          // 模型列表正在显示：Esc 返回到 ModelConfig 主界面
-          setShowModelListManager(false)
+          setIsDeleteMode(false) // Exit delete mode
         } else {
-          // 最外层 Esc 才关闭配置界面
           onClose()
         }
       } else if (input === 'd' && !isDeleteMode) {
-        setIsDeleteMode(true)
+        setIsDeleteMode(true) // Enter delete mode
       } else if (key.upArrow) {
         setSelectedIndex(prev => Math.max(0, prev - 1))
       } else if (key.downArrow) {
@@ -244,14 +169,14 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
         const setting = menuItems[selectedIndex]
 
         if (isDeleteMode && setting.type === 'modelPointer' && setting.value) {
-          // 删除模式：清空指针分配
+          // Delete mode: clear the pointer assignment (not delete the model config)
           setModelPointer(setting.id as ModelPointerType, '')
           setRefreshKey(prev => prev + 1)
-          setIsDeleteMode(false)
+          setIsDeleteMode(false) // Exit delete mode after clearing assignment
         } else if (setting.type === 'modelPointer') {
-          // 普通模式：循环可用模型
+          // Normal mode: cycle through available models
           if (setting.options.length === 0) {
-            // 没有可用模型，跳转到模型管理
+            // No models available, redirect to model library management
             handleManageModels()
             return
           }
@@ -264,78 +189,41 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
             setting.onChange(nextOption.id)
           }
         } else if (setting.type === 'action') {
-          // 执行操作
+          // Execute action (like "Add New Model")
           setting.onChange()
         }
       }
     },
-    [selectedIndex, menuItems, onClose, isDeleteMode, shouldShowQuickSetup, handleQuickSetup],
+    [selectedIndex, menuItems, onClose, isDeleteMode, modelManager],
   )
 
   useInput(handleInput)
 
-
-  // 如果检测到环境变量但没有配置模型，显示快速设置选项
-  if (shouldShowQuickSetup) {
-    return (
-      <Box
-        flexDirection="column"
-        borderStyle="round"
-        borderColor="green"
-        paddingX={1}
-        marginTop={1}
-      >
-        <Box flexDirection="column" minHeight={2} marginBottom={1}>
-          <Text bold color="green">🚀 检测到 API 密钥</Text>
-          <Text color="gray">
-            我们检测到您已经配置了 AI API 密钥，是否要自动配置模型？
-          </Text>
-        </Box>
-
-        <Box flexDirection="column" marginY={1}>
-          {process.env.DEEPSEEK_API_KEY && (
-            <Text>✓ DeepSeek API 密钥已配置</Text>
-          )}
-          {process.env.ANTHROPIC_API_KEY && (
-            <Text>✓ Anthropic Claude API 密钥已配置</Text>
-          )}
-          {process.env.OPENAI_API_KEY && (
-            <Text>✓ OpenAI API 密钥已配置</Text>
-          )}
-          {process.env.KIMI_API_KEY && (
-            <Text>✓ Kimi API 密钥已配置</Text>
-          )}
-        </Box>
-
-        <Box
-          marginTop={1}
-          paddingTop={1}
-          borderColor="gray"
-          borderStyle="single"
-          borderBottom={false}
-          borderLeft={false}
-          borderRight={false}
-          borderTop={true}
-        >
-          <Text color="green">
-            按 Enter 自动配置模型，或按 Esc 手动配置
-          </Text>
-        </Box>
-      </Box>
-    )
-  }
-
-  // 如果显示模型管理界面
+  // If showing ModelListManager, render it directly
   if (showModelListManager) {
     return <ModelListManager onClose={handleModelConfigurationComplete} />
   }
 
-  // 主配置界面
+  // If showing ModelSelector, render it directly
+  if (showModelSelector) {
+    return (
+      <ModelSelector
+        onDone={handleModelConfigurationComplete}
+        onCancel={handleModelConfigurationComplete} // Same as onDone - return to ModelConfig
+        skipModelType={true}
+        targetPointer={currentPointer || undefined}
+        isOnboarding={false}
+        abortController={new AbortController()}
+      />
+    )
+  }
+
+  // Main configuration screen - completely following Config component layout
   return (
     <Box
       flexDirection="column"
       borderStyle="round"
-      borderColor="gray"
+      borderColor={theme.secondaryBorder}
       paddingX={1}
       marginTop={1}
     >
@@ -343,7 +231,7 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
         <Text bold>
           WriteFlow 模型配置{isDeleteMode ? ' - 清空模式' : ''}
         </Text>
-        <Text color="gray">
+        <Text dimColor>
           {isDeleteMode
             ? '按 Enter/Space 清空选中的指针分配，Esc 取消'
             : availableModels.length === 0
@@ -371,7 +259,7 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
         return (
           <Box key={setting.id} flexDirection="column">
             <Box>
-              <Box width={30}>
+              <Box width={44}>
                 <Text color={isSelected ? 'blue' : undefined}>
                   {isSelected ? figures.pointer : ' '} {setting.label}
                 </Text>
@@ -380,7 +268,9 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
                 {setting.type === 'modelPointer' && (
                   <Text
                     color={
-                      displayValue !== '(未配置)' ? 'green' : 'yellow'
+                      displayValue !== '(未配置)'
+                        ? theme.success
+                        : theme.warning
                     }
                   >
                     {displayValue}
@@ -391,7 +281,7 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
             </Box>
             {isSelected && (
               <Box paddingLeft={2} marginBottom={1}>
-                <Text color="gray">{setting.description}</Text>
+                <Text dimColor>{setting.description}</Text>
               </Box>
             )}
           </Box>
@@ -401,14 +291,14 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
       <Box
         marginTop={1}
         paddingTop={1}
-        borderColor="gray"
+        borderColor={theme.secondaryBorder}
         borderStyle="single"
         borderBottom={false}
         borderLeft={false}
         borderRight={false}
         borderTop={true}
       >
-        <Text color="gray">
+        <Text dimColor>
           {isDeleteMode
             ? '清空模式：按 Enter/Space 清空分配，Esc 取消'
             : availableModels.length === 0
