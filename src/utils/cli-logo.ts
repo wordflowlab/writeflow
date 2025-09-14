@@ -1,8 +1,6 @@
 import chalk from 'chalk'
 
-import { debugLog, logError, logWarn, infoLog } from './log.js'
 /**
-import { debugLog, logError, logWarn, infoLog } from './log.js'
 
  * 显示WriteFlow的彩色ASCII Logo（CLI版本）
  */
@@ -72,7 +70,7 @@ export function displayCLILogo(): void {
   
   // 副标题
   console.log('')
-  console.log(chalk.gray.dim('        ✍️ AI Writing Assistant'))
+  console.log(chalk.gray.dim('        AI 写作助手'))
   console.log('')
 }
 
