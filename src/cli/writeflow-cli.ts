@@ -44,7 +44,7 @@ export class WriteFlowCLI {
       .command('start')
       .alias('s')
       .description('启动交互式写作助手')
-      .option('-m, --model <model>', '指定AI模型', 'claude-3-sonnet-20240229')
+      .option('-m, --model <model>', '指定AI模型', 'claude-4-sonnet-20250506')
       .option('-c, --config <path>', '指定配置文件路径')
       .action(async (options) => {
         await this.startInteractiveMode(options)
@@ -90,6 +90,9 @@ export class WriteFlowCLI {
    */
   private async startInteractiveMode(options: any): Promise<void> {
     try {
+      // 显示 ASCII 艺术 Logo
+      displayCLILogo()
+      
       // 检查是否需要显示引导
       if (shouldShowOnboarding()) {
         // 显示引导流程

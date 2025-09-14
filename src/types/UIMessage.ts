@@ -4,6 +4,7 @@
  * 扩展支持可折叠内容功能
  */
 
+import { randomUUID } from 'crypto'
 import type { UUID } from 'crypto'
 import type { CollapsibleState, ContentRenderMetadata, CollapsibleContentType } from './CollapsibleContent.js'
 
@@ -116,7 +117,7 @@ export type NormalizedMessage = UIMessage
 export function createUserMessage(content: string): UserMessage {
   return {
     type: 'user',
-    uuid: crypto.randomUUID() as UUID,
+    uuid: randomUUID() as UUID,
     message: {
       role: 'user',
       content,
@@ -132,7 +133,7 @@ export function createAssistantMessage(
 ): AssistantMessage {
   return {
     type: 'assistant',
-    uuid: crypto.randomUUID() as UUID,
+    uuid: randomUUID() as UUID,
     message: {
       role: 'assistant',
       content,

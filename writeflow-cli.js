@@ -32,8 +32,6 @@ const distEntry = path.join(__dirname, 'dist', 'cli', 'writeflow-cli.js');
 // Windows 平台检测
 const isWindows = process.platform === 'win32';
 
-console.log('🚀 WriteFlow 启动中...');
-
 /**
  * 方法1: 优先使用编译后的 dist 版本 (Windows 最佳)
  */

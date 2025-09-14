@@ -3,6 +3,7 @@
  * 支持标准调用和工具调用功能
  */
 
+import { randomUUID } from 'crypto'
 import type { ModelProfile } from '../../../utils/config.js'
 import { getResponseStateManager } from '../../streaming/ResponseStateManager.js'
 import { startStreamingProgress, stopStreamingProgress } from '../../streaming/ProgressIndicator.js'
@@ -1460,7 +1461,7 @@ export class DeepSeekProvider {
               // 创建字符级增量消息 - 这是实现丝滑显示的关键！
               const deltaMessage: Message = {
                 type: 'assistant' as const,
-                uuid: crypto.randomUUID(),
+                uuid: randomUUID(),
                 costUSD: 0,
                 durationMs: 0,
                 message: {
@@ -1589,9 +1590,9 @@ export class DeepSeekProvider {
       type: 'assistant',
       costUSD: this.calculateCost(finalUsage, profile),
       durationMs: 0,
-      uuid: crypto.randomUUID(),
+      uuid: randomUUID(),
       message: {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         model: profile.modelName,
         role: 'assistant',
         content: toolCalls.length > 0 ? [] : [{ type: 'text', text: content, citations: [] }],
