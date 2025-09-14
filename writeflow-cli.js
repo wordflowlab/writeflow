@@ -156,8 +156,8 @@ function showInstallationGuide() {
   console.log('   tsx src/cli.ts');
   
   console.log('\n📞 如需帮助:');
-  console.log('   GitHub: https://github.com/writeflow/writeflow');
-  console.log('   Issues: https://github.com/writeflow/writeflow/issues');
+  console.log('   GitHub: https://github.com/wordflowlab/writeflow');
+  console.log('   Issues: https://github.com/wordflowlab/writeflow/issues');
   
   // Windows 专用提示
   if (isWindows) {

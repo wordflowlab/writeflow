@@ -67,11 +67,7 @@ export function displayCLILogo(): void {
     chalk.hex('#FF69B4')('████  ') +
     chalk.hex('#FFB6C1')('███████'),
   )
-  
-  // 副标题
-  console.log('')
-  console.log(chalk.gray.dim('        AI 写作助手'))
-  console.log('')
+
 }
 
 /**
