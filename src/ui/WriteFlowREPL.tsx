@@ -38,9 +38,10 @@ import {
 import { Message } from './components/messages/Message.js'
 
 // 导入工具系统
-import { getAvailableTools } from '../tools/index.js'
+import { getAvailableTools, getToolOrchestrator } from '../tools/index.js'
 import { systemReminderService } from '../services/SystemReminderService.js'
 import type { Tool } from '../Tool.js'
+import { PermissionRequest as PermissionRequestComponent } from './components/permissions/PermissionRequest.js'
 
 const PRODUCT_NAME = 'WriteFlow'
 
@@ -94,6 +95,15 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const [planModeStartTime, setPlanModeStartTime] = useState<number>(0)
   const [showPlanConfirmation, setShowPlanConfirmation] = useState<boolean>(false)
   const [pendingPlan, setPendingPlan] = useState<string>('')
+  
+  // 权限确认状态（类似 Kode 的 ToolUseConfirm）
+  const [toolUseConfirm, setToolUseConfirm] = useState<{
+    toolName: string
+    filePath: string
+    description: string
+    onAllow: (type: 'temporary' | 'session') => void
+    onDeny: () => void
+  } | null>(null)
 
   // 工具调用状态管理
   const [erroredToolUseIDs, setErroredToolUseIDs] = useState<Set<string>>(new Set())
@@ -373,16 +383,36 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       setShowPlanConfirmation(true)
     }
 
+    const handlePermissionRequest = (request: any) => {
+      debugLog('🔐 收到权限请求:', request)
+      setToolUseConfirm({
+        toolName: request.toolName,
+        filePath: request.filePath,
+        description: request.description,
+        onAllow: (type: 'temporary' | 'session') => {
+          const decision = type === 'session' ? 'allow-session' : 'allow'
+          writeFlowApp.handlePermissionResponse(request.id, decision)
+          setToolUseConfirm(null)
+        },
+        onDeny: () => {
+          writeFlowApp.handlePermissionResponse(request.id, 'deny')
+          setToolUseConfirm(null)
+        }
+      })
+    }
+
     writeFlowApp.on('launch-model-config', handleLaunchModelConfig)
     writeFlowApp.on('ai-thinking', handleThinking)
     writeFlowApp.on('plan-mode-changed', handlePlanModeChanged)
     writeFlowApp.on('exit-plan-mode', handleExitPlanMode)
+    writeFlowApp.on('permission-request', handlePermissionRequest)
 
     return () => {
       writeFlowApp.off('launch-model-config', handleLaunchModelConfig)
       writeFlowApp.off('ai-thinking', handleThinking)
       writeFlowApp.off('plan-mode-changed', handlePlanModeChanged)
       writeFlowApp.off('exit-plan-mode', handleExitPlanMode)
+      writeFlowApp.off('permission-request', handlePermissionRequest)
     }
   }, [writeFlowApp])
 
@@ -755,6 +785,46 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   // 运行计时（用于 working/executing 状态显示秒数）
   const [statusStart, setStatusStart] = useState<number | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
+  
+  // 设置工具权限确认回调（类似 Kode 的 useCanUseTool）
+  useEffect(() => {
+    const orchestrator = getToolOrchestrator()
+    
+    // 设置权限确认回调
+    orchestrator.setConfig({
+      ...orchestrator.getConfig(),
+      permissionRequestCallback: async (request: {
+        toolName: string
+        filePath: string
+        description: string
+      }) => {
+        return new Promise<'temporary' | 'session' | 'deny'>((resolve) => {
+          setToolUseConfirm({
+            toolName: request.toolName,
+            filePath: request.filePath,
+            description: request.description,
+            onAllow: (type: 'temporary' | 'session') => {
+              setToolUseConfirm(null)
+              resolve(type)
+            },
+            onDeny: () => {
+              setToolUseConfirm(null)
+              resolve('deny')
+            }
+          })
+        })
+      }
+    })
+    
+    return () => {
+      // 清理回调
+      orchestrator.setConfig({
+        ...orchestrator.getConfig(),
+        permissionRequestCallback: undefined
+      })
+    }
+  }, [])
+
 
   // 辅助函数：自动注册新的可折叠内容并设置焦点
   const registerAndFocusNewCollapsible = useCallback((contentId: string) => {
@@ -868,6 +938,19 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
             plan={pendingPlan}
             onConfirm={handlePlanConfirmation}
             onCancel={handlePlanConfirmationCancel}
+          />
+        </Box>
+      )}
+      
+      {/* 权限确认界面（类似 Kode 的 PermissionRequest） */}
+      {toolUseConfirm && (
+        <Box marginTop={1} marginBottom={1}>
+          <PermissionRequestComponent
+            toolName={toolUseConfirm.toolName}
+            filePath={toolUseConfirm.filePath}
+            description={toolUseConfirm.description}
+            onAllow={toolUseConfirm.onAllow}
+            onDeny={toolUseConfirm.onDeny}
           />
         </Box>
       )}

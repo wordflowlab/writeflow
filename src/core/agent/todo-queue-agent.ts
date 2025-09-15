@@ -5,7 +5,7 @@ import { Message, MessageType, MessagePriority } from '../../types/message.js'
 import { AgentResponse, AgentContext } from '../../types/agent.js'
 import { Todo, TodoStatus, TodoPriority } from '../../types/Todo.js'
 import { TodoManager } from '../../tools/TodoManager.js'
-import { ToolManager } from '../../tools/tool-manager.js'
+import { LegacyToolManager } from '../../tools/LegacyToolManager.js'
 
 /**
 
@@ -20,7 +20,7 @@ import { ToolManager } from '../../tools/tool-manager.js'
  */
 export class TodoQueueAgent extends NOMainAgentEngine {
   private todoManager: TodoManager
-  private toolManager: ToolManager
+  private toolManager: LegacyToolManager
   private currentExecutingTodo: Todo | null = null
   private executionHistory: Array<{
     todo: Todo
@@ -30,10 +30,10 @@ export class TodoQueueAgent extends NOMainAgentEngine {
     error?: string
   }> = []
 
-  constructor(todoManager?: TodoManager, toolManager?: ToolManager) {
+  constructor(todoManager?: TodoManager, toolManager?: LegacyToolManager) {
     super()
     this.todoManager = todoManager || new TodoManager()
-    this.toolManager = toolManager || new ToolManager()
+    this.toolManager = toolManager || new LegacyToolManager()
     
     // 设置 TODO 专用的 onPrompt 回调
     this.onPrompt = this.handleTodoPrompt.bind(this)

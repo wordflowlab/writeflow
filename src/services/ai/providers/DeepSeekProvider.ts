@@ -93,19 +93,67 @@ export class DeepSeekProvider {
   }
 
   /**
-   * 获取可用工具列表
+   * 获取可用工具列表 - 使用真实的工具注册系统
    */
   private async getAvailableTools(request: AIRequest): Promise<Tool[]> {
-    if (!request.enableToolCalls || !request.allowedTools || request.allowedTools.length === 0) {
+    if (!request.enableToolCalls) {
       return []
     }
     
-    // 简化实现：返回基本工具接口
-    return request.allowedTools.map(toolName => ({
-      name: toolName,
-      description: `Tool: ${toolName}`,
-      execute: async () => `Mock result for ${toolName}`
-    })) as Tool[]
+    // 导入真实的工具注册系统
+    const { getAvailableTools } = await import('../../../tools/registry.js')
+    
+    // 将 WriteFlowTool 转换为 Tool 接口
+    const convertToTool = (writeFlowTool: any): Tool => ({
+      name: writeFlowTool.name,
+      description: writeFlowTool.description,
+      execute: async (args: any) => {
+        // WriteFlowTool 使用 call 方法，可能返回 AsyncGenerator 或 Promise
+        if (typeof writeFlowTool.call === 'function') {
+          // 创建 ToolUseContext
+          const context: ToolUseContext = {
+            messageId: `tool-${Date.now()}`,
+            agentId: 'ai-service', 
+            safeMode: false,
+            abortController: new AbortController(),
+            readFileTimestamps: {},
+            options: { verbose: false }
+          }
+          
+          const result = await writeFlowTool.call(args, context)
+          
+          // 如果返回 AsyncGenerator，收集所有结果
+          if (result && typeof result[Symbol.asyncIterator] === 'function') {
+            let finalResult: any = null
+            for await (const item of result) {
+              if (item.type === 'result' && item.data) {
+                finalResult = item.data
+              } else if (item.type === 'error') {
+                throw item.error || new Error(`工具执行失败: ${item.message}`)
+              }
+            }
+            return finalResult
+          }
+          
+          // 如果返回 Promise，直接返回结果
+          return result
+        }
+        throw new Error(`工具 ${writeFlowTool.name} 缺少 call 方法`)
+      }
+    })
+    
+    // 如果指定了特定工具，则过滤
+    if (request.allowedTools && request.allowedTools.length > 0) {
+      const availableTools = await getAvailableTools()
+      const filteredTools = availableTools
+        .filter((tool: any) => request.allowedTools!.includes(tool.name))
+        .map(convertToTool)
+      return filteredTools
+    }
+    
+    // 否则返回所有可用工具
+    const availableTools = await getAvailableTools()
+    return availableTools.map(convertToTool)
   }
 
   /**
@@ -428,7 +476,6 @@ export class DeepSeekProvider {
 
     while (iteration < maxIterations) {
       const iterationStartTime = Date.now()
-      debugLog(`🔄 [第${iteration + 1}轮] AI 正在思考和执行... (messages: ${messages.length}, tools: ${lastRoundHadTodoUpdate ? 0 : tools.length})`)
       
       // 为UI提供进度反馈 - 向对话历史中添加进度信息
       if (iteration === 0) {
@@ -448,7 +495,6 @@ export class DeepSeekProvider {
         stream: false
       }
       
-      debugLog(`📤 [第${iteration + 1}轮] 发送请求到 DeepSeek API...`)
 
       const response: any = await fetch(url, {
         method: 'POST',
@@ -466,12 +512,10 @@ export class DeepSeekProvider {
         throw new Error(`DeepSeek API 错误: ${response.status} - ${errorText}`)
       }
 
-      debugLog(`📥 [第${iteration + 1}轮] 收到 DeepSeek 响应，正在解析...`)
 
       let data: any
       try {
         data = await response.json()
-        debugLog(`✅ [第${iteration + 1}轮] JSON 解析成功`)
       } catch (e) {
         logWarn(`⚠️ [第${iteration + 1}轮] JSON 解析失败，尝试 SSE 兜底解析...`)
         // 某些网关可能仍返回 SSE，这里兜底读取文本并尝试提取最后一个 data: JSON
@@ -484,7 +528,6 @@ export class DeepSeekProvider {
         }
         const jsonStr = lastData.replace(/^data:\s*/, '')
         data = JSON.parse(jsonStr)
-        debugLog(`✅ [第${iteration + 1}轮] SSE 兜底解析成功`)
       }
       
       const message: any = data.choices?.[0]?.message
@@ -495,16 +538,12 @@ export class DeepSeekProvider {
         throw new Error(`DeepSeek API 响应格式错误：缺少 message`)
       }
 
-      debugLog(`📝 [第${iteration + 1}轮] AI 响应: ${message.content ? message.content.slice(0, 100) + '...' : '(无内容)'}`)
-      debugLog(`🔧 [第${iteration + 1}轮] 工具调用: ${message.tool_calls ? message.tool_calls.length : 0} 个`)
 
       // 处理 DeepSeek 内联工具标记（若存在）
       if (message && typeof message.content === 'string' && message.content.includes('tool▁')) {
-        debugLog(`🔧 [第${iteration + 1}轮] 检测到内联工具调用，正在提取...`)
         const inline = this.extractInlineToolCalls(message.content)
         message.content = inline.cleaned
         if (inline.calls.length > 0) {
-          debugLog(`✅ [第${iteration + 1}轮] 提取到 ${inline.calls.length} 个内联工具调用`)
           message.tool_calls = (message.tool_calls || []).concat(
             inline.calls.map((c: any) => ({
               type: 'function',
@@ -526,14 +565,11 @@ export class DeepSeekProvider {
 
       // 如果AI没有调用工具，则对话结束
       if (!message.tool_calls || message.tool_calls.length === 0) {
-        debugLog(`🏁 [第${iteration + 1}轮] AI 未调用工具，对话结束`)
         const content = this.sanitizeLLMArtifacts(message.content)
         conversationHistory += content
-        debugLog(`📄 [第${iteration + 1}轮] 最终内容长度: ${content.length} 字符`)
         
         // 若上一轮刚进行了 todo_* 更新，自动完成任务状态
         if (lastRoundHadTodoUpdate) {
-          debugLog(`📋 [第${iteration + 1}轮] 检测到 TODO 更新，正在自动完成任务状态...`)
           try {
             const { TodoManager } = await import('../../../tools/TodoManager.js')
             const mgr = new TodoManager(process.env.WRITEFLOW_SESSION_ID)
@@ -577,7 +613,6 @@ export class DeepSeekProvider {
       }
 
       // AI 调用了工具，添加 AI 消息到对话历史
-      debugLog(`⚙️ [第${iteration + 1}轮] AI 调用了 ${message.tool_calls.length} 个工具，开始执行...`)
       messages.push(message)
       
       // 执行工具调用
@@ -609,7 +644,6 @@ export class DeepSeekProvider {
           let toolResult: any
           try {
             toolResult = await Promise.race([toolPromise, timeoutPromise]) as any
-            debugLog(`⚡ [第${iteration + 1}轮-工具${i + 1}] 工具执行完成，耗时估计 < 30秒`)
           } catch (timeoutError) {
             logWarn(`⏰ [第${iteration + 1}轮-工具${i + 1}] 工具超时，尝试返回错误结果...`)
             toolResult = {
@@ -627,7 +661,6 @@ export class DeepSeekProvider {
               debugLog(`📄 [第${iteration + 1}轮-工具${i + 1}] 结果: ${resultLines} 行`)
               conversationHistory += `✅ ${toolName} 工具执行完成\n${toolResult.result}\n`
             } else {
-              debugLog(`📋 [第${iteration + 1}轮-工具${i + 1}] TODO 工具执行成功`)
               conversationHistory += `✅ 任务状态更新完成\n`
             }
             consecutiveFailures = 0 // 重置连续失败计数
@@ -670,7 +703,6 @@ export class DeepSeekProvider {
         }
       }
       
-      debugLog(`📊 [第${iteration + 1}轮] 工具执行完成: 成功 ${toolCallResults.filter(r => r.success).length}/${toolCallResults.length}, 失败标记: ${currentRoundHasFailures}`)
 
       // 智能错误恢复机制
       if (currentRoundHasFailures) {
@@ -691,7 +723,6 @@ export class DeepSeekProvider {
             content: recoveryGuidance
           })
           
-          debugLog(`🔄 [第${iteration + 1}轮] 添加恢复指导，尝试继续对话...`)
           
           // 重置失败计数，给AI一次恢复机会
           consecutiveFailures = 0
@@ -715,7 +746,6 @@ export class DeepSeekProvider {
       } else {
         // 本轮成功，重置连续失败计数
         if (consecutiveFailures > 0) {
-          debugLog(`✅ [第${iteration + 1}轮] 工具执行成功，重置连续失败计数 (${consecutiveFailures} → 0)`)
           consecutiveFailures = 0
         }
       }
@@ -800,7 +830,6 @@ export class DeepSeekProvider {
             }
           }
         })
-        debugLog(`✅ 工具 ${toolName} 已添加到 API 调用中`)
         continue
       }
       
@@ -813,7 +842,6 @@ export class DeepSeekProvider {
             parameters: { type: 'object', properties: {}, additionalProperties: false }
           }
         })
-        debugLog(`✅ 工具 ${toolName} 已添加到 API 调用中`)
         continue
       }
       
@@ -826,7 +854,6 @@ export class DeepSeekProvider {
             parameters: { type: 'object', properties: { plan: { type: 'string' } }, required: [] }
           }
         })
-        debugLog(`✅ 工具 ${toolName} 已添加到 API 调用中`)
         continue
       }
       
@@ -836,15 +863,21 @@ export class DeepSeekProvider {
         const tool = getTool(toolName)
         if (tool) {
           const description = await tool.description()
+          
+          // 🔥 获取工具的真实JSON Schema参数
+          let parameters = { type: 'object', properties: {}, additionalProperties: true }
+          if (tool.inputJSONSchema) {
+            parameters = tool.inputJSONSchema as any
+          }
+          
           tools.push({
             type: 'function',
             function: {
               name: toolName,
               description,
-              parameters: { type: 'object', properties: {}, additionalProperties: true }
+              parameters
             }
           })
-          debugLog(`✅ 工具 ${toolName} 已添加到 API 调用中`)
         } else {
           logWarn(`工具 ${toolName} 不在可用工具列表中，跳过`)
         }
@@ -1179,14 +1212,12 @@ export class DeepSeekProvider {
     
     while (iteration < MAX_ITERATIONS) {
       if (isDebugMode) {
-        debugLog(`🔄 [流式-第${iteration + 1}轮] 开始 AI 查询...`)
       }
       
       // 🎯 为每轮对话添加超时控制
       const iterationController = new AbortController()
       const iterationTimeoutId = setTimeout(() => {
         if (isDebugMode) {
-          debugLog(`⏰ [流式-第${iteration + 1}轮] 单轮超时 (90s)，中断当前轮次`)
         }
         iterationController.abort()
       }, ITERATION_TIMEOUT)
@@ -1215,13 +1246,11 @@ export class DeepSeekProvider {
           
           // 🚀 简化实时字符日志：仅在详细调试模式输出
           if (isDebugMode && realtimeCharCount % 50 === 0) {
-            debugLog(`🔥 [字符流-第${iteration + 1}轮] 第${realtimeCharCount}个字符`)
           }
         } else {
           // 这是最终完整消息
           assistantMessage = message as AssistantMessage
           if (isDebugMode) {
-            debugLog(`📝 [流式-第${iteration + 1}轮] AI 响应完成，内容长度: ${assistantMessage.message.content?.length || 0}`)
           }
         }
         
@@ -1240,13 +1269,11 @@ export class DeepSeekProvider {
       
       if (toolUseBlocks.length === 0) {
         if (isDebugMode) {
-          debugLog(`🏁 [流式-第${iteration + 1}轮] 无工具调用，对话结束`)
         }
         return
       }
       
       if (isDebugMode) {
-        debugLog(`⚙️ [流式-第${iteration + 1}轮] 检测到 ${toolUseBlocks.length} 个工具调用`)
       }
       
       // 5. 并发或串行执行工具 - 实现标准并发逻辑
@@ -1259,7 +1286,6 @@ export class DeepSeekProvider {
       
       if (canRunConcurrently) {
         if (isDebugMode) {
-          debugLog(`🚀 [流式-第${iteration + 1}轮] 并发执行工具`)
         }
         for await (const message of this.runToolsConcurrently(
           toolUseBlocks, 
@@ -1274,7 +1300,6 @@ export class DeepSeekProvider {
         }
       } else {
         if (isDebugMode) {
-          debugLog(`🔄 [流式-第${iteration + 1}轮] 串行执行工具`)
         }
         for await (const message of this.runToolsSerially(
           toolUseBlocks,
@@ -1293,14 +1318,12 @@ export class DeepSeekProvider {
       messages = [...messages, assistantMessage, ...toolResults]
       iteration++
       
-      debugLog(`🔄 [流式-第${iteration}轮] 准备下一轮，消息历史长度: ${messages.length}`)
       
       } catch (error) {
         // 清理单轮超时
         clearTimeout(iterationTimeoutId)
         
         if (error instanceof Error && error.message?.includes('超时')) {
-          debugLog(`⏰ [流式-第${iteration + 1}轮] 轮次超时，尝试恢复或结束对话`)
           // 超时情况下，可以选择结束对话或者重试
           break
         }
@@ -1313,7 +1336,6 @@ export class DeepSeekProvider {
       }
     }
     
-    debugLog(`⚠️ [流式] 达到最大迭代次数 ${MAX_ITERATIONS}，结束对话`)
   }
   
   /**
@@ -1356,12 +1378,10 @@ export class DeepSeekProvider {
       stream: true // 🌟 启用真正的流式！
     }
     
-    debugLog(`📤 [API] 发送请求到 DeepSeek...`)
     
     // 🎯 添加超时控制，防止API调用卡死
     const controller = new AbortController()
     const timeoutId = setTimeout(() => {
-      debugLog(`⏰ [API] DeepSeek 请求超时 (60s)，中断连接`)
       controller.abort()
     }, 60000) // 60秒超时
     
@@ -1406,7 +1426,6 @@ export class DeepSeekProvider {
     let finalUsage: any = null
     let streamId: string | null = null
 
-    debugLog(`🌊 [流式] 开始处理 SSE 响应...`)
 
     // 🎯 为SSE流式读取添加超时控制
     const streamController = new AbortController()
@@ -1416,7 +1435,6 @@ export class DeepSeekProvider {
     const resetNoDataTimeout = () => {
       if (noDataTimeoutId) clearTimeout(noDataTimeoutId)
       noDataTimeoutId = setTimeout(() => {
-        debugLog(`⏰ [流式] SSE 数据超时 (30s无数据)，中断流式读取`)
         streamController.abort()
         reader.cancel()
       }, 30000) // 30秒无数据则超时
@@ -1429,7 +1447,6 @@ export class DeepSeekProvider {
       while (true) {
         const { done, value } = await reader.read()
         if (done) {
-          debugLog(`🏁 [流式] SSE 流式读取完成`)
           break
         }
         
@@ -1498,7 +1515,6 @@ export class DeepSeekProvider {
                                now - lastLogTime >= LOG_THROTTLE_INTERVAL
               
               if (shouldLog) {
-                debugLog(`📝 [字符流] 累计${characterCount}字符, 本次+${delta.length}: "${delta.slice(0, 20)}..."`)
                 lastLogTime = now
               }
               
@@ -1541,7 +1557,6 @@ export class DeepSeekProvider {
             
             // 检查是否是AI生成的包含JSON内容的文本
             if (dataStr.includes('"type":"tool_use"') || dataStr.includes('{"type":')) {
-              debugLog(`📝 [流式] 检测到AI生成的JSON格式文本内容，已安全跳过解析`)
             }
             
             // 继续处理下一个数据块，不中断流程
@@ -1554,7 +1569,6 @@ export class DeepSeekProvider {
       if (noDataTimeoutId) clearTimeout(noDataTimeoutId)
       
       if (error instanceof Error && error.name === 'AbortError') {
-        debugLog(`⏰ [流式] SSE 读取被中断 (超时或手动中止)`)
         throw new Error('流式响应超时 (30秒无数据)')
       }
       
@@ -1568,7 +1582,6 @@ export class DeepSeekProvider {
 
     // 处理内联工具调用
     if (content.includes('tool▁')) {
-      debugLog(`🔧 [API] 检测到内联工具调用，正在提取...`)
       const inline = this.extractInlineToolCalls(content)
       content = inline.cleaned
       if (inline.calls.length > 0) {
@@ -1629,7 +1642,6 @@ export class DeepSeekProvider {
       )
     }
 
-    debugLog(`🏁 [流式] AI 响应完成，内容长度: ${content.length}, 工具调用: ${toolCalls.length}`)
     
     // 最后发出完整消息（用于工具调用处理）
     yield finalMessage
@@ -1723,9 +1735,8 @@ export class DeepSeekProvider {
     const toolUseID = toolUse.id
     const toolInput = toolUse.input
     
-    debugLog(`🔧 [工具执行] 开始执行 ${toolName} (ID: ${toolUseID})`)
     
-    // 1. 查找工具
+    // 1. 查找工具 - 添加调试日志
     const tool = availableTools.find(t => t.name === toolName)
     if (!tool) {
       logError(`❌ [工具执行] 工具 ${toolName} 不存在`)
@@ -1740,18 +1751,15 @@ export class DeepSeekProvider {
     
     // 2. 执行工具并流式推送进度 - 实现 AsyncGenerator 流式架构！
     try {
-      debugLog(`⚡ [工具执行] ${toolName} 开始执行...`)
       
       // 如果工具支持 AsyncGenerator，使用流式执行
       // 注意：当前 WriteFlow 工具接口可能还不支持 call 方法，这是未来优化方向
-      debugLog(`🔍 [调试] ${toolName} 工具call方法检查:`, (tool as any).call ? '有call方法' : '无call方法')
       if ((tool as any).call && typeof (tool as any).call === 'function') {
         const generator = (tool as any).call(toolInput as never, toolUseContext)
         
         for await (const result of generator) {
           switch (result.type) {
             case 'result':
-              debugLog(`✅ [工具执行] ${toolName} 执行成功`)
               yield createUserMessage([{
                 type: 'tool_result',
                 content: result.resultForAssistant || String(result.data),
@@ -1763,7 +1771,6 @@ export class DeepSeekProvider {
               return
               
             case 'progress':
-              debugLog(`🔄 [工具执行] ${toolName} 进度更新`)
               // 🌟 关键！yield 进度消息实现实时显示
               yield {
                 type: 'progress',
@@ -1776,7 +1783,6 @@ export class DeepSeekProvider {
         }
       } else {
         // 🚀 采用Kode架构：Progress消息系统 + 完全消息类型分离
-        debugLog(`🔧 [工具执行] ${toolName} 使用Kode风格架构执行`)
         
         // 🌟 阶段1: 工具执行开始的Progress消息（WriteFlow格式）
         yield {
@@ -1815,7 +1821,6 @@ export class DeepSeekProvider {
         
         // 🌟 阶段4: Kode风格的结果处理 - 用户友好消息 + 技术消息分离
         if (result.success) {
-          debugLog(`✅ [工具执行] ${toolName} 执行成功`)
           
           // 🌟 推送用户友好的完成消息（WriteFlow Progress格式）
           const completionMessage = toolName === 'todo_write' 

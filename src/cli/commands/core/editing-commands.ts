@@ -60,7 +60,7 @@ ${content}
 请提供改写后的完整内容。`
     },
     
-    allowedTools: ['read_article', 'write_article', 'style_adapter', 'grammar_checker'],
+    allowedTools: ['Write', 'Read', 'Edit', 'MultiEdit'],
     progressMessage: '正在改写内容',
     userFacingName: () => 'rewrite'
   },

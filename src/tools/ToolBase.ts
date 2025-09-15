@@ -35,7 +35,7 @@ export abstract class ToolBase<
   abstract call(
     input: z.infer<TInput>,
     context: ToolUseContext,
-  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown>
+  ): Promise<TOutput> | AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown>
 
   // 工具版本 - 用于兼容性检查
   version: string = '1.0.0'
@@ -211,8 +211,8 @@ export abstract class ToolBase<
 
   // Zod Schema 到 JSON Schema 的转换
   private zodSchemaToJsonSchema(zodSchema: any): Record<string, unknown> {
-    const shape = zodSchema._def?.shape
-    if (!shape) {
+    const shapeDef = zodSchema._def?.shape
+    if (!shapeDef) {
       return {
         type: 'object',
         properties: {},
@@ -221,6 +221,9 @@ export abstract class ToolBase<
       }
     }
 
+    // 🔥 如果shape是函数，需要调用它来获取实际形状
+    const shape = typeof shapeDef === 'function' ? shapeDef() : shapeDef
+    
     const properties: any = {}
     const required: string[] = []
 

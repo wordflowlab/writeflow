@@ -12,6 +12,7 @@ export interface ToolUseContext {
     verbose?: boolean
     safeMode?: boolean
     messageLogName?: string
+    autoApprove?: boolean
   }
 }
 
@@ -50,11 +51,11 @@ export interface WriteFlowTool<
   checkPermissions: (input: any, context: ToolUseContext) => Promise<PermissionResult>
   validateInput?: (input: any, context?: ToolUseContext) => Promise<ValidationResult>
   
-  // 执行和渲染 - 兼容新的事件系统
+  // 执行和渲染 - 支持两种返回类型：Promise（简单工具）和 AsyncGenerator（复杂工具）
   call: (
     input: any,
     context: ToolUseContext,
-  ) => AsyncGenerator<
+  ) => Promise<TOutput> | AsyncGenerator<
     { type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string },
     void,
     unknown

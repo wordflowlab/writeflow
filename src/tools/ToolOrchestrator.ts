@@ -7,7 +7,7 @@ import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
 import { z } from 'zod'
 import { WriteFlowTool, ToolUseContext, PermissionResult } from '../Tool.js'
 import { ToolCallEvent, ToolBase } from './ToolBase.js'
-import { PermissionManager, getPermissionManager } from './PermissionManager.js'
+import { PermissionManager, getPermissionManager, PermissionGrantType } from './PermissionManager.js'
 
 /**
  * 工具执行状态
@@ -74,6 +74,11 @@ export interface OrchestratorConfig {
   enableMetrics: boolean
   enableLogging: boolean
   retryFailedTools: boolean
+  permissionRequestCallback?: (request: {
+    toolName: string
+    filePath: string
+    description: string
+  }) => Promise<'temporary' | 'session' | 'deny'>
 }
 
 /**
@@ -99,6 +104,20 @@ export class ToolOrchestrator {
       retryFailedTools: true,
       ...config,
     }
+  }
+
+  /**
+   * 获取当前配置
+   */
+  getConfig(): OrchestratorConfig {
+    return { ...this.config }
+  }
+
+  /**
+   * 设置配置
+   */
+  setConfig(config: Partial<OrchestratorConfig>): void {
+    this.config = { ...this.config, ...config }
   }
 
   /**
@@ -194,11 +213,47 @@ export class ToolOrchestrator {
         )
         
         if (!permissionResult.isAllowed) {
-          result.status = ToolExecutionStatus.FAILED
-          result.error = new Error(`权限被拒绝: ${permissionResult.denialReason}`)
-          result.endTime = Date.now()
-          this.executionResults.set(executionId, result)
-          return result
+          // 如果有权限请求回调，尝试通过 UI 获取用户确认
+          if (this.config.permissionRequestCallback && permissionResult.behavior === 'ask') {
+            try {
+              // 提取文件路径用于权限确认
+              const filePath = request.input?.file_path || request.input?.path || 'unknown'
+              const description = typeof tool.description === 'function' 
+                ? await tool.description() 
+                : tool.description
+              
+              const userChoice = await this.config.permissionRequestCallback({
+                toolName: request.toolName,
+                filePath,
+                description,
+              })
+              
+              if (userChoice === 'deny') {
+                result.status = ToolExecutionStatus.FAILED
+                result.error = new Error(`用户拒绝了权限请求`)
+                result.endTime = Date.now()
+                this.executionResults.set(executionId, result)
+                return result
+              }
+              
+              // 用户同意，根据选择类型授权
+              this.permissionManager.grantPermission(request.toolName, 
+                userChoice === 'session' ? PermissionGrantType.SESSION_GRANT : PermissionGrantType.ONE_TIME_GRANT)
+              
+            } catch (error) {
+              result.status = ToolExecutionStatus.FAILED
+              result.error = new Error(`权限确认失败: ${error}`)
+              result.endTime = Date.now()
+              this.executionResults.set(executionId, result)
+              return result
+            }
+          } else {
+            result.status = ToolExecutionStatus.FAILED
+            result.error = new Error(`权限被拒绝: ${permissionResult.denialReason}`)
+            result.endTime = Date.now()
+            this.executionResults.set(executionId, result)
+            return result
+          }
         }
       }
 
@@ -225,20 +280,27 @@ export class ToolOrchestrator {
       }, timeout)
 
       try {
-        // 执行工具
-        const generator = tool.call(request.input, request.context)
+        // 执行工具 - 支持两种返回类型：Promise 和 AsyncGenerator
+        const callResult = tool.call(request.input, request.context)
         let toolResult: any
 
-        // 处理工具执行的事件流
-        for await (const event of generator) {
-          if (event.type === 'progress') {
-            this.logExecution(executionId, event.message || '执行中...')
-          } else if (event.type === 'result') {
-            toolResult = event.data
-            result.result = toolResult
-          } else if (event.type === 'error') {
-            throw event.error || new Error(event.message || '工具执行出错')
+        // 检查返回类型 - 使用类型保护
+        if (callResult && typeof callResult === 'object' && 'next' in callResult && typeof (callResult as any).next === 'function') {
+          // 是 AsyncGenerator - 处理工具执行的事件流
+          for await (const event of callResult as AsyncGenerator<any>) {
+            if (event.type === 'progress') {
+              this.logExecution(executionId, event.message || '执行中...')
+            } else if (event.type === 'result') {
+              toolResult = event.data
+              result.result = toolResult
+            } else if (event.type === 'error') {
+              throw event.error || new Error(event.message || '工具执行出错')
+            }
           }
+        } else {
+          // 是 Promise - 直接等待结果
+          toolResult = await callResult
+          result.result = toolResult
         }
 
         clearTimeout(timeoutHandle)

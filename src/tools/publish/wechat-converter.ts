@@ -1,6 +1,6 @@
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { WeChatFormat, PlatformConfig } from '../../types/publish.js'
-import { readToolAdapter } from '../adapters/CoreToolsAdapter.js'
+import { getTool } from '../index.js'
 
 /**
  * WeChatConverter 工具
@@ -32,7 +32,40 @@ export class WeChatConverterTool implements WritingTool {
       // 获取内容
       let originalContent: string
       if (filePath) {
-        const readResult = await readToolAdapter.execute({ file_path: filePath })
+        const readTool = getTool('Read')
+        if (!readTool) {
+          throw new Error('Read 工具不可用')
+        }
+        
+        // 创建工具上下文
+        const context = {
+          abortController: new AbortController(),
+          readFileTimestamps: {},
+          options: { verbose: false, safeMode: true }
+        }
+        
+        // 调用新工具
+        const callResult = readTool.call({ file_path: filePath }, context)
+        let readResult = null
+        
+        // 处理异步生成器结果
+        if (Symbol.asyncIterator in callResult) {
+          for await (const output of callResult as any) {
+            if (output.type === 'result') {
+              readResult = {
+                success: true,
+                content: output.data?.content || output.resultForAssistant || ''
+              }
+              break
+            }
+          }
+        } else {
+          const output = await callResult
+          readResult = {
+            success: true,
+            content: output?.content || ''
+          }
+        }
         if (!readResult.success) {
           return { success: false, error: `读取文件失败: ${readResult.error}` }
         }

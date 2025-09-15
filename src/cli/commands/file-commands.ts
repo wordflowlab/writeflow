@@ -1,6 +1,6 @@
 import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
-import { readToolAdapter } from '../../tools/adapters/CoreToolsAdapter.js'
+import { getTool } from '../../tools/index.js'
 import { promises as fs } from 'fs'
 import { join, relative } from 'path'
 
@@ -32,7 +32,40 @@ export const fileCommands: SlashCommand[] = [
       
       try {
         // 使用新的 ReadTool
-        const result = await readToolAdapter.execute({ file_path: filePath })
+        const readTool = getTool('Read')
+      if (!readTool) {
+        throw new Error('Read 工具不可用')
+      }
+      
+      // 创建工具上下文
+      const context = {
+        abortController: new AbortController(),
+        readFileTimestamps: {},
+        options: { verbose: false, safeMode: true }
+      }
+      
+      // 调用新工具
+      const callResult = readTool.call({ file_path: filePath }, context)
+      let result = null
+      
+      // 处理异步生成器结果
+      if (Symbol.asyncIterator in callResult) {
+        for await (const output of callResult as any) {
+          if (output.type === 'result') {
+            result = {
+              success: true,
+              content: output.data?.content || output.resultForAssistant || ''
+            }
+            break
+          }
+        }
+      } else {
+        const output = await callResult
+        result = {
+          success: true,
+          content: output?.content || ''
+        }
+      }
         
         if (!result.success) {
           return `❌ 读取文件失败: ${result.error}
@@ -102,7 +135,40 @@ export const fileCommands: SlashCommand[] = [
       try {
         // 首先读取文件内容
         // 使用新的 ReadTool
-        const readResult = await readToolAdapter.execute({ file_path: filePath })
+        const readTool = getTool('Read')
+        if (!readTool) {
+          throw new Error('Read 工具不可用')
+        }
+        
+        // 创建工具上下文
+        const context = {
+          abortController: new AbortController(),
+          readFileTimestamps: {},
+          options: { verbose: false, safeMode: true }
+        }
+        
+        // 调用新工具
+        const callResult = readTool.call({ file_path: filePath }, context)
+        let readResult = null
+        
+        // 处理异步生成器结果
+        if (Symbol.asyncIterator in callResult) {
+          for await (const output of callResult as any) {
+            if (output.type === 'result') {
+              readResult = {
+                success: true,
+                content: output.data?.content || output.resultForAssistant || ''
+              }
+              break
+            }
+          }
+        } else {
+          const output = await callResult
+          readResult = {
+            success: true,
+            content: output?.content || ''
+          }
+        }
         
         if (!readResult.success) {
           return `❌ 无法读取文件: ${readResult.error}

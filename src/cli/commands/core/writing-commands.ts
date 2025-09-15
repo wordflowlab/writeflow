@@ -109,8 +109,7 @@ export const writingCommands: SlashCommand[] = [
     },
     
     allowedTools: [
-      'web_search', 'read_article', 'write_article', 'citation_manager',
-      'task_manager', 'context_analyzer'
+      'Write', 'Read', 'Edit', 'MultiEdit', 'Grep', 'Glob', 'Bash'
     ],
     progressMessage: '正在执行写作任务...',
     userFacingName: () => 'write'
@@ -149,7 +148,7 @@ export const writingCommands: SlashCommand[] = [
 请提供一个结构清晰的草稿内容。`
     },
     
-    allowedTools: ['web_search', 'read_article', 'write_article'],
+    allowedTools: ['Write', 'Read', 'Edit', 'MultiEdit'],
     progressMessage: '正在快速起草内容',
     userFacingName: () => 'draft'
   },
@@ -193,7 +192,7 @@ export const writingCommands: SlashCommand[] = [
 请创作一篇有创意、有深度的文章。`
     },
     
-    allowedTools: ['web_search', 'read_article', 'write_article', 'citation_manager'],
+    allowedTools: ['Write', 'Read', 'Edit', 'MultiEdit', 'Grep', 'Glob'],
     progressMessage: '正在进行创意写作',
     userFacingName: () => 'compose'
   },
@@ -238,7 +237,7 @@ export const writingCommands: SlashCommand[] = [
 请提供高质量的续写内容。`
     },
     
-    allowedTools: ['read_article', 'write_article', 'content_analyzer'],
+    allowedTools: ['Write', 'Read', 'Edit', 'MultiEdit'],
     progressMessage: '正在续写内容',
     userFacingName: () => 'continue'
   }

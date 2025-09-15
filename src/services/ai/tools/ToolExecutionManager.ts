@@ -199,9 +199,13 @@ export class ToolExecutionManager {
       return {
         ...request,
         enableToolCalls: true,
-        allowedTools: request.allowedTools || analysis.suggestedTools.length > 0 
-          ? analysis.suggestedTools 
-          : ['Read', 'Grep', 'Glob', 'Bash', 'todo_write', 'todo_read'],
+        // 🔥 关键修复：让 AI 自主选择工具，不进行预先过滤！
+        allowedTools: request.allowedTools || [
+          // 提供所有可用工具，让 DeepSeek AI 智能选择
+          'Read', 'Write', 'Edit', 'MultiEdit',
+          'Grep', 'Glob', 'Bash',
+          'todo_write', 'todo_read', 'exit_plan_mode'
+        ],
         taskContext: request.enableSmartAnalysis 
           ? this.extractTaskContext(request.prompt)
           : undefined

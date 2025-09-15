@@ -66,6 +66,13 @@ import { addCostEntry } from '../CostTracker.js'
 import { getContextManager, estimateTokens, ContextEntry } from '../ContextManager.js'
 import { emitReminderEvent } from '../SystemReminderService.js'
 
+// 权限确认系统
+import { 
+  getPermissionConfirmationService, 
+  PermissionRequest, 
+  PermissionResponse 
+} from '../PermissionConfirmationService.js'
+
 
 // 兼容性类型 - 保持现有接口不变
 export interface AIRequest {
@@ -137,6 +144,7 @@ export class WriteFlowAIService {
   private contextManager = getContextManager()
   private messageLogger = getMessageLogger()
   private interactiveManager = getInteractiveExecutionManager()
+  private permissionService = getPermissionConfirmationService()
   
   /**
    * 处理 AI 请求（支持流式和非流式）
@@ -792,6 +800,19 @@ export class WriteFlowAIService {
       if (toolResults.length === 0) {
         for (const toolCall of toolCalls) {
           try {
+            // 权限确认检查
+            const hasPermission = await this.checkToolPermission(toolCall)
+            if (!hasPermission) {
+              toolResults.push({
+                toolName: toolCall.toolName,
+                callId: toolCall.callId,
+                result: '',
+                success: false,
+                error: '权限被拒绝'
+              })
+              continue
+            }
+
             const result = await this.toolExecutionManager.executeToolCall(
               toolCall.toolName,
               toolCall.parameters,
@@ -1059,6 +1080,58 @@ Write("analysis.md", "# 分析结果\\n基于您的请求进行的分析...")
     }
   }
   
+  /**
+   * 检查工具权限
+   */
+  private async checkToolPermission(toolCall: any): Promise<boolean> {
+    try {
+      // 对于需要权限确认的工具（如Write、Edit等）
+      if (['Write', 'Edit', 'MultiEdit', 'Bash'].includes(toolCall.toolName)) {
+        // 构建权限请求
+        const permissionRequest: PermissionRequest = {
+          id: `permission_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          toolName: toolCall.toolName,
+          filePath: toolCall.parameters.file_path || toolCall.parameters.path || '未指定',
+          description: this.getToolDescription(toolCall),
+          args: toolCall.parameters
+        }
+
+        // 请求权限确认
+        const response = await this.permissionService.requestPermission(permissionRequest)
+        return response.decision === 'allow' || response.decision === 'allow-session'
+      }
+
+      // 对于读取类工具，直接允许
+      if (['Read', 'Glob', 'Grep', 'todo_read', 'todo_write'].includes(toolCall.toolName)) {
+        return true
+      }
+
+      // 默认需要确认
+      return false
+    } catch (error) {
+      this.messageLogger.systemError(`权限检查失败: ${error}`)
+      return false
+    }
+  }
+
+  /**
+   * 获取工具描述
+   */
+  private getToolDescription(toolCall: any): string {
+    switch (toolCall.toolName) {
+      case 'Write':
+        return `写入文件: ${toolCall.parameters.file_path || '未指定'}`
+      case 'Edit':
+        return `编辑文件: ${toolCall.parameters.file_path || '未指定'}`
+      case 'MultiEdit':
+        return `批量编辑文件: ${toolCall.parameters.file_path || '未指定'}`
+      case 'Bash':
+        return `执行命令: ${toolCall.parameters.command || '未指定'}`
+      default:
+        return `执行工具: ${toolCall.toolName}`
+    }
+  }
+
   /**
    * 获取模型配置 - 保持现有兼容性
    */

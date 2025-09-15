@@ -1,6 +1,7 @@
 import { PlanMode } from '../types/agent.js'
 import { ToolUseContext, WriteFlowTool, PermissionResult } from '../Tool.js'
 import { ToolCallEvent } from './ToolBase.js'
+import { pathInWorkingDirectory, grantWritePermissionForWorkingDir } from '../utils/permissions/filesystem.js'
 
 /**
  * 工具权限级别定义 - 采用现代化的细粒度权限控制
@@ -50,9 +51,9 @@ export const DEFAULT_PERMISSION_POLICIES: PermissionPolicy[] = [
   { toolName: 'WebSearch', permissionLevel: ToolPermissionLevel.READ_only, grantType: PermissionGrantType.ALWAYS_ALLOW },
   { toolName: 'URLFetcher', permissionLevel: ToolPermissionLevel.network_access, grantType: PermissionGrantType.SESSION_GRANT },
   
-  // 安全写入工具（需要确认）
-  { toolName: 'Write', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.ONE_TIME_GRANT, 
-    conditions: { requireConfirmation: true, maxUsagePerSession: 10 } },
+  // 安全写入工具（工作目录内自动授权）
+  { toolName: 'Write', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.SESSION_GRANT, 
+    conditions: { requireConfirmation: false, maxUsagePerSession: 50 } },
   { toolName: 'MemoryWrite', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.SESSION_GRANT },
   { toolName: 'todo_write', permissionLevel: ToolPermissionLevel.safe_write, grantType: PermissionGrantType.ALWAYS_ALLOW },
   
@@ -221,6 +222,11 @@ export class PermissionManager {
         return { isAllowed: true }
       }
       
+      // 检查是否为自动授权模式（CLI 模式）
+      if (context.options?.autoApprove === true) {
+        return { isAllowed: true }
+      }
+      
       // 需要用户确认
       return {
         isAllowed: false,
@@ -233,6 +239,17 @@ export class PermissionManager {
     if (policy.grantType === PermissionGrantType.SESSION_GRANT) {
       if (this.sessionGrants.has(toolName)) {
         return { isAllowed: true }
+      }
+      
+      // 特殊处理：Write 工具在工作目录内自动授权
+      if (toolName === 'Write' && input && typeof input.file_path === 'string') {
+        const filePath = input.file_path
+        if (pathInWorkingDirectory(filePath)) {
+          // 自动授权工作目录写入权限
+          grantWritePermissionForWorkingDir()
+          this.sessionGrants.add(toolName)
+          return { isAllowed: true }
+        }
       }
       
       // 需要用户确认

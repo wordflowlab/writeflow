@@ -3,8 +3,7 @@
  * 基于最佳实践的工具架构，提供统一的工具管理和调用接口
  */
 
-// 原有系统导出（向后兼容）
-export { ToolManager } from './tool-manager.js'
+// 使用新的工具系统
 export * from '../types/tool.js'
 
 // 核心工具系统
@@ -311,14 +310,4 @@ export { GlobTool } from './search/GlobTool/GlobTool.js'
 export { GrepTool } from './search/GrepTool/GrepTool.js'
 export { BashTool } from './system/BashTool/BashTool.js'
 
-// 导出适配器类（用于 AgentLoader）
-export {
-  ReadToolAdapter,
-  WriteToolAdapter,
-  EditToolAdapter,
-  MultiEditToolAdapter,
-  GlobToolAdapter,
-  GrepToolAdapter,
-  BashToolAdapter,
-  createCoreToolAdapters,
-} from './adapters/CoreToolsAdapter.js'
+// 工具系统统一到新架构，不再需要适配器

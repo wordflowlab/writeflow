@@ -32,6 +32,7 @@ export interface CommandResult {
   jsx?: React.ReactElement
   shouldQuery?: boolean
   allowedTools?: string[]
+  enableToolCalls?: boolean  // 启用工具调用
   maxThinkingTokens?: number
   skipHistory?: boolean
   error?: string

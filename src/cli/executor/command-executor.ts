@@ -209,6 +209,7 @@ export class CommandExecutor {
         content: prompt
       }],
       allowedTools: command.allowedTools,
+      enableToolCalls: true,  // 🔥 关键配置：启用工具调用！
       maxThinkingTokens: this.config.enableThinkingTokens ? this.config.defaultMaxTokens : 0
     }
   }

@@ -1,6 +1,6 @@
 import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
-import { readToolAdapter } from '../../tools/adapters/CoreToolsAdapter.js'
+import { getTool } from '../../tools/index.js'
 
 /**
  * 发布相关命令实现

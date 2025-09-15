@@ -4,6 +4,7 @@ import { resolve, dirname, basename } from 'path'
 import { ToolBase } from '../../ToolBase.js'
 import { ToolUseContext, PermissionResult } from '../../../Tool.js'
 import { PROMPT } from './prompt.js'
+import { hasWritePermission, pathInWorkingDirectory } from '../../../utils/permissions/filesystem.js'
 
 // 输入参数架构
 import { debugLog, logError, logWarn, infoLog } from './../../../utils/log.js'
@@ -49,47 +50,57 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
   }
 
   needsPermissions(input?: WriteToolInput): boolean {
-    return true // 写入操作总是需要权限检查
+    if (!input?.file_path) return false // 简化：默认不需要权限
+    
+    const filePath = input.file_path
+    const isInWorkingDir = pathInWorkingDirectory(filePath)
+    
+    // 工作目录内的文件无需权限检查
+    if (isInWorkingDir) {
+      debugLog(`WriteTool: 工作目录内文件无需权限检查: ${filePath}`)
+      return false
+    }
+    
+    // 工作目录外的文件需要权限确认
+    debugLog(`WriteTool: 工作目录外文件需要权限确认: ${filePath}`)
+    return true
   }
 
   async checkPermissions(
     input: WriteToolInput,
-    context: ToolUseContext
+    context: ToolUseContext,
   ): Promise<PermissionResult> {
     // 基础权限检查
     const baseResult = await super.checkPermissions(input, context)
+    debugLog(`WriteTool: 基础权限检查结果: ${baseResult.isAllowed}`)
     if (!baseResult.isAllowed) {
       return baseResult
     }
 
-    try {
-      // 检查文件写入权限
-      await this.checkFilePermissions(input.file_path, 'write', context)
-      
-      // 检查是否为敏感文件
-      if (this.isSensitiveFile(input.file_path)) {
-        return {
-          isAllowed: false,
-          denialReason: `不允许写入敏感系统文件: ${input.file_path}`,
-          behavior: 'deny'
-        }
-      }
-
+    // 参考 Kode 简化权限检查：当前工作目录下的文件直接允许
+    if (pathInWorkingDirectory(input.file_path)) {
+      debugLog(`WriteTool: 工作目录内文件，直接允许: ${input.file_path}`)
       return { isAllowed: true }
-    } catch (error) {
+    }
+
+    // 工作目录外的文件需要检查权限
+    if (!hasWritePermission(input.file_path)) {
+      debugLog(`WriteTool: 工作目录外文件且无权限，需要用户确认: ${input.file_path}`)
       return {
         isAllowed: false,
-        denialReason: error instanceof Error ? error.message : String(error),
-        behavior: 'deny'
+        denialReason: `需要权限才能写入工作目录外的文件: ${input.file_path}`,
+        behavior: 'ask',
       }
     }
+
+    return { isAllowed: true }
   }
 
   async *call(
     input: WriteToolInput,
     context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: WriteToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
-    yield* this.executeWithErrorHandling(async function* () {
+    try {
       // 1. 路径处理和验证
       const filePath = resolve(input.file_path)
       const fileDir = dirname(filePath)
@@ -109,34 +120,42 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
         try {
           mkdirSync(fileDir, { recursive: true })
         } catch (error) {
-          throw new Error(`创建目录失败: ${error instanceof Error ? error.message : String(error)}`)
+          yield {
+            type: 'error',
+            error: new Error(`创建目录失败: ${error instanceof Error ? error.message : String(error)}`),
+            message: '创建目录失败',
+            resultForAssistant: `创建目录失败: ${error instanceof Error ? error.message : String(error)}`
+          }
+          return
         }
       }
 
-      // 4. 内容预处理
-      const content = input.content
-      const contentBytes = Buffer.byteLength(content, 'utf8')
-
-      // 5. 写入文件
+      // 4. 写入文件
       try {
-        writeFileSync(filePath, content, 'utf8')
+        writeFileSync(filePath, input.content, 'utf8')
+        debugLog('文件写入成功:', filePath)
       } catch (error) {
-        throw new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`)
+        logError('写入文件失败:', error)
+        yield {
+          type: 'error',
+          error: new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`),
+          message: '写入文件失败',
+          resultForAssistant: `写入文件失败: ${error instanceof Error ? error.message : String(error)}`
+        }
+        return
       }
 
-      // 6. 验证写入结果
-      let actualSize = 0
-      try {
+      // 5. 更新文件时间戳记录（类似 Kode 实现）
+      if (context.readFileTimestamps) {
         const stats = statSync(filePath)
-        actualSize = stats.size
-      } catch (error) {
-        logWarn('无法验证文件写入结果:', error)
+        context.readFileTimestamps[filePath] = stats.mtimeMs
       }
 
-      // 7. 构建结果
+      // 6. 构建结果
+      const contentBytes = Buffer.byteLength(input.content, 'utf8')
       const message = isNewFile 
         ? `新文件创建成功: ${fileName} (${contentBytes} 字节)`
-        : `文件更新成功: ${fileName} (${originalSize} → ${actualSize} 字节)`
+        : `文件更新成功: ${fileName} (${originalSize} → ${contentBytes} 字节)`
 
       const result: WriteToolOutput = {
         success: true,
@@ -146,15 +165,25 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
         message
       }
 
-      const resultForAssistant = `文件已成功写入: ${filePath}\n${message}\n\n文件内容预览 (前200字符):\n${content.substring(0, 200)}${content.length > 200 ? '...' : ''}`
-
+      infoLog(message)
+      
+      // 使用 AsyncGenerator yield 返回结果
       yield {
-        type: 'result' as const,
+        type: 'result',
         data: result,
-        resultForAssistant
+        message: result.message,
+        resultForAssistant: this.renderResultForAssistant(result)
       }
 
-    }.bind(this), context)
+    } catch (error) {
+      logError('WriteTool 执行失败:', error)
+      yield {
+        type: 'error',
+        error: error instanceof Error ? error : new Error(String(error)),
+        message: 'WriteTool 执行失败',
+        resultForAssistant: `WriteTool 执行失败: ${error instanceof Error ? error.message : String(error)}`
+      }
+    }
   }
 
   renderResultForAssistant(output: WriteToolOutput): string {
@@ -175,35 +204,4 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
     return 'Write'
   }
 
-  // 检查是否为敏感文件
-  private isSensitiveFile(filePath: string): boolean {
-    const sensitivePatterns = [
-      // 系统文件
-      '/etc/',
-      '/bin/',
-      '/sbin/',
-      '/usr/bin/',
-      '/usr/sbin/',
-      
-      // 配置文件
-      '/.ssh/',
-      '/.aws/',
-      
-      // 常见敏感文件名
-      'passwd',
-      'shadow',
-      'sudoers',
-      '.env.production',
-      '.env.prod',
-      'id_rsa',
-      'id_ed25519',
-      
-      // 系统库
-      'node_modules/',
-      '.git/',
-    ]
-
-    const normalizedPath = filePath.toLowerCase()
-    return sensitivePatterns.some(pattern => normalizedPath.includes(pattern))
-  }
 }

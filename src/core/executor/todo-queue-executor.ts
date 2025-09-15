@@ -2,7 +2,7 @@ import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
 import { TodoQueueAgent } from '../agent/todo-queue-agent.js'
 import { Todo, TodoStatus } from '../../types/Todo.js'
 import { TodoManager } from '../../tools/TodoManager.js'
-import { ToolManager } from '../../tools/tool-manager.js'
+import { LegacyToolManager } from '../../tools/LegacyToolManager.js'
 
 /**
  * TODO 队列执行器
@@ -17,7 +17,7 @@ import { ToolManager } from '../../tools/tool-manager.js'
 export class TodoQueueExecutor {
   private agent: TodoQueueAgent
   private todoManager: TodoManager
-  private toolManager: ToolManager
+  private toolManager: LegacyToolManager
   private isExecuting = false
   private executionPromise: Promise<void> | null = null
   private abortController: AbortController | null = null
@@ -47,11 +47,11 @@ export class TodoQueueExecutor {
 
   constructor(options?: {
     todoManager?: TodoManager
-    toolManager?: ToolManager
+    toolManager?: LegacyToolManager
     config?: Partial<typeof TodoQueueExecutor.prototype.config>
   }) {
     this.todoManager = options?.todoManager || new TodoManager()
-    this.toolManager = options?.toolManager || new ToolManager()
+    this.toolManager = options?.toolManager || new LegacyToolManager()
     this.agent = new TodoQueueAgent(this.todoManager, this.toolManager)
 
     // 合并配置
@@ -372,7 +372,7 @@ export class TodoQueueExecutor {
    */
   public static create(options?: {
     todoManager?: TodoManager
-    toolManager?: ToolManager
+    toolManager?: LegacyToolManager
     config?: Partial<TodoQueueExecutor['config']>
   }): TodoQueueExecutor {
     return new TodoQueueExecutor(options)

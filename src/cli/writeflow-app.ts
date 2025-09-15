@@ -23,9 +23,15 @@ import { coreCommands } from './commands/core/index.js'
 import { slideCommands } from './commands/slide-commands.js'
 import { SlashCommand } from '../types/command.js'
 
-// 工具系统
-import { ToolManager } from '../tools/tool-manager.js'
+// 新工具系统集成
+import { 
+  coreTools,
+  getToolOrchestrator, 
+  getPermissionManager,
+  getAvailableTools as getCoreTools 
+} from '../tools/index.js'
 import { TodoWriteTool } from '../tools/writing/TodoWriteTool.js'
+import { LegacyToolManager } from '../tools/LegacyToolManager.js'
 import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 
 import {
@@ -50,6 +56,13 @@ import { MemoryManager } from '../tools/memory/MemoryManager.js'
 
 // Plan 模式管理
 import { PlanModeManager } from '../modes/PlanModeManager.js'
+
+// 权限确认系统
+import { 
+  getPermissionConfirmationService, 
+  PermissionRequest, 
+  PermissionResponse 
+} from '../services/PermissionConfirmationService.js'
 
 // 类型定义
 import { AIWritingConfig } from '../types/writing.js'
@@ -77,13 +90,16 @@ export class WriteFlowApp extends EventEmitter {
 
   // CLI 组件
   private commandExecutor!: CommandExecutor
-  private toolManager!: ToolManager
+  private toolManager!: LegacyToolManager
 
   // 记忆系统
   private memoryManager!: MemoryManager
 
   // Plan 模式管理
   private planModeManager!: PlanModeManager
+
+  // 权限确认服务
+  private permissionService = getPermissionConfirmationService()
 
   // AI 服务
   private aiService = getWriteFlowAIService()
@@ -252,6 +268,9 @@ TODO 管理规范：
       // 初始化Plan模式管理器
       await this.initializePlanModeManager()
 
+      // 初始化权限确认系统
+      await this.initializePermissionSystem()
+
       // 初始化CLI组件
       await this.initializeCLIComponents()
 
@@ -351,8 +370,11 @@ TODO 管理规范：
    * 初始化CLI组件
    */
   private async initializeCLIComponents(): Promise<void> {
-    // 工具管理器
-    this.toolManager = new ToolManager()
+    // 工具管理器（使用新的兼容管理器）
+    this.toolManager = new LegacyToolManager()
+
+    // 核心工具已经通过新系统自动注册
+    debugLog('🔧 核心工具系统已初始化')
 
     // 注册高级写作工具
     const writingTools = [
@@ -471,6 +493,46 @@ TODO 管理规范：
         },
       },
     )
+  }
+
+  /**
+   * 初始化权限确认系统
+   */
+  private async initializePermissionSystem(): Promise<void> {
+    // 监听权限请求事件
+    this.permissionService.on('permission-request', async (request: PermissionRequest) => {
+      try {
+        // 发射权限请求事件给UI层处理
+        this.emit('permission-request', request)
+      } catch (error) {
+        logError('处理权限请求失败:', error)
+        // 如果UI处理失败，自动拒绝权限请求
+        this.permissionService.respondToPermission(request.id, { decision: 'deny' })
+      }
+    })
+
+    // 🔥 配置新工具系统的权限管理器
+    try {
+      const permissionManager = getPermissionManager()
+      const workingDir = process.cwd()
+      debugLog(`🔐 授权工作目录写入权限: ${workingDir}`)
+      
+      // 设置权限管理器为默认模式（允许工作目录内文件）
+      permissionManager.setCurrentMode(PlanMode.Default)
+      
+      debugLog('🔐 新工具系统权限管理器已配置')
+    } catch (error) {
+      logWarn('配置新工具系统权限管理器失败:', error)
+    }
+
+    debugLog('🔐 权限确认系统已初始化')
+  }
+
+  /**
+   * 处理权限响应
+   */
+  handlePermissionResponse(requestId: string, decision: 'allow' | 'allow-session' | 'deny'): void {
+    this.permissionService.respondToPermission(requestId, { decision })
   }
 
   /**
@@ -840,8 +902,17 @@ ${systemPrompt}`
         maxTokens: this.config.maxTokens,
         stream: this.config.stream,
         onToken: options.onToken,
-        // 允许 AI 直接调用 Todo 工具（DeepSeek/OpenAI 兼容路径优先生效）
-        allowedTools: ['todo_write', 'todo_read', 'exit_plan_mode'],
+        // 允许 AI 调用所有核心工具
+        allowedTools: [
+          // 文件操作工具
+          'Read', 'Write', 'Edit', 'MultiEdit',
+          // 搜索工具  
+          'Grep', 'Glob',
+          // 系统工具
+          'Bash',
+          // 任务管理工具
+          'todo_write', 'todo_read', 'exit_plan_mode'
+        ],
         enableToolCalls: true,
       }
 

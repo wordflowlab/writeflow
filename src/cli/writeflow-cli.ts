@@ -140,6 +140,40 @@ export class WriteFlowCLI {
   }
 
   /**
+   * 检查是否支持 Raw Mode
+   */
+  private isRawModeSupported(): boolean {
+    try {
+      // 检查 stdin 是否支持 raw mode
+      if (!process.stdin.isTTY) {
+        debugLog('Raw Mode 不支持：stdin 不是 TTY')
+        return false
+      }
+      
+      // 检查 setRawMode 函数是否存在
+      if (typeof process.stdin.setRawMode !== 'function') {
+        debugLog('Raw Mode 不支持：setRawMode 函数不存在')
+        return false
+      }
+
+      // 实际测试设置 raw mode（更严格的检测）
+      const originalRawMode = (process.stdin as any).isRaw
+      try {
+        process.stdin.setRawMode(true)
+        process.stdin.setRawMode(originalRawMode || false)
+        debugLog('Raw Mode 支持检测通过')
+        return true
+      } catch (testError) {
+        debugLog('Raw Mode 不支持：实际测试失败', testError instanceof Error ? testError.message : String(testError))
+        return false
+      }
+    } catch (error) {
+      debugLog('Raw Mode 检测异常:', error instanceof Error ? error.message : String(error))
+      return false
+    }
+  }
+
+  /**
    * 启动 React UI
    */
   private startReactUI(): void {
@@ -154,6 +188,16 @@ export class WriteFlowCLI {
         throw new Error('WriteFlowApp 未初始化')
       }
 
+      // 检查 Raw Mode 支持
+      if (!this.isRawModeSupported()) {
+        logWarn(chalk.yellow('⚠️  当前环境不支持交互模式，切换到命令行模式'))
+        this.startCommandLineMode().catch(err => {
+          logError(chalk.red('启动命令行模式失败:'), err)
+          process.exit(1)
+        })
+        return
+      }
+
       const replComponent = React.createElement(WriteFlowREPL, {
         writeFlowApp: this.app,
       })
@@ -162,12 +206,91 @@ export class WriteFlowCLI {
       this.keepAlive?.hasRef && this.keepAlive.unref()
       this.keepAlive = setInterval(() => {}, 1 << 30) // 超长间隔，仅用于保持事件循环
 
-      render(replComponent)
+      const { unmount } = render(replComponent)
+
+      // 捕获渲染错误
+      process.on('uncaughtException', (error) => {
+        if (error.message?.includes('Raw mode is not supported')) {
+          unmount()
+          logWarn(chalk.yellow('⚠️  Raw mode 不支持，切换到命令行模式'))
+          this.startCommandLineMode().catch(err => {
+            logError(chalk.red('启动命令行模式失败:'), err)
+            process.exit(1)
+          })
+        }
+      })
+
     } catch (error) {
+      if (error instanceof Error && error.message?.includes('Raw mode is not supported')) {
+        logWarn(chalk.yellow('⚠️  Raw mode 不支持，切换到命令行模式'))
+        this.startCommandLineMode().catch(err => {
+          logError(chalk.red('启动命令行模式失败:'), err)
+          process.exit(1)
+        })
+        return
+      }
+      
       logError(chalk.red('启动主界面失败:'), error)
       debugLog(chalk.yellow('请尝试重新运行 writeflow 或联系支持'))
       process.exit(1)
     }
+  }
+
+  /**
+   * 启动命令行模式（Raw Mode 不支持时的备选方案）
+   */
+  private async startCommandLineMode(): Promise<void> {
+    console.log(chalk.green('✨ WriteFlow AI 写作助手 (命令行模式)'))
+    console.log(chalk.gray('输入消息，按 Enter 发送'))
+    
+    process.stdin.setEncoding('utf8')
+    
+    const readline = await import('readline')
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      prompt: chalk.blue('> ')
+    })
+
+    rl.prompt()
+
+    rl.on('line', async (input: string) => {
+      const trimmedInput = input.trim()
+      
+      if (trimmedInput === '/exit' || trimmedInput === '/quit') {
+        console.log(chalk.yellow('👋 再见！'))
+        rl.close()
+        process.exit(0)
+        return
+      }
+
+      if (trimmedInput === '') {
+        rl.prompt()
+        return
+      }
+
+      try {
+        // 处理消息
+        if (trimmedInput.startsWith('/')) {
+          const result = await this.app.executeCommand(trimmedInput)
+          console.log(result)
+        } else {
+          console.log(chalk.gray('正在处理...'))
+          // 处理自由文本输入
+          const result = await this.app.handleFreeTextInput(trimmedInput, {})
+          console.log(result)
+        }
+      } catch (error) {
+        console.error(chalk.red('处理失败:'), error instanceof Error ? error.message : String(error))
+      }
+
+      rl.prompt()
+    })
+
+    rl.on('close', () => {
+      console.log(chalk.yellow('\n👋 再见！'))
+      process.exit(0)
+    })
   }
 
   /**
