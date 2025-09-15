@@ -86,10 +86,10 @@ export class ContentRewriterTool implements WritingTool {
             content: output?.content || ''
           }
         }
-        if (!readResult.success) {
+        if (!readResult || !readResult.success) {
           return {
             success: false,
-            error: `读取文件失败: ${readResult.error}`
+            error: `读取文件失败: ${(readResult as any)?.error || '未知错误'}`
           }
         }
         originalContent = this.extractContentFromRead(readResult.content!)

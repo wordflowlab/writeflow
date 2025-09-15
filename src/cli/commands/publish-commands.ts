@@ -40,19 +40,49 @@ export const publishCommands: SlashCommand[] = [
       if (filePath.startsWith('./') || filePath.startsWith('/')) {
         try {
           // 使用新的 ReadTool
-          const result = await readToolAdapter.execute({ file_path: filePath })
+          const readTool = getTool('Read')
+          if (!readTool) {
+            throw new Error('Read 工具不可用')
+          }
           
-          if (result.success && result.content) {
+          const context = {
+            abortController: new AbortController(),
+            readFileTimestamps: {},
+            options: { verbose: false, safeMode: true }
+          }
+          
+          const callResult = readTool.call({ file_path: filePath }, context)
+          let result = null
+          
+          if (Symbol.asyncIterator in callResult) {
+            for await (const output of callResult as any) {
+              if (output.type === 'result') {
+                result = {
+                  success: true,
+                  content: output.data?.content || output.resultForAssistant || ''
+                }
+                break
+              }
+            }
+          } else {
+            const output = await callResult
+            result = {
+              success: true,
+              content: output?.content || ''
+            }
+          }
+          
+          if (result && result.success && result.content) {
             // 提取实际内容（去除行号前缀）
             fileContent = result.content
               .split('\n')
-              .map(line => {
+              .map((line: string) => {
                 const match = line.match(/^\s*\d+→(.*)$/)
                 return match ? match[1] : line
               })
               .join('\n')
           } else {
-            throw new Error(`无法读取文件: ${result.error}`)
+            throw new Error(`无法读取文件: ${(result as any)?.error || '未知错误'}`)
           }
         } catch (error) {
           throw new Error(`读取文件失败: ${(error as Error).message}`)
@@ -125,21 +155,51 @@ ${getPlatformRequirements(platform)}
       if (filePath.startsWith('./') || filePath.startsWith('/')) {
         try {
           // 使用新的 ReadTool
-          const result = await readToolAdapter.execute({ file_path: filePath })
+          const readTool = getTool('Read')
+          if (!readTool) {
+            throw new Error('Read 工具不可用')
+          }
           
-          if (result.success && result.content) {
+          const context = {
+            abortController: new AbortController(),
+            readFileTimestamps: {},
+            options: { verbose: false, safeMode: true }
+          }
+          
+          const callResult = readTool.call({ file_path: filePath }, context)
+          let result = null
+          
+          if (Symbol.asyncIterator in callResult) {
+            for await (const output of callResult as any) {
+              if (output.type === 'result') {
+                result = {
+                  success: true,
+                  content: output.data?.content || output.resultForAssistant || ''
+                }
+                break
+              }
+            }
+          } else {
+            const output = await callResult
+            result = {
+              success: true,
+              content: output?.content || ''
+            }
+          }
+          
+          if (result && result.success && result.content) {
             // 提取实际内容（去除行号前缀）
             fileContent = result.content
               .split('\n')
-              .map(line => {
+              .map((line: string) => {
                 const match = line.match(/^\s*\d+→(.*)$/)
                 return match ? match[1] : line
               })
               .join('\n')
             
-            sourceFormat = (result.metadata as any)?.format || 'unknown'
+            sourceFormat = (result && (result as any).metadata as any)?.format || 'unknown'
           } else {
-            throw new Error(`无法读取文件: ${result.error}`)
+            throw new Error(`无法读取文件: ${(result as any)?.error || '未知错误'}`)
           }
         } catch (error) {
           throw new Error(`读取文件失败: ${(error as Error).message}`)

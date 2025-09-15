@@ -67,8 +67,8 @@ export const fileCommands: SlashCommand[] = [
         }
       }
         
-        if (!result.success) {
-          return `❌ 读取文件失败: ${result.error}
+        if (!result || !result.success) {
+          return `❌ 读取文件失败: ${(result as any)?.error || '未知错误'}
         
 文件路径: ${filePath}
 请检查文件是否存在和权限设置`
@@ -82,8 +82,8 @@ export const fileCommands: SlashCommand[] = [
         }
         
         // 显示元数据
-        if (result.metadata) {
-          const meta = result.metadata as any
+        if ((result as any).metadata) {
+          const meta = (result as any).metadata
           output += `\n\n📊 文件信息:
 - 大小: ${meta.size} bytes
 - 行数: ${meta.lineCount}
@@ -93,8 +93,8 @@ export const fileCommands: SlashCommand[] = [
         }
         
         // 显示警告
-        if (result.warnings && result.warnings.length > 0) {
-          output += `\n\n⚠️ 警告:\n${result.warnings.map(w => `- ${w}`).join('\n')}`
+        if ((result as any).warnings && (result as any).warnings.length > 0) {
+          output += `\n\n⚠️ 警告:\n${(result as any).warnings.map((w: any) => `- ${w}`).join('\n')}`
         }
         
         return output
@@ -170,8 +170,8 @@ export const fileCommands: SlashCommand[] = [
           }
         }
         
-        if (!readResult.success) {
-          return `❌ 无法读取文件: ${readResult.error}
+        if (!readResult || !readResult.success) {
+          return `❌ 无法读取文件: ${(readResult as any)?.error || '未知错误'}
         
 文件路径: ${filePath}
 请检查文件是否存在和权限设置`
@@ -192,10 +192,10 @@ ${readResult.content}
    - Nano: nano ${filePath}
 
 📊 文件信息:
-${readResult.metadata ? `- 大小: ${(readResult.metadata as any).size} bytes
-- 行数: ${(readResult.metadata as any).lineCount}
-- 字数: ${(readResult.metadata as any).wordCount}
-- 格式: ${(readResult.metadata as any).format}` : '暂无元数据'}`
+${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as any).size} bytes
+- 行数: ${((readResult as any).metadata as any).lineCount}
+- 字数: ${((readResult as any).metadata as any).wordCount}
+- 格式: ${((readResult as any).metadata as any).format}` : '暂无元数据'}`
         
       } catch (error) {
         return `❌ 编辑失败: ${(error as Error).message}

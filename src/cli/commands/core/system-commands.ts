@@ -73,6 +73,17 @@ export const systemCommands: SlashCommand[] = [
   /help [命令名]            查看帮助信息
   /clear                    清除会话历史
 
+📄 文件引用功能:
+  @文件路径                 快速引用文件内容到对话中
+  
+  示例用法:
+  > 分析这个文件 @README.md
+  > 帮我优化 @src/utils.js 中的代码
+  > 基于 @docs/spec.md 写一份实现方案
+  
+  支持的文件类型: .js .ts .jsx .tsx .md .json .yaml .py .java .go 等
+  安全限制: 只能访问当前项目目录内的文件
+
 🚀 规范驱动写作示例:
 > /specify "React性能优化最佳实践"     # 1. 生成写作规范
 > /plan                              # 2. 生成内容计划  

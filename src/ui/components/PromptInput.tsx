@@ -3,7 +3,9 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { getTheme } from '../../utils/theme.js'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { useUnifiedCompletion } from '../../hooks/useUnifiedCompletion.js'
+import { useFileCompletion } from '../../hooks/useFileCompletion.js'
 import { CompletionSuggestions } from './CompletionSuggestions.js'
+import { FileCompletionPopup } from './FileCompletionPopup.js'
 import { SlashCommand } from '../../types/command.js'
 
 interface Message {
@@ -76,6 +78,15 @@ export function PromptInput({
     enabled: enableCompletion && !isLoading && !isDisabled
   })
   
+  // 使用文件补全 Hook
+  const { state: fileCompletionState, applySelectedCompletion: applySelectedFile } = useFileCompletion({
+    input,
+    cursorOffset,
+    onInputChange,
+    setCursorOffset,
+    enabled: enableCompletion && !isLoading && !isDisabled
+  })
+  
   // Simple input handling (will be enhanced with TextInput later)
   const handleInput = useCallback((inputChar: string, key: any) => {
     if (key.ctrl && inputChar === 'c') {
@@ -86,13 +97,21 @@ export function PromptInput({
       return
     }
     
-    // Tab 键由补全系统处理
+    // Tab 键优先由文件补全系统处理
     if (key.tab) {
+      if (fileCompletionState.isActive && fileCompletionState.suggestions.length > 0) {
+        applySelectedFile()
+      }
       return
     }
     
     if (key.return) {
-      // 如果补全菜单激活，让补全系统处理
+      // 优先处理文件补全
+      if (fileCompletionState.isActive && fileCompletionState.suggestions.length > 0) {
+        applySelectedFile()
+        return
+      }
+      // 如果命令补全菜单激活，让补全系统处理
       if (completionActive && suggestions.length > 0) {
         return
       }
@@ -122,7 +141,7 @@ export function PromptInput({
       onInputChange(input + inputChar)
       setCursorOffset(input.length + 1)
     }
-  }, [input, onInputChange, onSubmit, mode, onModeChange, completionActive, suggestions])
+  }, [input, onInputChange, onSubmit, mode, onModeChange, completionActive, suggestions, fileCompletionState, applySelectedFile])
   
   // Set up input handling
   React.useEffect(() => {
@@ -191,8 +210,19 @@ export function PromptInput({
         </Box>
       </Box>
       
-      {/* 命令补全建议 */}
-      {completionActive && suggestions.length > 0 && (
+      {/* 文件补全弹窗 - 优先级高于命令补全 */}
+      {fileCompletionState.isActive && (
+        <FileCompletionPopup
+          suggestions={fileCompletionState.suggestions}
+          selectedIndex={fileCompletionState.selectedIndex}
+          visible={fileCompletionState.isActive}
+          isLoading={fileCompletionState.isLoading}
+          query={fileCompletionState.context?.query || ''}
+        />
+      )}
+      
+      {/* 命令补全建议 - 仅在文件补全不活跃时显示 */}
+      {!fileCompletionState.isActive && completionActive && suggestions.length > 0 && (
         <CompletionSuggestions 
           suggestions={suggestions}
           selectedIndex={selectedIndex}

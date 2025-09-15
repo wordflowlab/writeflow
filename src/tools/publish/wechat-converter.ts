@@ -66,8 +66,8 @@ export class WeChatConverterTool implements WritingTool {
             content: output?.content || ''
           }
         }
-        if (!readResult.success) {
-          return { success: false, error: `读取文件失败: ${readResult.error}` }
+        if (!readResult || !readResult.success) {
+          return { success: false, error: `读取文件失败: ${(readResult as any)?.error || '未知错误'}` }
         }
         originalContent = this.extractContent(readResult.content!)
       } else if (content) {

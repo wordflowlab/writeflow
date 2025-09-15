@@ -1,219 +1,132 @@
 import { z } from 'zod'
-import { existsSync, readFileSync, statSync } from 'fs'
-import { resolve, extname } from 'path'
+import { readFileSync, statSync } from 'fs'
+import { resolve, relative, extname } from 'path'
 import { ToolBase } from '../../ToolBase.js'
 import { ToolUseContext } from '../../../Tool.js'
-import { PROMPT } from './prompt.js'
 
-// 输入参数架构
 const ReadToolInputSchema = z.object({
-  file_path: z.string().describe('要读取的文件的绝对路径'),
-  offset: z.number().optional().describe('开始读取的行号（从1开始）'),
-  limit: z.number().optional().describe('读取的行数限制'),
+  path: z.string().describe('要读取的文件路径，可相对当前工作目录或绝对路径'),
+  offset: z.number().int().nonnegative().optional().describe('起始行(0-based)，仅对文本文件生效'),
+  limit: z.number().int().positive().optional().describe('读取的最大行数，仅对文本文件生效'),
 })
 
 type ReadToolInput = z.infer<typeof ReadToolInputSchema>
 
 interface ReadToolOutput {
-  content: string
-  fileInfo: {
-    path: string
-    size: number
-    extension: string
-    lines: number
-    isText: boolean
-  }
+  absolutePath: string
+  relativePath: string
+  isText: boolean
+  size: number
+  ext: string
+  totalLines?: number
+  shownRange?: { start: number; end: number }
+  contentPreview?: string
+  message: string
 }
 
-/**
- * ReadTool - 文件读取工具
- * 参考 Claude Code Read 工具实现
- */
 export class ReadTool extends ToolBase<typeof ReadToolInputSchema, ReadToolOutput> {
   name = 'Read'
   inputSchema = ReadToolInputSchema
   category = 'file' as const
 
   async description(): Promise<string> {
-    return '读取文件内容。支持文本文件、代码文件、配置文件等。可以指定读取范围（行号偏移和限制）。'
+    return '读取指定文件内容。支持相对路径，文本文件可按行分页读取(offset/limit)。大文件自动截断并给出继续读取指引。'
   }
 
-  async prompt(options?: { safeMode?: boolean }): Promise<string> {
-    return PROMPT
+  async prompt(): Promise<string> {
+    return '当需要查看文件内容时使用 Read 工具。优先传入相对路径，如 a.md；需要分页时提供 offset 与 limit。'
   }
 
-  isReadOnly(): boolean {
-    return true
-  }
-
-  isConcurrencySafe(): boolean {
-    return true
-  }
-
-  needsPermissions(): boolean {
-    return false // 读取操作通常不需要特殊权限
-  }
+  isReadOnly(): boolean { return true }
+  isConcurrencySafe(): boolean { return true }
+  needsPermissions(): boolean { return false }
 
   async *call(
     input: ReadToolInput,
     context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: ReadToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
-    yield* this.executeWithErrorHandling(async function* () {
-      // 1. 路径验证和安全检查
-      const filePath = resolve(input.file_path)
-      
-      if (!existsSync(filePath)) {
-        throw new Error(`文件不存在: ${filePath}`)
-      }
+    yield* this.executeWithErrorHandling(async function* (this: ReadTool): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: ReadToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
+      const cwd = process.cwd()
+      const absolutePath = resolve(cwd, input.path)
 
-      // 2. 文件信息获取
-      const stats = statSync(filePath)
-      
-      if (!stats.isFile()) {
-        throw new Error(`路径不是文件: ${filePath}`)
-      }
-
-      const fileExtension = extname(filePath)
-      
-      // 3. 文件类型检测
-      const isTextFile = ReadTool.isTextFile(fileExtension)
-      
-      if (!isTextFile) {
-        yield {
-          type: 'result' as const,
-          data: {
-            content: '[二进制文件，无法显示文本内容]',
-            fileInfo: {
-              path: filePath,
-              size: stats.size,
-              extension: fileExtension,
-              lines: 0,
-              isText: false
-            }
-          },
-          resultForAssistant: `文件 ${filePath} 是二进制文件，无法读取文本内容。文件大小: ${stats.size} 字节`
-        }
-        return
-      }
-
-      // 4. 读取文件内容
-      let content: string
+      let stat
       try {
-        content = readFileSync(filePath, 'utf-8')
-      } catch (error) {
-        throw new Error(`读取文件失败: ${error instanceof Error ? error.message : String(error)}`)
+        stat = statSync(absolutePath)
+        if (!stat.isFile()) {
+          throw new Error(`目标不是普通文件: ${absolutePath}`)
+        }
+      } catch (e: any) {
+        if (e?.code === 'ENOENT') throw new Error(`文件不存在: ${absolutePath}`)
+        throw e
       }
 
-      // 5. 处理行范围
-      const lines = content.split('\n')
-      const totalLines = lines.length
+      const rel = relative(cwd, absolutePath)
+      const ext = extname(absolutePath).toLowerCase()
 
-      let processedContent: string
-      let displayLines: string[]
+      // 简单判定文本类型
+      const textExts = new Set(['.md', '.txt', '.ts', '.tsx', '.js', '.jsx', '.json', '.yml', '.yaml', '.css', '.scss', '.html', '.mdx', '.sh'])
+      const isText = textExts.has(ext) || stat.size < 1024 * 64 // 小文件按文本尝试
 
-      if (input.offset !== undefined || input.limit !== undefined) {
-        const startLine = Math.max(1, input.offset || 1) - 1 // 转换为0基索引
-        const endLine = input.limit 
-          ? Math.min(totalLines, startLine + input.limit)
-          : totalLines
+      let output: ReadToolOutput
+      if (isText) {
+        const raw = readFileSync(absolutePath, 'utf8')
+        const lines = raw.split(/\r?\n/)
+        const totalLines = lines.length
+        let start = 0
+        let end = totalLines - 1
+        if (input.offset !== undefined && input.limit !== undefined) {
+          start = Math.max(0, input.offset)
+          end = Math.min(totalLines - 1, start + input.limit - 1)
+        } else if (totalLines > 2000) {
+          // 大文件默认只展示前 500 行
+          start = 0
+          end = Math.min(totalLines - 1, 499)
+        }
+        const slice = lines.slice(start, end + 1).join('\n')
+        const preview = slice.length > 4000 ? slice.slice(0, 4000) + '\n... (已截断)' : slice
 
-        displayLines = lines.slice(startLine, endLine)
-        
-        // 添加行号格式 (类似 cat -n)
-        processedContent = displayLines
-          .map((line, index) => {
-            const lineNumber = startLine + index + 1
-            return `${lineNumber.toString().padStart(5)}→${line}`
-          })
-          .join('\n')
+        const shownRange = { start, end }
+        const msgParts = [`已读取 ${rel}`, `行数 ${start + 1}-${end + 1}/${totalLines}`]
+        if (end < totalLines - 1) {
+          msgParts.push(`要继续阅读可设置 offset=${end + 1}, limit=...`)
+        }
+
+        output = {
+          absolutePath,
+          relativePath: rel,
+          isText: true,
+          size: stat.size,
+          ext,
+          totalLines,
+          shownRange,
+          contentPreview: preview,
+          message: msgParts.join(' | '),
+        }
       } else {
-        // 完整文件，但限制最大显示行数
-        const maxLines = 2000
-        if (totalLines > maxLines) {
-          displayLines = lines.slice(0, maxLines)
-          processedContent = displayLines
-            .map((line, index) => {
-              const lineNumber = index + 1
-              return `${lineNumber.toString().padStart(5)}→${line}`
-            })
-            .join('\n')
-          processedContent += `\n\n[文件太长，仅显示前 ${maxLines} 行，共 ${totalLines} 行]`
-        } else {
-          processedContent = lines
-            .map((line, index) => {
-              const lineNumber = index + 1
-              return `${lineNumber.toString().padStart(5)}→${line}`
-            })
-            .join('\n')
+        // 二进制文件仅返回摘要
+        const msg = `二进制或非文本文件: ${rel} (大小 ${stat.size} 字节, 扩展名 ${ext || '无'})`
+        output = {
+          absolutePath,
+          relativePath: rel,
+          isText: false,
+          size: stat.size,
+          ext,
+          message: msg,
         }
       }
 
-      // 6. 构建结果
-      const result: ReadToolOutput = {
-        content: processedContent,
-        fileInfo: {
-          path: filePath,
-          size: stats.size,
-          extension: fileExtension,
-          lines: totalLines,
-          isText: true
-        }
-      }
-
-      // 7. 生成AI可读的结果描述
-      const resultForAssistant = processedContent.length > 10000 
-        ? `文件内容过长，已截断。文件路径: ${filePath}，总行数: ${totalLines}`
-        : processedContent
-
-      yield {
-        type: 'result' as const,
-        data: result,
-        resultForAssistant
-      }
-
+      const assistant = this.renderResultForAssistant(output)
+      yield { type: 'result', data: output, resultForAssistant: assistant }
     }.bind(this), context)
   }
 
   renderResultForAssistant(output: ReadToolOutput): string {
-    return output.content
+    if (!output.isText) {
+      return `${output.message}`
+    }
+    const range = output.shownRange ? `行 ${output.shownRange.start + 1}-${output.shownRange.end + 1}` : ''
+    return `文件: ${output.relativePath}\n${range}\n---\n${output.contentPreview ?? ''}`
   }
 
-  renderToolUseMessage(
-    input: ReadToolInput,
-    options: { verbose: boolean }
-  ): string {
-    const range = input.offset || input.limit 
-      ? ` (行 ${input.offset || 1}-${(input.offset || 1) + (input.limit || 100) - 1})`
-      : ''
-    return `正在读取文件: ${input.file_path}${range}`
-  }
-
-  userFacingName(): string {
-    return 'Read'
-  }
-
-  // 静态方法：检测文件是否为文本文件
-  private static isTextFile(extension: string): boolean {
-    const textExtensions = new Set([
-      // 代码文件
-      '.js', '.ts', '.jsx', '.tsx', '.vue', '.svelte',
-      '.py', '.rb', '.php', '.java', '.c', '.cpp', '.h', '.hpp',
-      '.cs', '.go', '.rs', '.swift', '.kt', '.scala',
-      '.html', '.htm', '.css', '.scss', '.sass', '.less',
-      '.sql', '.sh', '.bat', '.ps1', '.fish', '.zsh',
-      
-      // 配置和数据文件
-      '.json', '.yaml', '.yml', '.toml', '.ini', '.env',
-      '.xml', '.csv', '.tsv',
-      
-      // 文档文件
-      '.md', '.rst', '.txt', '.log',
-      
-      // 其他文本文件
-      '.gitignore', '.gitattributes', '.editorconfig',
-      '.dockerfile', '.makefile'
-    ])
-
-    return textExtensions.has(extension.toLowerCase()) || extension === ''
-  }
+  userFacingName(): string { return 'Read' }
 }

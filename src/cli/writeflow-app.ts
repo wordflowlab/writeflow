@@ -16,6 +16,7 @@ import { SixLayerSecurityValidator } from '../core/security/six-layer-validator.
 
 // AI 服务
 import { getWriteFlowAIService, AIRequest } from '../services/ai/WriteFlowAIService.js'
+import { MentionProcessor } from '../services/MentionProcessor.js'
 
 // CLI 组件
 import { CommandExecutor } from './executor/command-executor.js'
@@ -33,6 +34,7 @@ import {
 import { TodoWriteTool } from '../tools/writing/TodoWriteTool.js'
 import { LegacyToolManager } from '../tools/LegacyToolManager.js'
 import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { mentionProcessor } from '../services/MentionProcessor.js'
 
 import {
   OutlineGeneratorTool,
@@ -103,6 +105,9 @@ export class WriteFlowApp extends EventEmitter {
 
   // AI 服务
   private aiService = getWriteFlowAIService()
+
+  // 文件引用处理
+  private mentionProcessor = new MentionProcessor()
 
   // 配置
   private config: AIWritingConfig & SecurityConfig
@@ -740,13 +745,53 @@ ${this.projectWritingConfig}`
     }
 
     // 获取最新的用户消息
-    const latestUserMessage = userMessages[userMessages.length - 1]?.content || ''
-    const finalPrompt = contextualPrompt + latestUserMessage
+    let latestUserMessage = userMessages[userMessages.length - 1]?.content || ''
+    
+    // 处理文件引用 (@文件路径)
+    let processedInput = latestUserMessage
+    let fileReferences: any[] = []
+    
+    if (this.mentionProcessor.hasFileReferences(latestUserMessage)) {
+      debugLog('🔍 检测到文件引用，开始处理...')
+      try {
+        const result = await this.mentionProcessor.processFileReferences(latestUserMessage)
+        processedInput = result.processedInput
+        fileReferences = result.fileReferences
+        
+        if (fileReferences.length > 0) {
+          debugLog(`✅ 成功处理 ${fileReferences.length} 个文件引用`)
+        }
+      } catch (error) {
+        logWarn('文件引用处理失败:', (error as Error).message)
+        // 文件引用失败时仍使用原始输入
+      }
+    }
+    
+    const finalPrompt = contextualPrompt + processedInput
+
+    // 如果处理了文件引用，在系统提示中添加说明
+    let enhancedSystemPrompt = systemPrompt
+    if (fileReferences.length > 0) {
+      const fileList = fileReferences.map(ref => `- ${ref.mention} (${ref.extension || 'unknown'}, ${Math.round((ref.size || 0) / 1024)}KB)`).join('\n')
+      enhancedSystemPrompt = `${systemPrompt}
+
+## 文件引用处理说明
+
+用户的消息中包含了 @ 文件引用，这些文件的内容已经被自动读取并注入到用户消息中：
+
+${fileList}
+
+**重要注意事项**:
+1. 上述文件的完整内容已经被自动读取并注入到用户消息中
+2. 请直接使用用户消息中的文件内容，不要再次调用任何文件读取工具
+3. 严格禁止调用 Read、Glob、Write、Edit 等工具来处理已引用的文件
+4. 如果需要分析文件内容，直接基于用户消息中提供的内容进行分析`
+    }
 
     // 构建AI请求
     const aiRequest: AIRequest = {
       prompt: finalPrompt,
-      systemPrompt,
+      systemPrompt: enhancedSystemPrompt,
       temperature: this.config.temperature,
       maxTokens: this.config.maxTokens,
       stream: this.config.stream,
@@ -816,9 +861,48 @@ ${this.projectWritingConfig}`
         throw new Error('操作已被中断')
       }
 
-      // 添加用户消息到记忆系统
+      // 处理文件引用 (@文件路径)
+      let processedInput = input
+      let fileReferences: any[] = []
+      
+      if (mentionProcessor.hasFileReferences(input)) {
+        debugLog('🔍 检测到文件引用，开始处理...')
+        const result = await mentionProcessor.processFileReferences(input)
+        processedInput = result.processedInput
+        fileReferences = result.fileReferences
+        
+        // 记录处理结果
+        if (fileReferences.length > 0) {
+          const successRefs = fileReferences.filter(ref => ref.exists && ref.content)
+          const failRefs = fileReferences.filter(ref => !ref.exists || !ref.content)
+          
+          debugLog(`📄 文件引用处理完成: ${successRefs.length} 个成功, ${failRefs.length} 个失败`)
+          
+          // 显示详细的处理结果给用户
+          if (successRefs.length > 0) {
+            console.log(chalk.green(`📄 已引用 ${successRefs.length} 个文件:`))
+            successRefs.forEach(ref => {
+              const displayPath = ref.filePath.replace(`${process.cwd()}/`, '')
+              const sizeStr = ref.size ? ` (${Math.round(ref.size / 1024 * 10) / 10}KB)` : ''
+              console.log(chalk.green(`  ✅ ${displayPath}${sizeStr}`))
+            })
+          }
+          
+          if (failRefs.length > 0) {
+            console.log(chalk.yellow(`⚠️  ${failRefs.length} 个文件引用失败:`))
+            failRefs.forEach(ref => {
+              const displayPath = ref.mention.replace('@', '')
+              console.log(chalk.yellow(`  ❌ ${displayPath} - ${ref.error || '未知错误'}`))
+            })
+          }
+          
+          console.log() // 添加空行分隔
+        }
+      }
+
+      // 添加用户消息到记忆系统（使用处理后的输入）
       if (this.memoryManager) {
-        await this.memoryManager.addMessage('user', input)
+        await this.memoryManager.addMessage('user', processedInput)
       }
 
       // 构建系统提示词
@@ -849,10 +933,10 @@ ${systemPrompt}`
       }
 
       // 获取记忆上下文（如果可用）
-      let contextualPrompt = input
+      let contextualPrompt = processedInput
       if (this.memoryManager) {
         try {
-          const context = await this.memoryManager.getContext(input)
+          const context = await this.memoryManager.getContext(processedInput)
 
           let contextInfo = ''
 
@@ -887,7 +971,7 @@ ${systemPrompt}`
           }
 
           if (contextInfo) {
-            contextualPrompt = `${contextInfo  }当前请求:\n${  input}`
+            contextualPrompt = `${contextInfo  }当前请求:\n${  processedInput}`
           }
         } catch (error) {
           logWarn('获取记忆上下文失败，使用原始输入:', error)
