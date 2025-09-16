@@ -274,8 +274,157 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
     },
     
     userFacingName: () => 'search'
+  },
+
+  {
+    type: 'local',
+    name: 'glob',
+    description: '使用 glob 模式匹配文件和目录',
+    aliases: ['文件匹配', '模式匹配', 'find'],
+    usage: '/glob <模式> [路径]',
+    examples: [
+      '/glob *.ts',
+      '/glob **/*.md',
+      '/glob src/**/*.js ./src',
+      '/glob *.json .'
+    ],
+    
+    async call(args: string, _context: AgentContext): Promise<string> {
+      const parts = args.trim().split(' ')
+      
+      if (parts.length === 0 || !parts[0]) {
+        return `请提供 glob 模式
+        
+使用方法: /glob <模式> [路径]
+示例: 
+  /glob *.ts                    # 当前目录下的所有 .ts 文件
+  /glob **/*.md                 # 递归查找所有 .md 文件
+  /glob src/**/*.js ./src       # 在 ./src 目录下查找 .js 文件
+  /glob *.{js,ts} .             # 查找 .js 和 .ts 文件`
+      }
+      
+      const pattern = parts[0]
+      const searchPath = parts.slice(1).join(' ') || process.cwd()
+      
+      try {
+        // 使用新的 GlobTool
+        const globTool = getTool('Glob')
+        if (!globTool) {
+          throw new Error('Glob 工具不可用')
+        }
+        
+        // 创建工具上下文
+        const context = {
+          abortController: new AbortController(),
+          readFileTimestamps: {},
+          options: { verbose: true, safeMode: true }
+        }
+        
+        // 调用新工具
+        const callResult = globTool.call({ 
+          pattern, 
+          path: searchPath,
+          max_depth: 10 
+        }, context)
+        let result = null
+        
+        // 处理异步生成器结果
+        if (Symbol.asyncIterator in callResult) {
+          for await (const output of callResult as any) {
+            if (output.type === 'result') {
+              result = {
+                success: true,
+                data: output.data,
+                message: output.resultForAssistant
+              }
+              break
+            } else if (output.type === 'error') {
+              throw new Error(output.error?.message || output.message || '工具执行失败')
+            }
+          }
+        } else {
+          const output = await callResult
+          result = {
+            success: true,
+            data: output,
+            message: output?.resultForAssistant || ''
+          }
+        }
+        
+        if (!result || !result.success) {
+          throw new Error((result as any)?.error || '未知错误')
+        }
+        
+        // 格式化输出
+        let output = `🔍 Glob 搜索: ${pattern}\n搜索路径: ${searchPath}\n\n`
+        
+        if (result.message) {
+          output += result.message
+        } else if (result.data?.matches) {
+          const matches = result.data.matches
+          if (matches.length === 0) {
+            output += `❌ 未找到匹配项\n\n建议:\n- 检查模式是否正确\n- 检查路径是否存在\n- 尝试更宽泛的模式`
+          } else {
+            output += `找到 ${matches.length} 个匹配项:\n\n`
+            
+            // 按类型分组显示
+            const files = matches.filter((m: any) => m.isFile)
+            const dirs = matches.filter((m: any) => m.isDirectory)
+            
+            if (files.length > 0) {
+              output += `📄 文件 (${files.length}):\n`
+              files.slice(0, 20).forEach((file: any, index: number) => {
+                const size = file.size ? ` (${formatFileSize(file.size)})` : ''
+                output += `  ${index + 1}. ${file.relativePath}${size}\n`
+              })
+              if (files.length > 20) {
+                output += `  ... 还有 ${files.length - 20} 个文件\n`
+              }
+              output += '\n'
+            }
+            
+            if (dirs.length > 0) {
+              output += `📁 目录 (${dirs.length}):\n`
+              dirs.slice(0, 10).forEach((dir: any, index: number) => {
+                output += `  ${index + 1}. ${dir.relativePath}/\n`
+              })
+              if (dirs.length > 10) {
+                output += `  ... 还有 ${dirs.length - 10} 个目录\n`
+              }
+            }
+          }
+        }
+        
+        return output
+        
+      } catch (error) {
+        return `❌ Glob 搜索失败: ${(error as Error).message}
+        
+模式: ${pattern}
+搜索路径: ${searchPath}
+请检查模式语法和路径设置
+
+Glob 模式说明:
+- * : 匹配除 / 外的任意字符
+- ** : 递归匹配目录
+- ? : 匹配单个字符
+- [abc] : 匹配字符类
+- {js,ts} : 匹配多个扩展名`
+      }
+    },
+    
+    userFacingName: () => 'glob'
   }
 ]
+
+// 格式化文件大小的辅助函数
+function formatFileSize(bytes: number): string {
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  if (bytes === 0) return '0B'
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const size = (bytes / Math.pow(1024, i)).toFixed(1)
+  return `${size}${sizes[i]}`
+}
 
 // 搜索方法实现
 async function searchInFiles(keyword: string, searchPath: string): Promise<Array<{file: string, line: number, content: string}>> {

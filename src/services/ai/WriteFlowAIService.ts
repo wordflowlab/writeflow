@@ -88,6 +88,7 @@ export interface AIRequest {
   enableSmartAnalysis?: boolean
   taskContext?: string
   autoGenerateSystemPrompt?: boolean
+  onToolUpdate?: (toolName: string, status: string, message?: string) => void
 }
 
 export interface AIResponse {
@@ -241,15 +242,15 @@ export class WriteFlowAIService {
         type: 'system',
         level: 'info',
         message: 'WriteFlow AI 开始处理请求',
-        timestamp: startTime
+        timestamp: startTime,
       } as StreamMessage
 
-      // 预处理阶段
+      // 预处理阶段 - 简化进度消息，避免与UI重复
       yield {
         type: 'progress',
         stage: 'preprocessing',
-        message: '预处理请求和分析内容...',
-        progress: 10
+        message: '',
+        progress: 10,
       } as StreamMessage
 
       const enhancedRequest = await this.enhanceRequest(request)
@@ -258,8 +259,8 @@ export class WriteFlowAIService {
       yield {
         type: 'progress', 
         stage: 'ai_processing',
-        message: '开始实时 AI 处理和工具执行...',
-        progress: 30
+        message: '',
+        progress: 30,
       } as StreamMessage
 
       // 🎯 正确架构：通过 ProviderFactory 获取提供商
@@ -374,8 +375,10 @@ export class WriteFlowAIService {
       
       // 如果启用了工具调用，处理工具交互
       if (enhancedRequest.enableToolCalls && enhancedRequest.allowedTools && enhancedRequest.allowedTools.length > 0) {
+        console.log('🛠️ [WriteFlowAIService] 开始处理工具交互')
         finalResponse = await this.processToolInteractions(finalResponse, enhancedRequest)
         finalResponse.hasToolInteraction = true
+        console.log('✅ [WriteFlowAIService] 工具交互处理完成')
       }
       
       return finalResponse
@@ -779,12 +782,16 @@ export class WriteFlowAIService {
         }
       )
       
-      // 开始交互式执行
+      // 开始交互式执行，添加UI更新回调
       const session = await this.interactiveManager.startInteractiveExecution(executionPlan, {
         requireConfirmation: false,
         allowInterruption: false,
         showPreview: true,
-        batchMode: true
+        batchMode: true,
+        onToolUpdate: request.onToolUpdate || ((toolName: string, status: string, message?: string) => {
+          // 默认使用控制台输出，或使用传递的回调
+          this.notifyToolStatusUpdate(toolName, status, message)
+        })
       })
       
       // 将交互式执行结果转换为工具结果
@@ -1141,6 +1148,16 @@ Write("analysis.md", "# 分析结果\\n基于您的请求进行的分析...")
       throw new Error(`无法创建模型配置: ${modelName}`)
     }
     return profile
+  }
+  
+  /**
+   * 通知UI工具状态更新
+   */
+  private notifyToolStatusUpdate(toolName: string, status: string, message?: string): void {
+    // 这里将来可以连接到UI事件系统
+    // 暂时使用console.log输出，但格式化为类似ToolStatusMessage的样式
+    const statusIcon = status === 'completed' ? '●' : status === 'running' ? '○' : '○'
+    console.log(`${statusIcon} ${toolName}${message ? ` - ${message}` : ''}`)
   }
   
 }

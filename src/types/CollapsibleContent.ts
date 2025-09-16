@@ -120,7 +120,7 @@ export const CONTENT_TYPE_PATTERNS = {
   'code-block': /^```|\n.*?```/s,
   'file-content': /^(📄|File:|文件:)/,
   'error-message': /^(❌|Error:|错误:|Exception)/,
-  'analysis-result': /^(📊|分析|Analysis|Summary)/,
+  'analysis-result': /^(📊|分析|Analysis|Summary)|项目分析/,
   // 新增：创作内容检测模式
   'creative-content': /^(📝|✍️|🎭|📖|📚)|(写作|创作|小说|文章|故事|散文|诗歌|剧本)/,
   'creative-writing': /(创意写作|文学创作|自由写作|想象力|灵感|创造性)/,

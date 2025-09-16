@@ -65,13 +65,14 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
 
     try {
       // 检查文件读写权限
-      await this.checkFilePermissions(input.file_path, 'write', context)
+      const resolvedPath = resolve(input.file_path)
+      await this.checkFilePermissions(resolvedPath, 'write', context)
       
       // 验证文件存在
-      if (!existsSync(input.file_path)) {
+      if (!existsSync(resolvedPath)) {
         return {
           isAllowed: false,
-          denialReason: `文件不存在: ${input.file_path}`,
+          denialReason: `文件不存在: ${resolvedPath}`,
           behavior: 'deny'
         }
       }

@@ -51,14 +51,34 @@ export function AssistantTextMessage({
     return null
   }
 
-  // 检查是否应该使用可折叠格式器 - 提高阈值减少过度折叠
+  // 检查是否应该使用可折叠格式器 - 优化 Markdown 内容处理
   const contentType = detectContentType(block.text)
   const isCreativeContent = ['creative-content', 'creative-writing', 'article', 'novel'].includes(contentType)
-  
-  const shouldUseCollapsible = enableCollapsible && !isCreativeContent && (
-    block.text.length > 800 ||     // 提高字符阈值从100->800
-    block.text.split('\n').length > 20  // 提高行数阈值从3->20
-  )
+
+  // 检测是否包含丰富的 Markdown 内容
+  const hasRichMarkdown = () => {
+    const text = block.text
+    // 检测标题（# ## ###）
+    const hasHeadings = /^#{1,6}\s+.+$/gm.test(text)
+    // 检测列表（- * +）
+    const hasLists = /^[\s]*[-*+]\s+.+$/gm.test(text)
+    // 检测代码块（```）
+    const hasCodeBlocks = /```[\s\S]*?```/g.test(text)
+    // 检测表格（|）
+    const hasTables = /\|.*\|/g.test(text)
+    // 检测链接和图片
+    const hasLinksOrImages = /!?\[[^\]]*\]\([^)]*\)/g.test(text)
+
+    return hasHeadings || hasLists || hasCodeBlocks || hasTables || hasLinksOrImages
+  }
+
+  const shouldUseCollapsible = enableCollapsible &&
+    !isCreativeContent &&
+    !hasRichMarkdown() && // Markdown 内容优先使用直接渲染
+    (
+      block.text.length > 1200 ||     // 进一步提高字符阈值 800->1200
+      block.text.split('\n').length > 30  // 进一步提高行数阈值 20->30
+    )
   
   // 自动注册可折叠内容
   useEffect(() => {
@@ -147,21 +167,21 @@ export function AssistantTextMessage({
             <Text color={theme.text}>●</Text>
           </Box>
         )}
-        <Box 
-          flexDirection="column" 
+        <Box
+          flexDirection="column"
           width={width || columns - 6}
         >
-          <Box flexDirection="row">
-            <RichTextRenderer 
-              content={block.text}
-              wrap={true}
-              preserveWhitespace={true}
-            />
-            {/* 流式显示光标 - 在流式进行中显示闪烁光标 */}
-            {isStreaming && streamingCursor && (
+          <RichTextRenderer
+            content={block.text}
+            wrap={true}
+            preserveWhitespace={true}
+          />
+          {/* 流式显示光标 - 在流式进行中显示闪烁光标 */}
+          {isStreaming && streamingCursor && (
+            <Box marginTop={0} width="100%">
               <Text color={theme.claude || 'cyan'} dimColor={false}>●</Text>
-            )}
-          </Box>
+            </Box>
+          )}
         </Box>
       </Box>
       

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { WriteFlowTool, ToolUseContext, PermissionResult, ValidationResult } from '../Tool.js'
 
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { debugLog, logError, logWarn } from './../utils/log.js'
 /**
 import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 

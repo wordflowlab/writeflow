@@ -101,9 +101,14 @@ export class StreamingFormatter {
   private formatToolExecution(message: any): string {
     const icon = this.getToolIcon(message.toolName)
     const statusIcon = this.getStatusIcon(message.status)
-    
+
+    // 如果工具执行完成并且有结果，使用专门的结果格式化
+    if (message.status === 'completed' && (message.result || message.data)) {
+      return this.formatToolResult(message)
+    }
+
     let line = `${icon} ${message.toolName}`
-    
+
     if (message.currentStep) {
       line += ` - ${message.currentStep}`
     }
@@ -134,6 +139,144 @@ export class StreamingFormatter {
     }
 
     return line
+  }
+
+  /**
+   * 格式化工具结果消息 - 专门处理工具执行结果
+   */
+  private formatToolResult(message: any): string {
+    const toolName = message.toolName || '工具'
+    const icon = this.getToolIcon(toolName)
+
+    // 优先使用工具格式化的结果
+    if (message.resultForAssistant && typeof message.resultForAssistant === 'string') {
+      let content = message.resultForAssistant
+      if (this.options.enableMarkdown) {
+        content = this.renderMarkdown(content)
+      }
+      return `${icon} ${toolName} 执行完成\n${content}`
+    }
+
+    // 根据工具类型提供专门的格式化
+    const result = message.result || message.data
+    if (!result) {
+      return `${icon} ${toolName} 执行完成`
+    }
+
+    switch (toolName) {
+      case 'Read':
+        return this.formatReadResult(result, icon)
+      case 'Write':
+      case 'Edit':
+        return this.formatFileOpResult(result, icon, toolName)
+      case 'Bash':
+        return this.formatBashResult(result, icon)
+      case 'Grep':
+      case 'Glob':
+        return this.formatSearchResult(result, icon, toolName)
+      default:
+        return this.formatGenericToolResult(result, icon, toolName)
+    }
+  }
+
+  /**
+   * 格式化 Read 工具结果
+   */
+  private formatReadResult(result: any, icon: string): string {
+    if (result.contentPreview) {
+      const header = `${icon} 📄 ${result.message || '文件内容'}`
+      let content = result.contentPreview
+      if (this.options.enableMarkdown) {
+        content = this.renderMarkdown(content)
+      }
+      return `${header}\n${content}`
+    }
+    return `${icon} Read 完成: ${result.message || '文件已读取'}`
+  }
+
+  /**
+   * 格式化文件操作结果
+   */
+  private formatFileOpResult(result: any, icon: string, toolName: string): string {
+    const operation = toolName === 'Write' ? '写入' : '编辑'
+    let message = `${icon} ✅ 文件${operation}完成`
+
+    if (result.filePath) {
+      message += `: ${result.filePath}`
+    } else if (result.message) {
+      message += `: ${result.message}`
+    }
+
+    if (result.changes && this.options.enableMarkdown) {
+      message += `\n变更: ${result.changes}`
+    }
+
+    return message
+  }
+
+  /**
+   * 格式化 Bash 命令结果
+   */
+  private formatBashResult(result: any, icon: string): string {
+    let output = `${icon} ⚡ 命令执行完成`
+
+    if (result.output) {
+      let commandOutput = result.output
+      if (this.options.enableMarkdown && this.options.enableSyntaxHighlight) {
+        commandOutput = this.highlightCode(result.output, 'bash')
+      }
+      output += `\n${commandOutput}`
+    }
+
+    if (result.exitCode !== undefined && result.exitCode !== 0) {
+      output += `\n❌ 退出码: ${result.exitCode}`
+    }
+
+    return output
+  }
+
+  /**
+   * 格式化搜索结果
+   */
+  private formatSearchResult(result: any, icon: string, toolName: string): string {
+    const searchType = toolName === 'Grep' ? '内容搜索' : '文件搜索'
+    let message = `${icon} 🔍 ${searchType}完成`
+
+    if (result.files && Array.isArray(result.files)) {
+      message += `: 找到 ${result.files.length} 个匹配项`
+    } else if (result.matches) {
+      message += `: 找到 ${result.matches} 个匹配项`
+    }
+
+    if (result.preview && this.options.enableMarkdown) {
+      message += `\n${this.renderMarkdown(result.preview)}`
+    }
+
+    return message
+  }
+
+  /**
+   * 格式化通用工具结果
+   */
+  private formatGenericToolResult(result: any, icon: string, toolName: string): string {
+    // 检测常见的文本字段
+    const textFields = ['content', 'output', 'text', 'message', 'description']
+    for (const field of textFields) {
+      if (result[field] && typeof result[field] === 'string') {
+        let content = result[field]
+        if (this.options.enableMarkdown) {
+          content = this.renderMarkdown(content)
+        }
+        return `${icon} ${toolName} 执行完成\n${content}`
+      }
+    }
+
+    // 如果是简单结果，格式化为友好显示
+    if (typeof result === 'string') {
+      return `${icon} ${toolName} 执行完成\n${result}`
+    }
+
+    return `${icon} ${toolName} 执行完成`
   }
 
   /**
@@ -192,10 +335,45 @@ export class StreamingFormatter {
   }
 
   /**
-   * 通用格式化
+   * 通用格式化 - 智能处理未匹配类型的消息
    */
   private formatGeneric(message: any): string {
-    return JSON.stringify(message, null, 2)
+    // 如果消息有 resultForAssistant 字段，优先使用
+    if (message.resultForAssistant && typeof message.resultForAssistant === 'string') {
+      return message.resultForAssistant
+    }
+
+    // 如果消息有常见的文本字段，尝试提取
+    const textFields = ['content', 'output', 'text', 'message', 'description']
+    for (const field of textFields) {
+      if (message[field] && typeof message[field] === 'string') {
+        return message[field]
+      }
+    }
+
+    // 如果是字符串，直接返回
+    if (typeof message === 'string') {
+      return message
+    }
+
+    // 如果是简单对象，格式化为用户友好的展示
+    if (message && typeof message === 'object') {
+      const keys = Object.keys(message)
+      if (keys.length <= 3) {
+        return keys.map(key => `${key}: ${message[key]}`).join(', ')
+      }
+    }
+
+    // 最后回退到JSON，但提供更好的格式
+    try {
+      const jsonStr = JSON.stringify(message, null, 2)
+      if (this.options.enableMarkdown && this.options.enableColors) {
+        return this.renderMarkdown(`\`\`\`json\n${jsonStr}\n\`\`\``)
+      }
+      return jsonStr
+    } catch (error) {
+      return String(message)
+    }
   }
 
   /**

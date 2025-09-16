@@ -4,7 +4,7 @@
  */
 
 import { Box, Text } from 'ink'
-import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
 import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
@@ -36,6 +36,8 @@ import {
   isTextBlock
 } from '../types/UIMessage.js'
 import { Message } from './components/messages/Message.js'
+import { ToolExecutionMessage, ToolStatusMessage } from './components/WriterMessage.js'
+import type { ToolExecutionInfo } from './components/WriterMessage.js'
 
 // 导入工具系统
 import { getAvailableTools, getToolOrchestrator } from '../tools/index.js'
@@ -44,6 +46,15 @@ import type { Tool } from '../Tool.js'
 import { PermissionRequest as PermissionRequestComponent } from './components/permissions/PermissionRequest.js'
 
 const PRODUCT_NAME = 'WriteFlow'
+const MAX_TOOL_STATUS_HISTORY = 8
+
+interface ToolStatusEntry {
+  id: string
+  toolName: string
+  status: 'started' | 'completed' | 'failed'
+  message?: string
+  duration?: number
+}
 
 interface WriteFlowREPLProps {
   writeFlowApp: WriteFlowApp
@@ -109,12 +120,22 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const [erroredToolUseIDs, setErroredToolUseIDs] = useState<Set<string>>(new Set())
   const [inProgressToolUseIDs, setInProgressToolUseIDs] = useState<Set<string>>(new Set())
   const [unresolvedToolUseIDs, setUnresolvedToolUseIDs] = useState<Set<string>>(new Set())
+  const [toolExecutions, setToolExecutions] = useState<ToolExecutionInfo[]>([])
+  const [toolStatusHistory, setToolStatusHistory] = useState<ToolStatusEntry[]>([])
+  const [toolProgressTitle, setToolProgressTitle] = useState<string>('')
+  const [toolProgressSubtitle, setToolProgressSubtitle] = useState<string>('')
+  const [showToolExecutionPanel, setShowToolExecutionPanel] = useState<boolean>(false)
+  const toolExecutionStateRef = useRef<Map<string, { id: string; startTime: number; completed: boolean }>>(new Map())
+  const lastToolNameRef = useRef<string | null>(null)
   
   // 流式显示状态管理
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
-  
+
   // 🚀 文本选择模式 - 暂停更新以支持复制
   const [textSelectionMode, setTextSelectionMode] = useState<boolean>(false)
+
+  // 🚀 消息去重状态 - 防止重复显示相同的系统状态消息
+  const processedStatusMessagesRef = useRef<Set<string>>(new Set())
   
   // 获取可用工具
   const tools = useMemo(() => getAvailableTools(), [])
@@ -128,6 +149,349 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       return []
     }
   }, [writeFlowApp])
+
+  const resetToolExecutionState = useCallback(() => {
+    setToolExecutions([])
+    setToolStatusHistory([])
+    setToolProgressTitle('')
+    setToolProgressSubtitle('')
+    setShowToolExecutionPanel(false)
+    toolExecutionStateRef.current.clear()
+    lastToolNameRef.current = null
+    // 🚀 清理消息去重状态
+    processedStatusMessagesRef.current.clear()
+  }, [])
+
+  const addToolStatusEntry = useCallback((
+    toolName: string,
+    status: ToolStatusEntry['status'],
+    message?: string,
+    duration?: number
+  ) => {
+    setToolStatusHistory(prev => {
+      const existingIndex = prev.findIndex(item => item.toolName === toolName && item.status === status)
+      if (existingIndex >= 0) {
+        const next = [...prev]
+        next[existingIndex] = {
+          ...next[existingIndex],
+          message,
+          duration
+        }
+        return next
+      }
+
+      const entry: ToolStatusEntry = {
+        id: `tool-status-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        toolName,
+        status,
+        message,
+        duration
+      }
+      const next = [...prev, entry]
+      if (next.length > MAX_TOOL_STATUS_HISTORY) {
+        return next.slice(next.length - MAX_TOOL_STATUS_HISTORY)
+      }
+      return next
+    })
+  }, [])
+
+  const upsertToolExecution = useCallback((
+    id: string,
+    base: ToolExecutionInfo,
+    updates: Partial<ToolExecutionInfo> = {}
+  ) => {
+    setToolExecutions(prev => {
+      const index = prev.findIndex(exec => exec.id === id)
+      if (index >= 0) {
+        const next = [...prev]
+        next[index] = { ...next[index], ...updates }
+        return next
+      }
+      return [...prev, { ...base, ...updates }]
+    })
+  }, [])
+
+  const normalizeToolName = useCallback((rawName: string) => {
+    const cleaned = rawName
+      .replace(/[`'"\\]/g, '')
+      .replace(/工具$/, '')
+      .replace(/工具执行$/, '')
+      .replace(/执行中$/, '')
+      .replace(/执行$/, '')
+      .replace(/处理中$/, '')
+      .replace(/完成$/, '')
+      .trim()
+
+    if (!cleaned) return ''
+
+    const normalized = cleaned.replace(/\s+/g, ' ').trim()
+    const lower = normalized.toLowerCase()
+
+    if (/(todo[_\s]?write|任务列表更新)/i.test(normalized)) return 'todo_write'
+    if (/(todo[_\s]?read|读取任务列表)/i.test(normalized)) return 'todo_read'
+    if (/(exit[_\s]?plan[_\s]?mode|退出.*plan|退出计划)/i.test(normalized)) return 'exit_plan_mode'
+    if (/glob/.test(lower)) return 'Glob'
+    if (/grep/.test(lower)) return 'Grep'
+    if (/read/.test(lower) || /读取/.test(normalized)) return 'Read'
+    if (/write/.test(lower) || /写入/.test(normalized)) return 'Write'
+    if (/edit/.test(lower) || /编辑/.test(normalized)) return 'Edit'
+    if (/multi\s*edit/i.test(normalized)) return 'MultiEdit'
+
+    const firstToken = normalized.split(' ')[0]
+    const knownNames = ['Glob', 'Grep', 'Read', 'Write', 'Edit', 'MultiEdit', 'Bash']
+    if (knownNames.includes(firstToken)) {
+      return firstToken
+    }
+
+    if (knownNames.map(name => name.toLowerCase()).includes(lower)) {
+      return normalized
+    }
+
+    return normalized
+  }, [])
+
+  const createToolExecutionId = useCallback(() => {
+    return `tool-exec-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }, [])
+
+  const startToolExecution = useCallback((toolName: string, message: string) => {
+    const id = createToolExecutionId()
+    toolExecutionStateRef.current.set(toolName, { id, startTime: Date.now(), completed: false })
+    lastToolNameRef.current = toolName
+    upsertToolExecution(id, {
+      id,
+      toolName,
+      status: 'running',
+      message
+    })
+    addToolStatusEntry(toolName, 'started', message)
+    setToolProgressSubtitle(message)
+    setShowToolExecutionPanel(true)
+  }, [addToolStatusEntry, createToolExecutionId, setToolProgressSubtitle, setShowToolExecutionPanel, upsertToolExecution])
+
+  const finalizeToolExecution = useCallback((
+    toolName: string,
+    status: 'completed' | 'failed',
+    message: string,
+    extra: Partial<ToolExecutionInfo> = {},
+    options: { clearState?: boolean } = {}
+  ) => {
+    const state = toolExecutionStateRef.current.get(toolName)
+    const id = state?.id || createToolExecutionId()
+    const duration = state ? Math.max(0, Date.now() - state.startTime) : undefined
+
+    if (state) {
+      if (options.clearState || status === 'failed') {
+        toolExecutionStateRef.current.delete(toolName)
+      } else {
+        toolExecutionStateRef.current.set(toolName, {
+          id,
+          startTime: state.startTime,
+          completed: true
+        })
+      }
+    } else if (!options.clearState && status !== 'failed') {
+      toolExecutionStateRef.current.set(toolName, {
+        id,
+        startTime: Date.now(),
+        completed: true
+      })
+    }
+
+    upsertToolExecution(id, {
+      id,
+      toolName,
+      status,
+    }, {
+      status,
+      message,
+      duration,
+      ...extra
+    })
+
+    addToolStatusEntry(toolName, status, message, duration)
+    setToolProgressSubtitle(message)
+    setShowToolExecutionPanel(true)
+    lastToolNameRef.current = toolName
+  }, [addToolStatusEntry, createToolExecutionId, setToolProgressSubtitle, setShowToolExecutionPanel, upsertToolExecution])
+  const processToolResultJson = useCallback((rawJson: string) => {
+    try {
+      const data = JSON.parse(rawJson)
+      if (!data || typeof data !== 'object') {
+        return null
+      }
+
+      const toolNameFromJson = typeof (data as any).toolName === 'string'
+        ? normalizeToolName((data as any).toolName)
+        : ''
+
+      const toolName = toolNameFromJson || lastToolNameRef.current || 'Read'
+
+      const relativePath = typeof (data as any).relativePath === 'string' ? (data as any).relativePath : ''
+      const absolutePath = typeof (data as any).absolutePath === 'string' ? (data as any).absolutePath : ''
+      const path = relativePath || absolutePath || ''
+
+      let totalLines = typeof (data as any).totalLines === 'number'
+        ? (data as any).totalLines
+        : undefined
+
+      const shownRange = (data as any).shownRange
+      if (typeof totalLines !== 'number' && shownRange && typeof shownRange === 'object') {
+        const start = Number((shownRange as any).start)
+        const end = Number((shownRange as any).end)
+        if (!Number.isNaN(start) && !Number.isNaN(end)) {
+          totalLines = Math.max(0, end - start + 1)
+        }
+      }
+
+      let message = ''
+      if (typeof (data as any).message === 'string' && (data as any).message.trim()) {
+        message = (data as any).message.trim()
+      } else if (path) {
+        message = path
+      } else {
+        message = '工具执行完成'
+      }
+
+      if (typeof totalLines === 'number' && totalLines > 0) {
+        message = `${message} · ${totalLines} 行`
+      }
+
+      const contentPreview = typeof (data as any).contentPreview === 'string'
+        ? (data as any).contentPreview.trim()
+        : ''
+      const details = contentPreview
+        ? contentPreview.split('\n').slice(0, 8).join('\n')
+        : undefined
+
+      return {
+        toolName,
+        message,
+        details,
+        path,
+        lineCount: typeof totalLines === 'number' ? totalLines : undefined
+      }
+    } catch (error) {
+      if (process.env.WRITEFLOW_DEBUG_STREAM === 'verbose') {
+        debugLog('解析工具结果 JSON 失败:', error)
+      }
+      return null
+    }
+  }, [normalizeToolName])
+
+  const processToolProgressText = useCallback((text: string, updateState: boolean) => {
+    if (!text) return ''
+
+    // 去除 ANSI 转义
+    let remainingText = text.replace(/\u001B\[[0-9;]*m/g, '')
+
+    const consumePattern = (regex: RegExp, handler: (match: string, ...groups: string[]) => void) => {
+      remainingText = remainingText.replace(regex, (...args) => {
+        if (updateState) {
+          handler(...args)
+        }
+        return ''
+      })
+    }
+
+    consumePattern(/预处理请求和分析内容\.\.\./g, () => {
+      // 🚀 防重复机制 - 只有在没有处理过这个消息时才设置
+      const messageKey = 'preprocessing-request'
+      if (!processedStatusMessagesRef.current.has(messageKey)) {
+        setToolProgressTitle('')
+        setShowToolExecutionPanel(true)
+        processedStatusMessagesRef.current.add(messageKey)
+      }
+    })
+
+    consumePattern(/开始实时\s*AI\s*处理和工具执行\.\.\./g, () => {
+      // 🚀 防重复机制
+      const messageKey = 'realtime-ai-processing'
+      if (!processedStatusMessagesRef.current.has(messageKey)) {
+        setToolProgressSubtitle('')
+        setShowToolExecutionPanel(true)
+        processedStatusMessagesRef.current.add(messageKey)
+      }
+    })
+
+    consumePattern(/AI响应生成中[^。\n]*\.\.\./g, (match) => {
+      // 🚀 防重复机制 - 对于AI响应生成消息，使用匹配的文本作为key
+      const messageKey = `ai-response-${match.trim()}`
+      if (!processedStatusMessagesRef.current.has(messageKey)) {
+        setToolProgressSubtitle(match.trim())
+        setShowToolExecutionPanel(true)
+        processedStatusMessagesRef.current.add(messageKey)
+      }
+    })
+
+    consumePattern(/处理完成\s*\([^)]+\)/g, (match) => {
+      // 🚀 防重复机制
+      const messageKey = `processing-completed-${match.trim()}`
+      if (!processedStatusMessagesRef.current.has(messageKey)) {
+        setToolProgressSubtitle(match.trim())
+        setShowToolExecutionPanel(true)
+        processedStatusMessagesRef.current.add(messageKey)
+      }
+    })
+
+    consumePattern(/🔧\s*(?:正在执行\s*)?([^\s。:：,，]+?)(?:\s*(?:工具|tool))?(?:执行(?:中)?|处理中)?(?:\.{3})?/gi, (match, rawName) => {
+      const normalizedName = normalizeToolName(rawName) || rawName.trim() || `tool-${Date.now()}`
+      const messageText = match.replace(/^🔧\s*/, '').trim()
+      startToolExecution(normalizedName, messageText)
+    })
+
+    consumePattern(/✅\s*([^\s。:：,，]+?)(?:工具执行完成|执行完成|完成)/g, (match, rawName) => {
+      let resolvedName = rawName?.trim() || ''
+      if (!resolvedName && lastToolNameRef.current) {
+        resolvedName = lastToolNameRef.current
+      }
+      const normalizedName = normalizeToolName(resolvedName) || lastToolNameRef.current || resolvedName || `tool-${Date.now()}`
+      const messageText = match.replace(/^✅\s*/, '').trim()
+      finalizeToolExecution(normalizedName, 'completed', messageText)
+    })
+
+    consumePattern(/❌\s*([^\s。:：,，]+?)(?:工具执行失败|执行失败|失败)/g, (match, rawName) => {
+      let resolvedName = rawName?.trim() || ''
+      if (!resolvedName && lastToolNameRef.current) {
+        resolvedName = lastToolNameRef.current
+      }
+      const normalizedName = normalizeToolName(resolvedName) || lastToolNameRef.current || resolvedName || `tool-${Date.now()}`
+      const messageText = match.replace(/^❌\s*/, '').trim()
+      finalizeToolExecution(normalizedName, 'failed', messageText, {}, { clearState: true })
+    })
+
+    // 处理工具结果 JSON
+    const jsonRegex = /{[\s\S]*?"absolutePath"[\s\S]*?}/g
+    let jsonMatch: RegExpExecArray | null
+    while ((jsonMatch = jsonRegex.exec(remainingText)) !== null) {
+      const rawJson = jsonMatch[0]
+      const parsed = processToolResultJson(rawJson)
+      if (parsed && updateState) {
+        const { toolName, message, details, path, lineCount } = parsed
+        finalizeToolExecution(toolName, 'completed', message, {
+          details,
+          path,
+          lineCount
+        }, { clearState: true })
+      }
+      remainingText = remainingText.replace(rawJson, '')
+      jsonRegex.lastIndex = 0
+    }
+
+    // 移除工具调用 JSON 片段
+    const toolJsonRegex = /{[\s\S]*?"type"\s*:\s*"tool_use"[\s\S]*?}/g
+    remainingText = remainingText.replace(toolJsonRegex, '')
+
+    return remainingText
+  }, [
+    addToolStatusEntry,
+    normalizeToolName,
+    processToolResultJson,
+    setToolProgressSubtitle,
+    setToolProgressTitle,
+    setShowToolExecutionPanel,
+    upsertToolExecution
+  ])
 
   // TODO 面板是否展开
   const [showTodos, setShowTodos] = useState<boolean>(false)
@@ -532,8 +896,15 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     }
     
     return (chunk: string) => {
+      if (!chunk) return
+
+      let filteredChunk = processToolProgressText(chunk, true)
+      if (!filteredChunk.trim() && chunk.trim()) {
+        filteredChunk = chunk
+      }
+
       // 🚀 防闪烁优化：忽略空内容和重复内容
-      if (!chunk || chunk.trim() === '') return
+      if (!filteredChunk || filteredChunk.trim() === '') return
       
       // 🎯 文本选择模式下暂停更新，避免干扰复制操作
       if (textSelectionMode) {
@@ -541,7 +912,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         return
       }
       
-      textChunks.push(chunk)
+      textChunks.push(filteredChunk)
       
       // 🎯 智能批量更新策略
       const now = Date.now()
@@ -562,7 +933,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         }, THROTTLE_INTERVAL)
       }
     }
-  }, [setMessages])
+  }, [processToolProgressText, setMessages, textSelectionMode])
 
   // 处理消息提交
   const handleSubmit = useCallback(async (message: string) => {
@@ -581,6 +952,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     })
     setInput('')
     setIsThinking(true)
+    resetToolExecutionState()
 
     try {
       const trimmedMessage = message.trim()
@@ -634,6 +1006,10 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       
       // 🚀 智能处理最终文本，强化markdown格式保护
       if (finalText && finalText.trim()) {
+        let sanitizedFinalText = processToolProgressText(finalText, false)
+        if (!sanitizedFinalText.trim()) {
+          sanitizedFinalText = finalText
+        }
         setMessages(prev => {
           const last = prev[prev.length - 1]
           if (!isAssistantMessage(last)) {
@@ -650,11 +1026,32 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
                               currentText.includes('正在处理...')
             
             // 应用与onToken相同的过滤逻辑，确保一致性
-            const lines = finalText.split('\n')
+            const lines = sanitizedFinalText.split('\n')
             const filteredLines: string[] = []
+            let skippingJsonBlock = false
             
             for (const line of lines) {
               const trimmed = line.trim()
+
+              if (!skippingJsonBlock && trimmed.startsWith('{') && (
+                trimmed.includes('"absolutePath"') ||
+                trimmed.includes('"contentPreview"') ||
+                trimmed.includes('"relativePath"') ||
+                trimmed.includes('"totalLines"')
+              )) {
+                skippingJsonBlock = true
+                if (trimmed.endsWith('}')) {
+                  skippingJsonBlock = false
+                }
+                continue
+              }
+
+              if (skippingJsonBlock) {
+                if (trimmed.endsWith('}')) {
+                  skippingJsonBlock = false
+                }
+                continue
+              }
               
               // 🛡️ 跳过所有工具调用JSON行 - 与onToken过滤逻辑保持一致
               if (trimmed.startsWith('{') && (
@@ -721,7 +1118,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         })
 
         // 若文本包含 TODO 更新的信号，则刷新面板
-        if (/Todos have been modified|任务列表已更新|"todos"\s*:\s*\[/.test(finalText)) {
+        if (/Todos have been modified|任务列表已更新|"todos"\s*:\s*\[/.test(sanitizedFinalText)) {
           await fetchTodos()
         }
       }
@@ -878,6 +1275,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     return () => clearInterval(timer)
   }, [activityStatus])
   
+  const shouldShowToolPanel = showToolExecutionPanel || toolExecutions.length > 0 || toolStatusHistory.length > 0
+  
   return (
     <Box flexDirection="column" width="100%" minHeight={3}>
       {/* Header */}
@@ -929,6 +1328,26 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           }
           return null
         })}
+        {shouldShowToolPanel && (
+          <Box flexDirection="column" marginTop={normalizedMessages.length > 0 ? 1 : 0}>
+            <ToolExecutionMessage
+              executions={toolExecutions}
+              title={toolProgressTitle}
+              progressTitle={toolProgressSubtitle}
+              addMargin={normalizedMessages.length > 0}
+            />
+            {toolStatusHistory.map((entry, index) => (
+              <ToolStatusMessage
+                key={entry.id}
+                toolName={entry.toolName}
+                status={entry.status}
+                message={entry.message}
+                duration={entry.duration}
+                addMargin={index !== 0}
+              />
+            ))}
+          </Box>
+        )}
       </Box>
 
       {/* Plan Mode Confirmation - 只在需要确认时显示 */}

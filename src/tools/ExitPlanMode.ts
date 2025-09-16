@@ -1,11 +1,17 @@
 import { z } from 'zod'
-import { WritingTool, ToolInput, ToolResult } from '../types/tool.js'
+import { ToolBase } from './ToolBase.js'
+import type { ToolUseContext } from '../Tool.js'
 
 /**
  * ExitPlanMode 工具输入参数
  */
 export const ExitPlanModeInputSchema = z.object({
-  plan: z.string().min(1).describe('The plan you came up with, that you want to run by the user for approval. Supports markdown. The plan should be pretty concise.'),
+  plan: z
+    .string()
+    .min(1)
+    .describe(
+      'The plan you came up with, that you want to run by the user for approval. Supports markdown. The plan should be pretty concise.'
+    ),
 })
 
 export type ExitPlanModeInput = z.infer<typeof ExitPlanModeInputSchema>
@@ -24,17 +30,19 @@ export interface ExitPlanModeResult {
  * Exit Plan Mode 工具
  * 完全复刻 Claude Code 的 exit_plan_mode 工具实现
  */
-export class ExitPlanModeTool implements WritingTool {
-  name = 'exit_plan_mode'
-  description = 'Prompts the user to exit plan mode and start coding'
-  securityLevel = 'safe' as const
-  
+export class ExitPlanModeTool extends ToolBase<typeof ExitPlanModeInputSchema, ExitPlanModeResult> {
+  name = 'ExitPlanMode'
   inputSchema = ExitPlanModeInputSchema
+  category = 'other' as const
 
   /**
    * 获取工具使用提示
    */
-  getPrompt(): string {
+  async description(): Promise<string> {
+    return 'Prompts the user to exit plan mode and start coding'
+  }
+
+  async prompt(): Promise<string> {
     return `Use this tool when you are in plan mode and have finished presenting your plan and are ready to code. This will prompt the user to exit plan mode. 
 
 IMPORTANT: Only use this tool when the task requires planning the implementation steps of a task that requires writing code. For research tasks where you're gathering information, searching files, reading files or in general trying to understand the codebase - do NOT use this tool.
@@ -56,53 +64,49 @@ Examples:
     return true // 支持并发安全
   }
 
-  canBypassReadOnlyMode(): boolean {
-    return true // 可以在只读模式下运行
-  }
+  needsPermissions(): boolean { return false }
 
   /**
    * 执行工具 - 处理计划确认和模式切换
    */
-  async execute(input: ToolInput): Promise<ToolResult> {
-    const parsedInput = this.inputSchema.parse(input) as ExitPlanModeInput
-    const { plan } = parsedInput
+  async *call(
+    input: ExitPlanModeInput,
+    _context: ToolUseContext,
+  ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: ExitPlanModeResult; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
+    yield* this.executeWithErrorHandling(async function* (this: ExitPlanModeTool): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: ExitPlanModeResult; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
+      const parsedInput = this.inputSchema.parse(input) as ExitPlanModeInput
+      const { plan } = parsedInput
 
-    // 验证计划内容
-    if (!plan.trim()) {
-      return {
-        success: false,
-        content: '计划内容不能为空，请提供详细的实施计划',
-        metadata: {
+      // 验证计划内容
+      if (!plan.trim()) {
+        const result: ExitPlanModeResult = {
           plan: '',
           approved: false,
           message: '计划内容不能为空，请提供详细的实施计划',
           nextSteps: ['重新制定详细计划', '确保包含具体实施步骤'],
-        },
+        }
+        yield { type: 'result' as const, data: result, resultForAssistant: result.message }
+        return
       }
-    }
 
-    // 检查计划质量
-    const planQuality = this.assessPlanQuality(plan)
-    if (!planQuality.isGood) {
-      return {
-        success: false,
-        content: `计划质量需要改进：${planQuality.issues.join(', ')}`,
-        metadata: {
+      // 检查计划质量
+      const planQuality = this.assessPlanQuality(plan)
+      if (!planQuality.isGood) {
+        const result: ExitPlanModeResult = {
           plan,
           approved: false,
           message: `计划质量需要改进：${planQuality.issues.join(', ')}`,
           nextSteps: planQuality.suggestions,
-        },
+        }
+        yield { type: 'result' as const, data: result, resultForAssistant: result.message }
+        return
       }
-    }
 
-    // 成功确认的响应 - 包含格式化的计划内容
-    const formattedPlan = this.formatPlanForDisplay(plan)
-    const planSummary = this.generatePlanSummary(plan)
-    
-    return {
-      success: true,
-      content: `📋 **实施计划**
+      // 成功确认的响应 - 包含格式化的计划内容
+      const formattedPlan = this.formatPlanForDisplay(plan)
+      const planSummary = this.generatePlanSummary(plan)
+      
+      const content = `📋 **实施计划**
 
 ${formattedPlan}
 
@@ -112,11 +116,9 @@ ${formattedPlan}
 • 预估时间: ${planSummary.estimatedTime}  
 • 复杂度: ${planSummary.complexity === 'high' ? '🔴 高' : planSummary.complexity === 'medium' ? '🟡 中' : '🟢 低'}
 
-等待用户确认以开始执行...`,
-      metadata: {
+等待用户确认以开始执行...`
+      const result: ExitPlanModeResult = {
         plan,
-        formattedPlan,
-        planSummary,
         approved: true,
         message: 'User has approved your plan. You can now start coding. Start with updating your todo list if applicable',
         nextSteps: [
@@ -124,8 +126,14 @@ ${formattedPlan}
           '开始按计划执行代码修改',
           '定期检查进度并更新状态',
         ],
-      },
-    }
+      }
+
+      yield {
+        type: 'result' as const,
+        data: result,
+        resultForAssistant: content,
+      }
+    }.bind(this), _context)
   }
 
   /**
@@ -284,6 +292,31 @@ ${formattedPlan}
           nextSteps: result.nextSteps,
         },
       }
+    }
+  }
+
+  // 兼容旧接口：提供 execute 方法，供 PlanModeManager 直接调用
+  async execute(input: { plan: string }): Promise<{ success: boolean; content: string; metadata: ExitPlanModeResult }> {
+    const gen = this.call(input, {
+      abortController: new AbortController(),
+      readFileTimestamps: {},
+    } as ToolUseContext)
+
+    let last: ExitPlanModeResult | null = null
+    for await (const ev of gen) {
+      if (ev.type === 'result' && ev.data) {
+        last = ev.data
+        return {
+          success: true,
+          content: ev.resultForAssistant || ev.data.message,
+          metadata: ev.data,
+        }
+      }
+    }
+    return {
+      success: false,
+      content: 'ExitPlanMode 执行失败',
+      metadata: last || { plan: input.plan, approved: false, message: '执行失败' },
     }
   }
 }

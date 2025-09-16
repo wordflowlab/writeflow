@@ -34,7 +34,6 @@ import {
 import { TodoWriteTool } from '../tools/writing/TodoWriteTool.js'
 import { LegacyToolManager } from '../tools/LegacyToolManager.js'
 import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
-import { mentionProcessor } from '../services/MentionProcessor.js'
 
 import {
   OutlineGeneratorTool,
@@ -854,6 +853,7 @@ ${fileList}
     messages?: Array<{ type: string; content: string }>,
     planMode?: boolean,
     onToken?: (chunk: string) => void,
+    onToolUpdate?: (toolName: string, status: string, message?: string) => void,
   } = {}): Promise<string> {
     try {
       // 检查是否被中断
@@ -865,9 +865,9 @@ ${fileList}
       let processedInput = input
       let fileReferences: any[] = []
       
-      if (mentionProcessor.hasFileReferences(input)) {
+      if (false && this.mentionProcessor.hasFileReferences(input)) {
         debugLog('🔍 检测到文件引用，开始处理...')
-        const result = await mentionProcessor.processFileReferences(input)
+        const result = await this.mentionProcessor.processFileReferences(input)
         processedInput = result.processedInput
         fileReferences = result.fileReferences
         
@@ -901,8 +901,15 @@ ${fileList}
       }
 
       // 添加用户消息到记忆系统（使用处理后的输入）
+
       if (this.memoryManager) {
-        await this.memoryManager.addMessage('user', processedInput)
+        try {
+          await this.memoryManager.addMessage('user', processedInput)
+        } catch (error) {
+          console.warn('⚠️ 记忆系统处理失败，继续执行:', error instanceof Error ? error.message : String(error))
+        }
+      } else {
+        console.log('🧠 记忆管理器不存在')
       }
 
       // 构建系统提示词
@@ -973,8 +980,9 @@ ${systemPrompt}`
           if (contextInfo) {
             contextualPrompt = `${contextInfo  }当前请求:\n${  processedInput}`
           }
+          
         } catch (error) {
-          logWarn('获取记忆上下文失败，使用原始输入:', error)
+          console.warn('⚠️ 获取记忆上下文失败，使用原始输入:', error instanceof Error ? error.message : String(error))
         }
       }
 
@@ -986,6 +994,7 @@ ${systemPrompt}`
         maxTokens: this.config.maxTokens,
         stream: this.config.stream,
         onToken: options.onToken,
+        onToolUpdate: options.onToolUpdate,
         // 允许 AI 调用所有核心工具
         allowedTools: [
           // 文件操作工具
@@ -1024,12 +1033,17 @@ ${systemPrompt}`
 
       // 添加响应到记忆系统
       if (this.memoryManager) {
-        await this.memoryManager.addMessage('assistant', response.content)
+        try {
+          await this.memoryManager.addMessage('assistant', response.content)
 
-        // 检查是否需要压缩
-        const compressionCheck = await this.memoryManager.checkCompressionNeeded()
-        if (compressionCheck.needed) {
-          debugLog(chalk.yellow(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`))
+          // 检查是否需要压缩
+          const compressionCheck = await this.memoryManager.checkCompressionNeeded()
+          if (compressionCheck.needed) {
+            console.log(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`)
+          }
+          
+        } catch (error) {
+          console.warn('⚠️ 响应保存到记忆系统失败:', error instanceof Error ? error.message : String(error))
         }
       }
 

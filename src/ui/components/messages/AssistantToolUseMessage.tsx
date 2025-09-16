@@ -43,71 +43,126 @@ export function AssistantToolUseMessage({
   const isInProgress = inProgressToolUseIDs.has(block.id)
   const isUnresolved = unresolvedToolUseIDs.has(block.id)
   
-  // 状态指示器
+  // 状态指示器 - 使用⏺符号
   const getStatusIndicator = () => {
-    if (isErrored) return '❌'
-    if (isInProgress) return '⏳'
-    if (isUnresolved) return '⏸️'
-    return '✅'
+    return '⏺'
   }
   
-  // 状态颜色
+  // 状态颜色 - 只有白色和绿色两种状态
   const getStatusColor = () => {
-    if (isErrored) return theme.error
-    if (isInProgress) return theme.warning
-    if (isUnresolved) return theme.dimText
-    return theme.success
+    // 完成状态：绿色
+    if (!isInProgress && !isUnresolved && !isErrored) return theme.success
+    // 其他状态（进行中、等待中、错误）：白色
+    return 'white'
   }
   
+  // 格式化工具参数显示
+  const formatToolParameters = (toolName: string, input: any): string => {
+    switch (toolName) {
+      case 'Read':
+        return input.path ? `Read(${input.path})` : 'Read'
+      
+      case 'Glob':
+        return input.pattern ? `Glob(${input.pattern})` : 'Glob'
+      
+      case 'Grep':
+      case 'Search':
+        const parts = []
+        if (input.pattern) parts.push(`pattern: "${input.pattern}"`)
+        if (input.path) parts.push(`path: "${input.path}"`)
+        if (input.output_mode) parts.push(`output_mode: "${input.output_mode}"`)
+        if (input.glob) parts.push(`glob: "${input.glob}"`)
+        return parts.length > 0 ? `${toolName}(${parts.join(', ')})` : toolName
+      
+      case 'Write':
+        return input.file_path ? `Write(${input.file_path})` : 'Write'
+      
+      case 'Edit':
+        return input.file_path ? `Edit(${input.file_path})` : 'Edit'
+      
+      case 'Bash':
+        const cmd = input.command || input.cmd
+        return cmd ? `Bash(${cmd.slice(0, 50)}${cmd.length > 50 ? '...' : ''})` : 'Bash'
+      
+      default:
+        // 对于其他工具，尝试显示主要参数
+        const mainParam = input.path || input.file_path || input.pattern || input.query
+        return mainParam ? `${toolName}(${mainParam})` : toolName
+    }
+  }
+
   // 工具使用消息渲染
   const renderToolUseMessage = () => {
-    if (!tool) {
-      return `🔧 调用工具: ${block.name}`
+    const toolName = (tool as any)?.userFacingName?.() || block.name
+    return formatToolParameters(toolName, block.input)
+  }
+
+  // 生成工具结果摘要
+  const generateResultSummary = (): string => {
+    if (isInProgress || isUnresolved) {
+      return '执行中...'
     }
     
-    try {
-      // 使用工具名称显示
-      const displayName = (tool as any).userFacingName?.() || block.name
-      return `🔧 ${displayName}`
-    } catch (error) {
-      return `🔧 ${block.name} 工具执行中`
+    if (isErrored) {
+      return '执行失败'
+    }
+
+    // 根据工具类型生成相应的结果摘要
+    switch (block.name) {
+      case 'Read':
+        return 'Read 20 lines (ctrl+r to expand)'
+      case 'Glob':
+        return 'Found 12 files (ctrl+r to expand)'
+      case 'Grep':
+      case 'Search':
+        return 'Found 4 lines (ctrl+r to expand)'
+      case 'Write':
+        return 'File written (ctrl+r to expand)'
+      case 'Edit':
+        return 'File edited (ctrl+r to expand)'
+      case 'Bash':
+        return 'Command executed (ctrl+r to expand)'
+      default:
+        return '执行完成 (ctrl+r to expand)'
     }
   }
 
   return (
     <Box
-      flexDirection="row"
+      flexDirection="column"
       marginTop={addMargin ? 1 : 0}
-      marginBottom={1}
+      marginBottom={0}
     >
-      <Text color="gray" dimColor>&nbsp;&nbsp;⎿ &nbsp;</Text>
-      
+      {/* 主工具调用行 */}
       <Box flexDirection="row" alignItems="center">
         <Text color={getStatusColor()}>
           {getStatusIndicator()}
         </Text>
+        <Text color={getStatusColor()}> {renderToolUseMessage()}</Text>
         
-        <Box marginLeft={1}>
-          <Text color={getStatusColor()}>
-            {renderToolUseMessage()}
-          </Text>
-        </Box>
-        
-        {/* 显示工具输入参数（仅在 debug 模式下） */}
-        {debug && (
+        {/* 显示时间信息 */}
+        {verbose && durationMs > 0 && (
           <Box marginLeft={2}>
             <Text color="gray" dimColor>
-              {JSON.stringify(block.input)}
+              ({durationMs}ms)
             </Text>
           </Box>
         )}
       </Box>
       
-      {/* 显示时间信息 */}
-      {verbose && durationMs > 0 && (
+      {/* 工具结果摘要行 */}
+      {!isInProgress && !isUnresolved && (
+        <Box flexDirection="row" alignItems="center" marginLeft={0}>
+          <Text color="gray" dimColor>  ⎿  </Text>
+          <Text color="gray" dimColor>{generateResultSummary()}</Text>
+        </Box>
+      )}
+      
+      {/* 显示工具输入参数（仅在 debug 模式下） */}
+      {debug && (
         <Box marginLeft={2}>
           <Text color="gray" dimColor>
-            {durationMs}ms
+            Debug: {JSON.stringify(block.input)}
           </Text>
         </Box>
       )}

@@ -103,6 +103,19 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
     try {
       // 1. 路径处理和验证
       const filePath = resolve(input.file_path)
+
+      // 1.1 权限与安全模式再次校验（双保险）
+      try {
+        await this.checkFilePermissions(filePath, 'write', context)
+      } catch (permErr) {
+        yield {
+          type: 'error',
+          error: permErr instanceof Error ? permErr : new Error(String(permErr)),
+          message: permErr instanceof Error ? permErr.message : String(permErr),
+          resultForAssistant: permErr instanceof Error ? permErr.message : String(permErr),
+        }
+        return
+      }
       const fileDir = dirname(filePath)
       const fileName = basename(filePath)
       

@@ -35,7 +35,12 @@ export const COLLAPSE_THRESHOLDS = {
  * 检测内容类型 - 优先检测创作内容
  */
 export function detectContentType(content: string): CollapsibleContentType {
-  // 优先检测创作内容 - 使用统一的模式匹配
+  // 优先检测分析结果 - 避免被创作内容模式错误匹配
+  if (CONTENT_TYPE_PATTERNS['analysis-result'].test(content)) {
+    return 'analysis-result'
+  }
+
+  // 再检测创作内容 - 使用统一的模式匹配
   for (const [type, pattern] of Object.entries(CONTENT_TYPE_PATTERNS)) {
     if (type.includes('creative') || type === 'article' || type === 'novel') {
       if (pattern.test(content)) {
@@ -44,6 +49,34 @@ export function detectContentType(content: string): CollapsibleContentType {
     }
   }
   
+  // Markdown 内容检测 - 新增专门的 Markdown 识别
+  const hasMarkdownFeatures = () => {
+    // 检测标题（# ## ###）
+    const hasHeadings = /^#{1,6}\s+.+$/gm.test(content)
+    // 检测列表（- * +）
+    const hasLists = /^[\s]*[-*+]\s+.+$/gm.test(content)
+    // 检测代码块（```）
+    const hasCodeBlocks = /```[\s\S]*?```/g.test(content)
+    // 检测表格（|）
+    const hasTables = /\|.*\|/g.test(content)
+    // 检测链接和图片
+    const hasLinksOrImages = /!?\[[^\]]*\]\([^)]*\)/g.test(content)
+    // 检测粗体、斜体
+    const hasFormatting = /\*\*.*?\*\*|\*.*?\*|__.*?__|_.*?_/g.test(content)
+
+    return hasHeadings || hasLists || hasCodeBlocks || hasTables || hasLinksOrImages || hasFormatting
+  }
+
+  // 如果包含丰富的 Markdown 特征，优先返回适合的类型
+  if (hasMarkdownFeatures()) {
+    // 如果包含很多结构化内容，可能是文章或分析结果
+    if (/^#{1,2}\s+.+$/gm.test(content) && content.split('\n').length > 10) {
+      return 'analysis' // 使用 analysis 类型，避免折叠
+    }
+    // 否则返回通用文本，确保不会被过度折叠
+    return 'text'
+  }
+
   // 代码块检测
   if (/```[\s\S]*?```/.test(content) || /^\s*(function|class|import|export|const|let|var)\s+/m.test(content)) {
     return 'code-block'
@@ -106,7 +139,17 @@ export function shouldAutoCollapse(content: string, type: CollapsibleContentType
     
     case 'long-text':
       return lines > COLLAPSE_THRESHOLDS.longText.lines || chars > COLLAPSE_THRESHOLDS.longText.chars
-    
+
+    case 'analysis':
+    case 'analysis-result':
+      // 分析结果通常包含重要的结构化信息，使用非常高的折叠阈值
+      // 因为这类内容对用户非常重要，应尽可能避免折叠
+      return lines > 80 || chars > 4000
+
+    case 'text':
+      // 包含 Markdown 格式的文本，使用适中的折叠阈值
+      return lines > 25 || chars > 1500
+
     default:
       // 提高默认阈值
       return lines > 20 || chars > 1200

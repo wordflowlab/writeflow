@@ -70,6 +70,7 @@ export class PlanModeManager {
       'get_status',
       'help',
       'exit_plan_mode',
+      'ExitPlanMode',
     ],
     // Plan 模式下禁止的修改工具
     restricted: [
@@ -95,7 +96,7 @@ export class PlanModeManager {
       enablePermissionCheck: true,
       enableSystemReminders: true,
       strictMode: true,
-      allowedBypassTools: ['exit_plan_mode', 'get_status', 'help', 'read_article', 'search_files', 'list_directory'],
+      allowedBypassTools: ['exit_plan_mode', 'ExitPlanMode', 'get_status', 'help', 'read_article', 'search_files', 'list_directory'],
     }
     this.toolInterceptor = new ToolInterceptor(
       this.permissionManager,

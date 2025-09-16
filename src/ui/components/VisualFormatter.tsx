@@ -42,11 +42,8 @@ export function VisualFormatter({
   isFocused = false
 }: VisualFormatterProps) {
   const theme = getTheme()
-  const renderer = getContentBlockRenderer({
-    enableColors: true,
-    showMetadata,
-    maxWidth: process.stdout.columns - 6
-  })
+  // 移除对 getContentBlockRenderer 的依赖，直接使用 RichTextRenderer
+  // 这确保了所有 Markdown 内容都能正确渲染
 
   // 🎯 重构后的折叠策略 - 使用ContentAnalyzer统一检测
   const shouldUseCollapsible = () => {
@@ -272,9 +269,11 @@ export function VisualFormatter({
         </Box>
         
         <Box marginLeft={2}>
-          <Text color={theme.dimText}>
-            {thinkingBlock.content}
-          </Text>
+          <RichTextRenderer
+            content={thinkingBlock.content || ''}
+            wrap={true}
+            preserveWhitespace={true}
+          />
         </Box>
       </Box>
     )

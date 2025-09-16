@@ -24,3 +24,4 @@ WriteFlow 是基于 Claude Code 核心架构的 AI 写作助手，专为技术�
 
 WriteFlow 实现了 GitHub Spec Kit 的"规范驱动"理念在写作场景的应用，通过 `specify → plan → task → write` 完整工作流，解决传统"氛围写作"问题，实现规范驱动的精确写作。
 
+测试参考：WRITEFLOW_DEBUG=true echo "请分析这个项目" | npm run dev

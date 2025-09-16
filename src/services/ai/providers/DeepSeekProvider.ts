@@ -27,7 +27,7 @@ import {
 import { all } from '../../../utils/generators.js'
 import type { Tool, ToolUseContext } from '../../../Tool.js'
 import type { StreamMessage, ProgressMessage } from '../streaming/AsyncStreamingManager.js'
-import { debugLog, logError, logWarn } from '../../../utils/log.js'
+import { debugLog, logDebug, logError, logWarn } from '../../../utils/log.js'
 
 export class DeepSeekProvider {
   private contentProcessor = getContentProcessor()
@@ -986,18 +986,33 @@ export class DeepSeekProvider {
         agentId: 'deepseek-ai',
         abortController: new AbortController(),
         readFileTimestamps: {},
-        options: { verbose: false }
+        options: { 
+          verbose: true,   // 启用详细日志以便调试
+          safeMode: false,  // AI 调用时不启用安全模式
+        },
       }
+      debugLog(`[DeepSeekProvider] 开始执行工具: ${toolName}, 参数:`, args)
+      
+      // executeToolQuick 在成功时返回结果，失败时抛出异常
       const result = await executeToolQuick(toolName, args, toolContext)
+      
+      debugLog(`[DeepSeekProvider] 工具执行完成: ${toolName}, 成功: true`)
       
       return {
         toolName,
         callId: toolCall.id,
-        result: result.result || '',
-        success: result.success,
-        error: result.success ? undefined : result.error?.message
+        result: typeof result === 'string' ? result : (result?.result || JSON.stringify(result) || ''),
+        success: true,
+        error: undefined
       }
     } catch (error) {
+      debugLog(`[DeepSeekProvider] 工具调用异常:`, {
+        toolName,
+        error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined
+      })
+      
       return {
         toolName,
         callId: toolCall.id,
@@ -1244,14 +1259,10 @@ export class DeepSeekProvider {
           hasCharacterDeltas = true
           realtimeCharCount++
           
-          // 🚀 简化实时字符日志：仅在详细调试模式输出
-          if (isDebugMode && realtimeCharCount % 50 === 0) {
-          }
         } else {
           // 这是最终完整消息
           assistantMessage = message as AssistantMessage
-          if (isDebugMode) {
-          }
+
         }
         
         // 3. 立即 yield 每个消息 - 实时显示的关键！
@@ -1842,6 +1853,7 @@ export class DeepSeekProvider {
           }])
         } else {
           logError(`❌ [工具执行] ${toolName} 执行失败:`, result.error)
+          logError(`❌ [工具执行详情] 工具: ${toolName}, 调用ID: ${result.callId}, 详细错误:`, result.error)
           
           // 🌟 推送用户友好的错误消息（WriteFlow格式）
           yield {

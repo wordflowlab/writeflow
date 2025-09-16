@@ -78,13 +78,14 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
 
     try {
       // 检查文件读写权限
-      await this.checkFilePermissions(input.file_path, 'write', _context)
+      const resolvedPath = resolve(input.file_path)
+      await this.checkFilePermissions(resolvedPath, 'write', _context)
       
       // 验证文件存在
-      if (!existsSync(input.file_path)) {
+      if (!existsSync(resolvedPath)) {
         return {
           isAllowed: false,
-          denialReason: `文件不存在: ${input.file_path}`,
+          denialReason: `文件不存在: ${resolvedPath}`,
           behavior: 'deny',
         }
       }

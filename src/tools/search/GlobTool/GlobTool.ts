@@ -4,11 +4,13 @@ import { resolve, join, relative, sep } from 'path'
 import { ToolBase } from '../../ToolBase.js'
 import { ToolUseContext } from '../../../Tool.js'
 import { PROMPT } from './prompt.js'
+import { debugLog } from '../../../utils/log.js'
 
 // 输入参数架构
 const GlobToolInputSchema = z.object({
   pattern: z.string().describe('文件匹配模式，支持 *, **, ? 等通配符'),
   path: z.string().optional().describe('搜索目录路径，默认为当前工作目录'),
+  max_depth: z.number().int().positive().optional().describe('最大搜索深度，默认 10；超过则不再深入递归'),
 })
 
 type GlobToolInput = z.infer<typeof GlobToolInputSchema>
@@ -62,9 +64,11 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
     context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: GlobToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: GlobTool) {
+      debugLog(`[GlobTool] 开始执行，输入:`, input)
       // 1. 参数处理
       const pattern = input.pattern.trim()
       const searchPath = input.path ? resolve(input.path) : process.cwd()
+      const maxDepth = Math.max(1, input.max_depth ?? 10)
 
       if (!pattern) {
         throw new Error('匹配模式不能为空')
@@ -83,19 +87,40 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
         throw error
       }
 
-      // 3. 执行文件匹配
-      const matches = this.globSearch(searchPath, pattern)
+      // 3. 执行文件匹配（带性能保护）
+      const maxResults = 1000
+      const timeout = 30000 // 30秒
+      const startTime = Date.now()
+      
+      debugLog(`[GlobTool] 开始搜索，模式: ${pattern}, 路径: ${searchPath}, 最大深度: ${maxDepth}`)
+      
+      const matches = this.globSearch(
+        searchPath, 
+        pattern, 
+        '', 
+        0, 
+        maxDepth,
+        maxResults,
+        startTime,
+        timeout
+      )
+
+      debugLog(`[GlobTool] 搜索完成，找到 ${matches.length} 个匹配项，耗时: ${Date.now() - startTime}ms`)
 
       // 4. 按修改时间排序
-      matches.sort((a, b) => {
-        if (a.mtime && b.mtime) {
-          return b.mtime.getTime() - a.mtime.getTime()
-        }
-        return a.path.localeCompare(b.path)
-      })
+      try {
+        matches.sort((a, b) => {
+          if (a.mtime && b.mtime) {
+            return b.mtime.getTime() - a.mtime.getTime()
+          }
+          return a.path.localeCompare(b.path)
+        })
+      } catch (sortError) {
+        debugLog(`[GlobTool] 排序错误:`, sortError)
+        // 排序失败不影响结果返回
+      }
 
-      // 5. 限制结果数量（避免返回过多结果）
-      const maxResults = 1000
+      // 5. 应用结果限制
       const limitedMatches = matches.slice(0, maxResults)
       const wasLimited = matches.length > maxResults
 
@@ -141,11 +166,16 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
     return 'Glob'
   }
 
-  // 递归搜索文件
+  // 递归搜索文件（重写以提供更好的错误处理和性能保护）
   private globSearch(
     basePath: string,
     pattern: string,
     currentPath: string = '',
+    depth: number = 0,
+    maxDepth: number = 10,
+    maxResults: number = 1000,
+    startTime: number = Date.now(),
+    timeout: number = 30000, // 30秒超时
   ): Array<{
     path: string
     relativePath: string
@@ -163,12 +193,42 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
       mtime?: Date
     }> = []
 
+    // 性能保护：检查执行时间
+    if (Date.now() - startTime > timeout) {
+      debugLog(`[GlobTool] 搜索超时，已运行 ${timeout}ms`)
+      throw new Error(`搜索超时：模式 "${pattern}" 执行时间超过 ${timeout}ms`)
+    }
+
+    // 性能保护：检查结果数量限制
+    if (results.length >= maxResults) {
+      debugLog(`[GlobTool] 达到结果数量限制: ${maxResults}`)
+      return results
+    }
+
     const fullPath = currentPath ? join(basePath, currentPath) : basePath
 
     try {
       const entries = readdirSync(fullPath)
 
+      // 跳过常见的大型目录以提升性能
+      const skipDirs = new Set([
+        'node_modules', '.git', '.svn', '.hg', 
+        'dist', 'build', 'coverage', '.nyc_output',
+        'target', 'bin', 'obj', '.cache'
+      ])
+
       for (const entry of entries) {
+        // 性能保护：再次检查时间和结果限制
+        if (Date.now() - startTime > timeout) {
+          debugLog(`[GlobTool] 搜索在文件遍历中超时`)
+          throw new Error(`搜索超时：模式 "${pattern}" 执行时间超过 ${timeout}ms`)
+        }
+        
+        if (results.length >= maxResults) {
+          debugLog(`[GlobTool] 在文件遍历中达到结果数量限制`)
+          break
+        }
+
         const entryPath = currentPath ? join(currentPath, entry) : entry
         const fullEntryPath = join(basePath, entryPath)
 
@@ -178,32 +238,56 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
           const isFile = stats.isFile()
 
           // 检查当前项是否匹配模式
-          if (this.matchesPattern(entryPath, pattern)) {
-            results.push({
-              path: fullEntryPath,
-              relativePath: entryPath,
-              isFile,
-              isDirectory,
-              size: isFile ? stats.size : undefined,
-              mtime: stats.mtime,
-            })
+          try {
+            if (this.matchesPattern(entryPath, pattern)) {
+              results.push({
+                path: fullEntryPath,
+                relativePath: entryPath,
+                isFile,
+                isDirectory,
+                size: isFile ? stats.size : undefined,
+                mtime: stats.mtime,
+              })
+            }
+          } catch (matchError) {
+            debugLog(`[GlobTool] 模式匹配错误: ${entryPath}`, matchError)
+            // 模式匹配错误，跳过此项但继续处理其他项
+            continue
           }
 
           // 递归搜索目录
-          if (isDirectory) {
+          if (isDirectory && !skipDirs.has(entry)) {
             // 检查是否需要进入此目录
-            if (this.shouldRecurseIntoDirectory(entryPath, pattern)) {
-              const subResults = this.globSearch(basePath, pattern, entryPath)
-              results.push(...subResults)
+            if (depth < maxDepth && this.shouldRecurseIntoDirectory(entryPath, pattern)) {
+              try {
+                const subResults = this.globSearch(
+                  basePath, 
+                  pattern, 
+                  entryPath, 
+                  depth + 1, 
+                  maxDepth,
+                  maxResults,
+                  startTime,
+                  timeout
+                )
+                results.push(...subResults.slice(0, Math.max(0, maxResults - results.length)))
+              } catch (subError) {
+                debugLog(`[GlobTool] 递归搜索目录失败: ${entryPath}`, subError)
+                // 子目录搜索失败，继续处理其他目录
+                continue
+              }
             }
           }
         } catch (error) {
-          // 忽略无法访问的文件/目录
+          debugLog(`[GlobTool] 无法访问文件/目录: ${fullEntryPath}`, (error as Error).message)
+          // 忽略无法访问的文件/目录，继续处理
           continue
         }
       }
     } catch (error) {
-      // 忽略无法读取的目录
+      debugLog(`[GlobTool] 无法读取目录: ${fullPath}`, (error as Error).message)
+      // 目录无法读取，但不应该终止整个搜索
+      // 只是记录错误并返回已找到的结果
     }
 
     return results
@@ -235,8 +319,43 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
     return patternParts.length > dirParts.length
   }
 
-  // 将 glob 模式转换为正则表达式
+  // 将 glob 模式转换为正则表达式（重写以避免灾难性回溯）
   private globToRegex(pattern: string): string {
+    // 预处理特殊情况
+    if (pattern === '**/*' || pattern === '**') {
+      return '^.*$' // 匹配所有内容
+    }
+    
+    // 分解模式以更好地处理 ** 和 *
+    const parts = pattern.split('/')
+    let regexParts: string[] = []
+    
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i]
+      
+      if (part === '**') {
+        // ** 可以匹配零个或多个目录层级
+        if (i === parts.length - 1) {
+          // ** 在末尾，匹配所有剩余内容
+          regexParts.push('.*')
+        } else {
+          // ** 在中间，匹配零个或多个目录
+          regexParts.push('(?:[^/]+(?:/[^/]+)*)?')
+        }
+      } else if (part.includes('*') || part.includes('?') || part.includes('[')) {
+        // 包含通配符的部分
+        regexParts.push(this.simpleGlobToRegex(part))
+      } else {
+        // 普通字符串部分，需要转义特殊字符
+        regexParts.push(this.escapeRegexChars(part))
+      }
+    }
+    
+    return '^' + regexParts.join('/') + '$'
+  }
+  
+  // 处理简单的 glob 模式（不包含路径分隔符）
+  private simpleGlobToRegex(pattern: string): string {
     let regex = ''
     let i = 0
 
@@ -245,20 +364,9 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
 
       switch (char) {
         case '*':
-          if (pattern[i + 1] === '*') {
-            // ** 匹配任意路径
-            if (pattern[i + 2] === '/') {
-              regex += '(?:.*?/)?'
-              i += 3
-            } else {
-              regex += '.*?'
-              i += 2
-            }
-          } else {
-            // * 匹配除 / 外的任意字符
-            regex += '[^/]*?'
-            i++
-          }
+          // * 匹配除 / 外的任意字符（使用占有量词避免回溯）
+          regex += '[^/]*'
+          i++
           break
 
         case '?':
@@ -287,6 +395,7 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
         case '{':
         case '}':
         case '|':
+        case '\\':
           // 转义正则表达式特殊字符
           regex += '\\' + char
           i++
@@ -298,7 +407,12 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
       }
     }
 
-    return '^' + regex + '$'
+    return regex
+  }
+  
+  // 转义正则表达式特殊字符
+  private escapeRegexChars(str: string): string {
+    return str.replace(/[.^$+(){}|\\[\]]/g, '\\$&')
   }
 
   // 格式化结果给 AI

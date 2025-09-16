@@ -13,6 +13,7 @@ import { getVersion } from '../utils/version.js'
 import { getGlobalConfig, shouldShowOnboarding } from '../utils/config.js'
 import { WriteFlowOnboarding } from '../ui/components/onboarding/WriteFlowOnboarding.js'
 import { WriteFlowREPL } from '../ui/WriteFlowREPL.js'
+import { startEnhancedCommandLineMode } from '../ui/WriteFlowCommandLine.js'
 
 /**
  * WriteFlow CLI 主入口
@@ -238,8 +239,23 @@ export class WriteFlowCLI {
 
   /**
    * 启动命令行模式（Raw Mode 不支持时的备选方案）
+   * 使用增强的 React 组件界面，类似 Claude Code 的工具执行显示
    */
   private async startCommandLineMode(): Promise<void> {
+    try {
+      // 使用增强的命令行模式，支持结构化工具执行显示
+      await startEnhancedCommandLineMode(this.app)
+    } catch (error) {
+      // 如果增强模式失败，回退到简单命令行模式
+      logWarn(chalk.yellow('⚠️  增强模式启动失败，使用简单命令行模式'))
+      await this.startSimpleCommandLineMode()
+    }
+  }
+
+  /**
+   * 简单命令行模式（增强模式失败时的最终备选方案）
+   */
+  private async startSimpleCommandLineMode(): Promise<void> {
     console.log(chalk.green('✨ WriteFlow AI 写作助手 (命令行模式)'))
     console.log(chalk.gray('输入消息，按 Enter 发送'))
     

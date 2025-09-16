@@ -77,20 +77,41 @@ export class ShortTermMemory {
 
   async loadMessages(): Promise<Message[]> {
     try {
-      const exists = await fs.access(this.sessionFile).then(() => true).catch(() => false)
+      
+      // Add timeout to fs.access to prevent hanging
+      const exists = await Promise.race([
+        fs.access(this.sessionFile).then(() => true).catch(() => false),
+        new Promise<boolean>((_, reject) => 
+          setTimeout(() => reject(new Error('File access timeout')), 5000)
+        )
+      ])
+      
+      
       if (!exists) {
         return []
       }
 
-      const data = await fs.readFile(this.sessionFile, 'utf-8')
+      
+      // Add timeout to fs.readFile to prevent hanging on large files
+      const data = await Promise.race([
+        fs.readFile(this.sessionFile, 'utf-8'),
+        new Promise<string>((_, reject) => 
+          setTimeout(() => reject(new Error('File read timeout')), 10000)
+        )
+      ])
+      
+      
       const parsed = JSON.parse(data)
+      
       const validatedData = MessageArraySchema.parse(parsed)
       
-      return validatedData.map(item => ({
+      const result = validatedData.map(item => ({
         ...item,
         role: item.role as 'user' | 'assistant' | 'system',
         tokens: item.tokens || TokenCalculator.estimateTokens(item.content)
       }))
+      
+      return result
     } catch (error) {
       logError('加载短期记忆失败:', error)
       return []
@@ -100,7 +121,9 @@ export class ShortTermMemory {
   async saveMessages(messages: Message[]): Promise<void> {
     try {
       const data = JSON.stringify(messages, null, 2)
+      
       await fs.writeFile(this.sessionFile, data, { encoding: 'utf-8', flag: 'w' })
+      
       this.messages = messages
     } catch (error) {
       logError('保存短期记忆失败:', error)
@@ -109,21 +132,30 @@ export class ShortTermMemory {
   }
 
   async addMessage(role: 'user' | 'assistant' | 'system', content: string, metadata?: Record<string, any>): Promise<Message> {
-    const messages = await this.loadMessages()
-    const now = new Date()
     
-    const newMessage: Message = {
-      id: this.generateMessageId(),
-      role,
-      content,
-      timestamp: now,
-      tokens: TokenCalculator.estimateTokens(content),
-      metadata
-    }
+    try {
+      const messages = await this.loadMessages()
+      
+      const now = new Date()
+      
+      const newMessage: Message = {
+        id: this.generateMessageId(),
+        role,
+        content,
+        timestamp: now,
+        tokens: TokenCalculator.estimateTokens(content),
+        metadata
+      }
 
-    messages.push(newMessage)
-    await this.saveMessages(messages)
-    return newMessage
+      messages.push(newMessage)
+      
+      await this.saveMessages(messages)
+      
+      return newMessage
+    } catch (error) {
+      console.error('💾 [ShortTermMemory] addMessage 错误:', error)
+      throw error
+    }
   }
 
   async getRecentMessages(limit?: number): Promise<Message[]> {

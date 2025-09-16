@@ -178,6 +178,7 @@ export class ToolOrchestrator {
     // 获取工具实例
     const tool = this.tools.get(request.toolName)
     if (!tool) {
+      logError(`[ToolOrchestrator] 工具未找到: ${request.toolName}, 可用工具: ${Array.from(this.tools.keys()).join(', ')}`)
       // 返回失败结果而不是抛出异常
       return {
         toolName: request.toolName,
@@ -272,6 +273,7 @@ export class ToolOrchestrator {
       // 开始执行
       result.status = ToolExecutionStatus.RUNNING
       this.logExecution(executionId, `开始执行工具 ${request.toolName}`)
+      debugLog(`[ToolOrchestrator] 执行工具: ${request.toolName}, 输入:`, request.input)
 
       // 设置超时
       const timeout = request.timeout || this.config.defaultTimeout
@@ -320,6 +322,8 @@ export class ToolOrchestrator {
         result.endTime = Date.now()
         result.metrics.duration = result.endTime - result.startTime
         
+        logError(`[ToolOrchestrator] 工具 ${request.toolName} 执行失败:`, executionError)
+        logError(`[ToolOrchestrator] 错误堆栈:`, result.error.stack)
         this.logExecution(executionId, `工具执行失败: ${result.error.message}`)
       }
 

@@ -64,6 +64,7 @@ export interface InteractionOptions {
   showPreview?: boolean            // 是否显示预览
   batchMode?: boolean              // 批量模式（减少交互）
   timeout?: number                 // 操作超时时间
+  onToolUpdate?: (toolName: string, status: string, message?: string) => void  // UI更新回调
 }
 
 /**
@@ -169,7 +170,7 @@ export class InteractiveExecutionManager {
       session.currentToolIndex = i
 
       // 显示当前执行的工具
-      this.displayCurrentTool(tool, i + 1, plan.tools.length)
+      this.displayCurrentTool(tool, i + 1, plan.tools.length, options)
 
       // 如果允许中断，检查是否有用户输入
       if (options.allowInterruption) {
@@ -190,12 +191,17 @@ export class InteractiveExecutionManager {
           category: 'tool-execution'
         })
 
+        // 通知UI工具开始执行
+        if (options.onToolUpdate) {
+          options.onToolUpdate(tool.toolName, 'running', `正在执行 ${tool.toolName}`)
+        }
+
         // 模拟工具执行 - 在实际实现中会调用真实的工具
         const result = await this.simulateToolExecution(tool)
         session.results.push(result)
 
         // 显示执行结果
-        this.displayToolResult(result, tool)
+        this.displayToolResult(result, tool, options)
 
         // 如果执行失败且允许交互，询问用户是否重试
         if (result.status === ToolExecutionStatus.FAILED && options.allowInterruption) {
@@ -276,17 +282,22 @@ export class InteractiveExecutionManager {
   /**
    * 显示当前工具
    */
-  private displayCurrentTool(tool: PlannedTool, current: number, total: number): void {
+  private displayCurrentTool(tool: PlannedTool, current: number, total: number, options: InteractionOptions): void {
     debugLog(`\n[${current}/${total}] 🔧 ${tool.toolName}`)
     debugLog(`描述: ${tool.description}`)
     debugLog(`风险级别: ${this.getRiskIcon(tool.riskLevel)} ${tool.riskLevel}`)
     debugLog(`预计耗时: ${tool.estimatedTime}ms`)
+    
+    // 通知UI更新工具状态
+    if (options.onToolUpdate) {
+      options.onToolUpdate(tool.toolName, 'running', `正在执行 ${tool.toolName}`)
+    }
   }
 
   /**
    * 显示工具执行结果
    */
-  private displayToolResult(result: ToolExecutionResult, tool: PlannedTool): void {
+  private displayToolResult(result: ToolExecutionResult, tool: PlannedTool, options: InteractionOptions): void {
     const success = result.status === ToolExecutionStatus.COMPLETED
     const icon = success ? '✅' : '❌'
     const duration = result.endTime ? result.endTime - result.startTime : 0
@@ -300,6 +311,13 @@ export class InteractiveExecutionManager {
     if (success && result.result) {
       const preview = String(result.result).slice(0, 100)
       debugLog(`   结果: ${preview}${String(result.result).length > 100 ? '...' : ''}`)
+    }
+    
+    // 通知UI更新工具状态
+    if (options.onToolUpdate) {
+      const status = success ? 'completed' : 'failed'
+      const message = success ? `${tool.toolName} 执行完成` : `${tool.toolName} 执行失败`
+      options.onToolUpdate(tool.toolName, status, message)
     }
   }
 

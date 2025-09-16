@@ -78,7 +78,7 @@ export function RichTextRenderer({
       italic: style.italic || type === 'em',
       underline: style.underline || type === 'link',
       dimColor: style.dim,
-      wrap: wrap ? "wrap" as const : undefined
+      wrap: wrap ? 'wrap' as const : undefined
     }
 
     switch (type) {
@@ -159,7 +159,18 @@ export function RichTextRenderer({
       case 'strong':
       case 'em':
       default:
-        // 普通文本、段落、强调等
+        // 普通文本、段落、强调等 - 处理换行符
+        if (text.includes('\n')) {
+          return (
+            <Box key={index} flexDirection="column">
+              {text.split('\n').map((line, lineIndex) => (
+                <Text key={lineIndex} {...textProps}>
+                  {line}
+                </Text>
+              ))}
+            </Box>
+          )
+        }
         return (
           <Text key={index} {...textProps}>
             {text}
@@ -168,10 +179,21 @@ export function RichTextRenderer({
     }
   }
 
-  // 如果没有解析内容，显示原始文本
+  // 如果没有解析内容，显示原始文本 - 处理换行符
   if (parsedContent.length === 0) {
+    if (content.includes('\n')) {
+      return (
+        <Box flexDirection="column">
+          {content.split('\n').map((line, index) => (
+            <Text key={index} color={theme.text} wrap={wrap ? 'wrap' : undefined}>
+              {line}
+            </Text>
+          ))}
+        </Box>
+      )
+    }
     return (
-      <Text color={theme.text} wrap={wrap ? "wrap" : undefined}>
+      <Text color={theme.text} wrap={wrap ? 'wrap' : undefined}>
         {content}
       </Text>
     )

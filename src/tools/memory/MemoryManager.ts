@@ -52,18 +52,26 @@ export class MemoryManager {
     content: string,
     metadata?: Record<string, any>
   ): Promise<Message> {
-    const message = await this.shortTerm.addMessage(role, content, metadata)
+    
+    try {
+      const message = await this.shortTerm.addMessage(role, content, metadata)
 
-    // 自动压缩检查
-    if (this.config.autoCompress && !this.compressionInProgress) {
-      const compressionCheck = await this.checkCompressionNeeded()
-      if (compressionCheck.needed) {
-        // 异步执行压缩，避免阻塞消息添加
-        setImmediate(() => this.performCompression())
+      // 自动压缩检查
+      if (this.config.autoCompress && !this.compressionInProgress) {
+        const compressionCheck = await this.checkCompressionNeeded()
+        
+        if (compressionCheck.needed) {
+          // 异步执行压缩，避免阻塞消息添加
+          setImmediate(() => this.performCompression())
+        }
+      } else {
+        console.log('🧠 [MemoryManager] 跳过压缩检查, autoCompress:', this.config.autoCompress, 'compressionInProgress:', this.compressionInProgress)
       }
-    }
 
-    return message
+      return message
+    } catch (error) {
+      throw error
+    }
   }
 
   // 检查是否需要压缩 - 基于 token 阈值和消息数量
