@@ -66,5 +66,4 @@ export class SlideProjectInitTool implements WritingTool {
   }
 }
 
-export default SlideProjectInitTool
 

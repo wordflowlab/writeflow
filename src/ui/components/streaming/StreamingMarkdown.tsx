@@ -49,7 +49,7 @@ export interface StreamingMarkdownProps {
   onError?: (error: Error) => void
 }
 
-export interface MarkdownRenderStats {
+interface MarkdownRenderStats {
   totalElements: number
   renderedElements: number
   parseTime: number
@@ -59,7 +59,7 @@ export interface MarkdownRenderStats {
   lists: number
 }
 
-export interface MarkdownStructure {
+interface MarkdownStructure {
   headings: Array<{ level: number; text: string; position: number }>
   codeBlocks: Array<{ language: string; position: number; length: number }>
   lists: Array<{ type: 'ordered' | 'unordered'; position: number; items: number }>
@@ -505,4 +505,3 @@ export const StreamingMarkdown: React.FC<StreamingMarkdownProps> = ({
   )
 }
 
-export default StreamingMarkdown

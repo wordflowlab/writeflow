@@ -8,7 +8,7 @@ export interface SelectOption {
   description?: string
 }
 
-export interface SelectProps {
+interface SelectProps {
   options: SelectOption[]
   value?: string
   onChange?: (value: string) => void

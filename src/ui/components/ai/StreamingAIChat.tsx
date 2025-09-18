@@ -241,4 +241,3 @@ export const StreamingAIChat: React.FC<StreamingAIChatProps> = ({
   )
 }
 
-export default StreamingAIChat

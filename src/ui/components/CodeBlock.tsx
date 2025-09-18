@@ -80,4 +80,3 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   )
 }
 
-export default CodeBlock

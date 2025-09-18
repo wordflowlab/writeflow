@@ -809,4 +809,3 @@ export const slideCommands: SlashCommand[] = [
   slidePreviewCommand,       // 预览功能 - 核心功能，支持多种预览选项
 ]
 
-export default slideCommands

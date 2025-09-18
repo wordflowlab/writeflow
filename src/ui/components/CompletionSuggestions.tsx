@@ -75,24 +75,3 @@ export function CompletionSuggestions({
   )
 }
 
-/**
- * 紧凑版补全建议组件（内联显示）
- */
-export function InlineCompletionSuggestions({
-  suggestions,
-  selectedIndex
-}: CompletionSuggestionsProps) {
-  const theme = getTheme()
-  
-  if (suggestions.length === 0) return null
-  
-  // 只显示选中的建议
-  const selected = suggestions[selectedIndex]
-  if (!selected) return null
-  
-  return (
-    <Text color={theme.muted}>
-      {' '}← {selected.displayValue}
-    </Text>
-  )
-}

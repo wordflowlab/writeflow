@@ -159,4 +159,3 @@ export const MultiDiffViewer: React.FC<MultiDiffViewerProps> = ({
   )
 }
 
-export default DiffViewer

@@ -67,5 +67,4 @@ export class SlideExporterTool implements WritingTool {
   }
 }
 
-export default SlideExporterTool
 

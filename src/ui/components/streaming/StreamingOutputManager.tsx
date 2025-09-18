@@ -234,4 +234,3 @@ export const StreamingOutputManager: React.FC<StreamingOutputManagerProps> = ({
   )
 }
 
-export default StreamingOutputManager

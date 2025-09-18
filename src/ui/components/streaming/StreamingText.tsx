@@ -35,7 +35,7 @@ export interface StreamingTextProps {
   onError?: (error: Error) => void
 }
 
-export interface RenderStats {
+interface RenderStats {
   fps: number
   charactersPerSecond: number
   renderTime: number
@@ -468,4 +468,3 @@ export const StreamingText: React.FC<StreamingTextProps> = ({
   )
 }
 
-export default StreamingText

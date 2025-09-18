@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
 import chalk from 'chalk'
 
-export interface PermissionRequestProps {
+interface PermissionRequestProps {
   toolName: string
   filePath: string
   description: string

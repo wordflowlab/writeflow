@@ -9,7 +9,7 @@ import { analyzeContent } from './contentAnalyzer.js'
 import { CollapsibleContentType } from '../types/CollapsibleContent.js'
 import { defaultColorScheme } from './colorScheme.js'
 
-export interface FormattingOptions {
+interface FormattingOptions {
   /**
    * 是否启用智能折叠
    */
@@ -31,7 +31,7 @@ export interface FormattingOptions {
   contentType?: CollapsibleContentType
 }
 
-export class SmartFormatter {
+class SmartFormatter {
   /**
    * 智能格式化内容 - 主入口
    */
@@ -181,7 +181,7 @@ export class SmartFormatter {
 /**
  * 工具执行结果格式化器
  */
-export class ToolResultFormatter {
+class ToolResultFormatter {
   private formatter: SmartFormatter
   
   constructor() {
@@ -269,10 +269,7 @@ export class ToolResultFormatter {
   }
 }
 
-/**
- * 全局格式化器实例
- */
-export const smartFormatter = new SmartFormatter()
+const smartFormatter = new SmartFormatter()
 export const toolFormatter = new ToolResultFormatter()
 
 /**

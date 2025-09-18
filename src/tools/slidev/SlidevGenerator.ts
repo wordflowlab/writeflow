@@ -232,4 +232,3 @@ ${yamlContent}
   }
 }
 
-export default SlidevGenerator

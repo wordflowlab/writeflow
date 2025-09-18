@@ -430,4 +430,3 @@ Questions?`)
   }
 }
 
-export default SlideConverter

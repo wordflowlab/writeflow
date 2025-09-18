@@ -5,7 +5,7 @@ import { useTextInput } from '../../hooks/useTextInput.js'
 import { getTheme } from '../../../utils/theme.js'
 import { type Key } from 'ink'
 
-export type Props = {
+type Props = {
   /**
    * Optional callback for handling history navigation on up arrow at start of input
    */

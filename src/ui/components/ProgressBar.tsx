@@ -241,4 +241,3 @@ export const TaskProgress: React.FC<TaskProgressProps> = ({
   )
 }
 
-export default ProgressBar

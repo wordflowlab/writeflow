@@ -48,7 +48,7 @@ export interface StreamingCodeBlockProps {
   onError?: (error: Error) => void
 }
 
-export interface CodeRenderStats {
+interface CodeRenderStats {
   totalLines: number
   highlightedLines: number
   renderTime: number
@@ -453,4 +453,3 @@ export const StreamingCodeBlock: React.FC<StreamingCodeBlockProps> = ({
   )
 }
 
-export default StreamingCodeBlock

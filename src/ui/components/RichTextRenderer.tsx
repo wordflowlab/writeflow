@@ -233,15 +233,3 @@ export function SimpleRichText({ content }: { content: string }) {
   )
 }
 
-/**
- * 专门用于代码内容的渲染组件
- */
-export function CodeRenderer({ content, language }: { content: string; language?: string }) {
-  return (
-    <CodeBlock 
-      code={content}
-      language={language}
-      showLanguage={!!language}
-    />
-  )
-}

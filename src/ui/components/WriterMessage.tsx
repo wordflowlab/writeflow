@@ -35,7 +35,7 @@ const MODE_ICONS = {
   reviewing: '👁'
 }
 
-export function WriterMessage({
+function WriterMessage({
   message,
   addMargin = true,
   showTimestamp = false,
@@ -118,11 +118,11 @@ export function UserPromptMessage({
   )
 }
 
-export function AssistantResponseMessage({ 
-  content, 
+function AssistantResponseMessage({
+  content,
   addMargin = true,
-  showThinking = false 
-}: { 
+  showThinking = false
+}: {
   content: string
   addMargin?: boolean
   showThinking?: boolean
@@ -208,31 +208,6 @@ export function SystemMessage({
   )
 }
 
-// Conversation separator
-export function MessageSeparator({ label }: { label?: string }) {
-  const theme = getTheme()
-  const { columns } = useTerminalSize()
-  
-  return (
-    <Box flexDirection="column" marginY={1}>
-      <Box
-        borderColor={theme.secondaryBorder}
-        borderStyle="single"
-        borderBottom={false}
-        borderLeft={false}
-        borderRight={false}
-        borderTop={true}
-        width={columns - 2}
-      >
-        {label && (
-          <Text color={theme.dimText}>
-            {label}
-          </Text>
-        )}
-      </Box>
-    </Box>
-  )
-}
 
 // 工具执行消息组件 - 类似 Claude Code 的显示效果
 export function ToolExecutionMessage({

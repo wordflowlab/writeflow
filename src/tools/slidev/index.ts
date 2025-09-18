@@ -11,4 +11,3 @@ export const slidevTools = {
   SlideConverter: () => import('./SlideConverter.js')
 }
 
-export default slidevTools
