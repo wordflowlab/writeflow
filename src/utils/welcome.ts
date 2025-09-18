@@ -3,7 +3,7 @@ import chalk from 'chalk'
 // 基础 ANSI 去除与显示宽度计算（简版，处理 CJK 与 emoji）
 import { debugLog, logError, logWarn, infoLog } from './log.js'
 
-const ANSI_REGEX = /\x1B\[[0-9;]*m/g
+const ANSI_REGEX = /\u001B\[[0-9;]*m/g
 
 function stripAnsi(input: string): string {
   return input.replace(ANSI_REGEX, '')
@@ -67,7 +67,7 @@ function truncateToWidth(input: string, maxWidth: number): string {
   // 简化处理：逐字符复制（含 ANSI），仅按可见字符累积宽度
   for (let i = 0; i < raw.length; ) {
     // 处理 ANSI 片段
-    const ansiMatch = raw.slice(i).match(/^\x1B\[[0-9;]*m/)
+    const ansiMatch = raw.slice(i).match(/^\u001B\[[0-9;]*m/)
     if (ansiMatch) {
       out += ansiMatch[0]
       i += ansiMatch[0].length

@@ -48,7 +48,7 @@ export class ContextManager {
       maxTokens: maxContextTokens,
       currentTokens: 0,
       entries: [],
-      compressionRatio: 1.0
+      compressionRatio: 1.0,
     }
   }
   
@@ -59,7 +59,7 @@ export class ContextManager {
     const contextEntry: ContextEntry = {
       id: `ctx-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       timestamp: Date.now(),
-      ...entry
+      ...entry,
     }
     
     this.window.entries.push(contextEntry)
@@ -112,7 +112,7 @@ export class ContextManager {
       targetTokens: Math.floor(this.maxContextTokens * 0.6), // 压缩到60%
       preserveRecent: 5, // 保留最近5条消息
       preserveImportant: true,
-      enableSummarization: true
+      enableSummarization: true,
     }
     
     const { entries } = this.window
@@ -145,7 +145,7 @@ export class ContextManager {
    */
   private compressOldEntries(
     entries: ContextEntry[], 
-    options: ContextCompressionOptions
+    options: ContextCompressionOptions,
   ): ContextEntry[] {
     if (entries.length === 0) return []
     
@@ -208,7 +208,7 @@ export class ContextManager {
       timestamp: Date.now(),
       tokens: estimatedTokens,
       importance: 0.8, // 摘要具有较高重要性
-      type: 'background'
+      type: 'background',
     }
   }
   
@@ -284,7 +284,7 @@ export class ContextManager {
       typeDistribution: typeStats,
       averageImportance: avgImportance,
       oldestEntry: entries.length > 0 ? entries[0].timestamp : null,
-      newestEntry: entries.length > 0 ? entries[entries.length - 1].timestamp : null
+      newestEntry: entries.length > 0 ? entries[entries.length - 1].timestamp : null,
     }
   }
   

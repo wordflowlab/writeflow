@@ -53,7 +53,7 @@ function getWriteFlowRoot(): string {
       '/usr/local/lib/node_modules/writeflow',
       '/usr/lib/node_modules/writeflow',
       // 本地安装路径 
-      join(process.cwd(), 'node_modules', 'writeflow')
+      join(process.cwd(), 'node_modules', 'writeflow'),
     )
     
     for (const path of possiblePaths) {

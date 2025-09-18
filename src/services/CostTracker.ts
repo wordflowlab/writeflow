@@ -54,7 +54,7 @@ const STATE: CostState = {
   totalAPIDuration: 0,
   startTime: Date.now(),
   sessionId: `wf-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  modelUsage: new Map()
+  modelUsage: new Map(),
 }
 
 // 成本历史记录（内存中保存，重启时清空）
@@ -69,7 +69,7 @@ export function addCostEntry(
   outputTokens: number,
   cost: number,
   duration: number,
-  requestType: 'chat' | 'tool' | 'reasoning' = 'chat'
+  requestType: 'chat' | 'tool' | 'reasoning' = 'chat',
 ): void {
   // 更新全局统计
   STATE.totalCost += cost
@@ -83,7 +83,7 @@ export function addCostEntry(
     inputTokens: 0,
     outputTokens: 0,
     cost: 0,
-    duration: 0
+    duration: 0,
   }
 
   existing.requests += 1
@@ -102,7 +102,7 @@ export function addCostEntry(
     outputTokens,
     cost,
     duration,
-    requestType
+    requestType,
   })
 
   // 检查阈值警告
@@ -188,7 +188,7 @@ export function generateCostSummary(): string {
       lines.push(
         `   ${model}:`,
         `     请求: ${usage.requests}, tokens: ${formatTokens(usage.inputTokens + usage.outputTokens)}`,
-        `     成本: ${formatCost(usage.cost)} (平均: ${formatCost(avgCostPerRequest)}/请求)`
+        `     成本: ${formatCost(usage.cost)} (平均: ${formatCost(avgCostPerRequest)}/请求)`,
       )
     }
     lines.push('')
@@ -201,7 +201,7 @@ export function generateCostSummary(): string {
     for (const entry of recent) {
       const time = new Date(entry.timestamp).toLocaleTimeString()
       lines.push(
-        `   ${time} - ${entry.model}: ${formatTokens(entry.inputTokens + entry.outputTokens)} tokens, ${formatCost(entry.cost)}`
+        `   ${time} - ${entry.model}: ${formatTokens(entry.inputTokens + entry.outputTokens)} tokens, ${formatCost(entry.cost)}`,
       )
     }
   }
@@ -219,7 +219,7 @@ function getCostThresholds(): CostThresholds {
     monthlyLimit: 100.0,
     warningThreshold: 0.8,
     emergencyThreshold: 0.95,
-    enableWarnings: true
+    enableWarnings: true,
   }
 }
 
@@ -281,11 +281,11 @@ export function getDetailedStats() {
       cost: STATE.totalCost,
       tokens: STATE.totalTokens,
       requests: STATE.totalRequests,
-      apiDuration: STATE.totalAPIDuration
+      apiDuration: STATE.totalAPIDuration,
     },
     models: Object.fromEntries(STATE.modelUsage),
     recent: costHistory.slice(-10),
-    thresholds: getCostThresholds()
+    thresholds: getCostThresholds(),
   }
 }
 
@@ -318,7 +318,7 @@ export function saveCostSummaryOnExit(): void {
     requests: STATE.totalRequests,
     duration: getSessionDuration(),
     apiDuration: STATE.totalAPIDuration,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   }
   
   // TODO: 在适当的地方保存到配置文件

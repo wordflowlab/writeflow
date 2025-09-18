@@ -168,7 +168,7 @@ export class MentionProcessor {
       
       // 安全检查2：检查是否为敏感路径
       const isBlockedPath = MentionProcessor.BLOCKED_PATHS.some(blockedPath => 
-        fileRef.filePath.startsWith(blockedPath)
+        fileRef.filePath.startsWith(blockedPath),
       )
       if (isBlockedPath) {
         fileRef.error = '安全限制：禁止访问系统敏感目录'
@@ -178,7 +178,7 @@ export class MentionProcessor {
       // 安全检查3：检查是否为敏感文件名
       const fileName = mentionPath.toLowerCase()
       const isBlockedFile = MentionProcessor.BLOCKED_PATTERNS.some(pattern => 
-        pattern.test(fileName)
+        pattern.test(fileName),
       )
       if (isBlockedFile) {
         fileRef.error = '安全限制：禁止访问敏感文件'

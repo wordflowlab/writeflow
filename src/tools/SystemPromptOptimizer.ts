@@ -508,7 +508,7 @@ ${this.config.customInstructions!.map((instruction, index) => `${index + 1}. ${i
       '可用工具:',
       toolList,
       '',
-      principles
+      principles,
     ]
 
     // 任务特定指导（精简版）

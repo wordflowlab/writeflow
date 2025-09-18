@@ -107,11 +107,11 @@ export const DEFAULT_COLLAPSIBLE_OPTIONS: Required<CollapsibleOptions> = {
     toggleAll: 'ctrl+shift+r',
     navigate: {
       next: '↓',
-      prev: '↑'
-    }
+      prev: '↑',
+    },
   },
   showPreview: true,
-  previewLines: 3
+  previewLines: 3,
 }
 
 // 内容类型检测规则
@@ -125,7 +125,7 @@ export const CONTENT_TYPE_PATTERNS = {
   'creative-content': /^(📝|✍️|🎭|📖|📚)|(写作|创作|小说|文章|故事|散文|诗歌|剧本)/,
   'creative-writing': /(创意写作|文学创作|自由写作|想象力|灵感|创造性)/,
   'article': /(文章|论文|评论|报告|专栏|博客|教程|指南)/,
-  'novel': /(小说|故事|情节|角色|对话|章节|续写|创作小说)/
+  'novel': /(小说|故事|情节|角色|对话|章节|续写|创作小说)/,
 } as const
 
 // 自动折叠阈值配置
@@ -135,5 +135,5 @@ export const AUTO_COLLAPSE_THRESHOLDS: Record<string, number> = {
   codeBlockLines: 10,     // 提高代码块阈值从 6 -> 10
   toolOutputLines: 8,     // 提高工具输出阈值从 5 -> 8
   errorMessageLines: 5,   // 提高错误消息阈值从 3 -> 5
-  creativeContentLines: 999999  // 创作内容永远不折叠
+  creativeContentLines: 999999,  // 创作内容永远不折叠
 }

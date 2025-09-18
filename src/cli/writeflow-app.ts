@@ -29,7 +29,7 @@ import {
   coreTools,
   getToolOrchestrator, 
   getPermissionManager,
-  getAvailableTools as getCoreTools 
+  getAvailableTools as getCoreTools, 
 } from '../tools/index.js'
 import { TodoWriteTool } from '../tools/writing/TodoWriteTool.js'
 import { LegacyToolManager } from '../tools/LegacyToolManager.js'
@@ -62,7 +62,7 @@ import { PlanModeManager } from '../modes/PlanModeManager.js'
 import { 
   getPermissionConfirmationService, 
   PermissionRequest, 
-  PermissionResponse 
+  PermissionResponse, 
 } from '../services/PermissionConfirmationService.js'
 
 // 类型定义
@@ -462,7 +462,9 @@ TODO 管理规范：
     try {
       const sid = this.memoryManager.getSessionId()
       process.env.WRITEFLOW_SESSION_ID = sid
-    } catch {}
+    } catch {
+      // Ignore errors when setting session ID
+    }
   }
 
   /**
@@ -744,7 +746,7 @@ ${this.projectWritingConfig}`
     }
 
     // 获取最新的用户消息
-    let latestUserMessage = userMessages[userMessages.length - 1]?.content || ''
+    const latestUserMessage = userMessages[userMessages.length - 1]?.content || ''
     
     // 处理文件引用 (@文件路径)
     let processedInput = latestUserMessage
@@ -1004,7 +1006,7 @@ ${systemPrompt}`
           // 系统工具
           'Bash',
           // 任务管理工具
-          'todo_write', 'todo_read', 'exit_plan_mode'
+          'todo_write', 'todo_read', 'exit_plan_mode',
         ],
         enableToolCalls: true,
       }
@@ -1394,7 +1396,9 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
         }
         // 再兜底清理
         aiResponse = adapter.sanitizeText(aiResponse)
-      } catch {}
+      } catch {
+        // Ignore sanitization errors
+      }
 
       const thinkingMatch = aiResponse.match(/<thinking>([\s\S]*?)<\/thinking>/i)
       if (thinkingMatch) {
@@ -1462,7 +1466,9 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
           this.emit('agent-response', resp)
           if (resp.type === 'plan') this.emit('agent-plan', resp)
           if (resp.type === 'prompt') this.emit('agent-prompt', resp)
-        } catch {}
+        } catch {
+          // Ignore event emission errors
+        }
 
         // 统计：处理过的 prompt 计数
         this.agentBridgeStats.promptsHandled++

@@ -23,14 +23,14 @@ interface UseCollapsibleShortcutsOptions {
 export function useCollapsibleShortcuts({
   shortcuts = DEFAULT_COLLAPSIBLE_OPTIONS.shortcuts,
   enableGlobalShortcuts = true,
-  onStateChange
+  onStateChange,
 }: UseCollapsibleShortcutsOptions = {}) {
   
   // 全局折叠状态管理
   const [manager, setManager] = useState<CollapsibleManager>({
     states: new Map(),
     focusedId: null,
-    globalCollapsed: false
+    globalCollapsed: false,
   })
   
   // 用于追踪注册的可折叠内容
@@ -42,14 +42,14 @@ export function useCollapsibleShortcuts({
     toggleAll: shortcuts?.toggleAll || DEFAULT_COLLAPSIBLE_OPTIONS.shortcuts.toggleAll || 'ctrl+shift+r',
     navigate: {
       next: shortcuts?.navigate?.next || DEFAULT_COLLAPSIBLE_OPTIONS.shortcuts.navigate?.next || '↓',
-      prev: shortcuts?.navigate?.prev || DEFAULT_COLLAPSIBLE_OPTIONS.shortcuts.navigate?.prev || '↑'
-    }
+      prev: shortcuts?.navigate?.prev || DEFAULT_COLLAPSIBLE_OPTIONS.shortcuts.navigate?.prev || '↑',
+    },
   }
   
   // 注册可折叠内容
   const registerCollapsible = useCallback((
     id: string, 
-    initialState?: Partial<CollapsibleState>
+    initialState?: Partial<CollapsibleState>,
   ) => {
     const state: CollapsibleState = {
       id,
@@ -57,12 +57,12 @@ export function useCollapsibleShortcuts({
       autoCollapse: true,
       maxLines: 15,
       focusable: true,
-      ...initialState
+      ...initialState,
     }
     
     setManager(prev => ({
       ...prev,
-      states: new Map(prev.states).set(id, state)
+      states: new Map(prev.states).set(id, state),
     }))
     
     registeredContents.current.add(id)
@@ -79,7 +79,7 @@ export function useCollapsibleShortcuts({
       return {
         ...prev,
         states: newStates,
-        focusedId: prev.focusedId === id ? null : prev.focusedId
+        focusedId: prev.focusedId === id ? null : prev.focusedId,
       }
     })
     
@@ -90,7 +90,7 @@ export function useCollapsibleShortcuts({
   const updateCollapsibleState = useCallback((
     id: string, 
     updates: Partial<CollapsibleState>,
-    trigger: CollapsibleStateChangeEvent['trigger'] = 'user'
+    trigger: CollapsibleStateChangeEvent['trigger'] = 'user',
   ) => {
     setManager(prev => {
       const currentState = prev.states.get(id)
@@ -105,14 +105,14 @@ export function useCollapsibleShortcuts({
           contentId: id,
           collapsed: updates.collapsed,
           contentType: 'long-text', // 默认类型，实际使用时应该传入正确的类型
-          trigger
+          trigger,
         }
         onStateChange(event)
       }
       
       return {
         ...prev,
-        states: newStates
+        states: newStates,
       }
     })
   }, [onStateChange])
@@ -122,7 +122,7 @@ export function useCollapsibleShortcuts({
     const currentState = manager.states.get(id)
     if (currentState) {
       updateCollapsibleState(id, { 
-        collapsed: !currentState.collapsed 
+        collapsed: !currentState.collapsed, 
       }, 'user')
     }
   }, [manager.states, updateCollapsibleState])
@@ -131,7 +131,7 @@ export function useCollapsibleShortcuts({
   const setFocus = useCallback((id: string | null) => {
     setManager(prev => ({
       ...prev,
-      focusedId: id
+      focusedId: id,
     }))
   }, [])
   
@@ -266,7 +266,7 @@ export function useCollapsibleShortcuts({
       collapsed,
       expanded,
       globalCollapsed: manager.globalCollapsed,
-      focusedId: manager.focusedId
+      focusedId: manager.focusedId,
     }
   }, [manager])
   
@@ -276,7 +276,7 @@ export function useCollapsibleShortcuts({
     setManager({
       states: new Map(),
       focusedId: null,
-      globalCollapsed: false
+      globalCollapsed: false,
     })
   }, [])
   
@@ -311,7 +311,7 @@ export function useCollapsibleShortcuts({
     cleanup,
     
     // 快捷键配置
-    shortcuts: mergedShortcuts
+    shortcuts: mergedShortcuts,
   }
 }
 
@@ -337,7 +337,7 @@ export function useSimpleCollapsible(
   return {
     collapsed,
     toggle,
-    setCollapsed
+    setCollapsed,
   }
 }
 
@@ -346,7 +346,7 @@ export function useSimpleCollapsible(
  */
 export function useCollapsibleFocus(
   id: string,
-  onFocusChange?: (focused: boolean) => void
+  onFocusChange?: (focused: boolean) => void,
 ) {
   const [focused, setFocused] = useState(false)
   
@@ -372,6 +372,6 @@ export function useCollapsibleFocus(
   return {
     focused,
     focus,
-    blur
+    blur,
   }
 }

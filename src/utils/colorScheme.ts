@@ -268,7 +268,7 @@ export class HierarchicalFormatter {
     const dirPath = parts.join('/')
     
     if (dirPath) {
-      return `${this.styles.dim(dirPath + '/')}${this.styles.accent(fileName)}`
+      return `${this.styles.dim(`${dirPath  }/`)}${this.styles.accent(fileName)}`
     }
     return this.styles.accent(fileName)
   }

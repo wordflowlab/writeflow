@@ -5,7 +5,7 @@
 
 import { 
   CollapsibleContentType, 
-  CONTENT_TYPE_PATTERNS 
+  CONTENT_TYPE_PATTERNS, 
 } from '../types/CollapsibleContent.js'
 
 export interface ContentAnalysis {
@@ -28,7 +28,7 @@ export const COLLAPSE_THRESHOLDS = {
   fileContent: { lines: 25, chars: 2000 },     // 文件内容：提高从20->25行  
   bashOutput: { lines: 12, chars: 800 },       // 命令输出：提高从8->12行
   longText: { lines: 30, chars: 1500 },        // 长文本：大幅提高从12->30行
-  creativeContent: { lines: 999999, chars: 999999 }  // 创作内容：永不折叠
+  creativeContent: { lines: 999999, chars: 999999 },  // 创作内容：永不折叠
 }
 
 /**
@@ -172,7 +172,7 @@ export function generatePreview(content: string, maxLines: number = 3, maxChars:
   
   // 如果单行太长，也需要截取
   if (preview.length > maxChars) {
-    preview = preview.substring(0, maxChars) + '...'
+    preview = `${preview.substring(0, maxChars)  }...`
   }
   
   // 计算剩余内容
@@ -231,7 +231,7 @@ export function analyzeContent(content: string): ContentAnalysis {
     previewText,
     hasCodeBlocks,
     hasLongLines,
-    complexity
+    complexity,
   }
 }
 

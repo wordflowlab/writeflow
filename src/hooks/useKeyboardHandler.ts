@@ -66,12 +66,12 @@ export interface KeyboardState {
 export function useCollapsibleKeyboard(
   initialCollapsed: boolean = false,
   onToggle?: (collapsed: boolean) => void,
-  config: KeyboardConfig = {}
+  config: KeyboardConfig = {},
 ): KeyboardState {
   const {
     enabled = true,
     toggleKey = 'r',
-    focusDuration = 2000
+    focusDuration = 2000,
   } = config
   
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
@@ -154,7 +154,7 @@ export function useCollapsibleKeyboard(
     globalCollapsed,
     toggleCollapse,
     setFocused,
-    toggleGlobalCollapse
+    toggleGlobalCollapse,
   }
 }
 
@@ -164,7 +164,7 @@ export function useCollapsibleKeyboard(
 export function useGlobalKeyboardHandler(config: KeyboardConfig = {}) {
   const {
     enabled = true,
-    globalToggleKey = 'r'
+    globalToggleKey = 'r',
   } = config
   
   const [globalCollapsed, setGlobalCollapsed] = useState<boolean | null>(null)
@@ -190,7 +190,7 @@ export function useGlobalKeyboardHandler(config: KeyboardConfig = {}) {
     globalCollapsed,
     setGlobalCollapsed,
     registerElement,
-    elementCount: registeredElements.size
+    elementCount: registeredElements.size,
   }
 }
 
@@ -203,7 +203,7 @@ export const KEYBOARD_SHORTCUTS = {
   FOCUS_UP: '↑',
   FOCUS_DOWN: '↓',
   EXPAND_ALL: 'Ctrl+Shift+E',
-  COLLAPSE_ALL: 'Ctrl+Shift+C'
+  COLLAPSE_ALL: 'Ctrl+Shift+C',
 } as const
 
 /**
@@ -212,7 +212,7 @@ export const KEYBOARD_SHORTCUTS = {
 export function generateKeyboardHints(
   isCollapsed: boolean,
   isFocused: boolean = false,
-  showGlobal: boolean = false
+  showGlobal: boolean = false,
 ): string[] {
   const hints: string[] = []
   
@@ -220,7 +220,7 @@ export function generateKeyboardHints(
     hints.push(
       isCollapsed 
         ? `${KEYBOARD_SHORTCUTS.TOGGLE_COLLAPSE} 展开`
-        : `${KEYBOARD_SHORTCUTS.TOGGLE_COLLAPSE} 折叠`
+        : `${KEYBOARD_SHORTCUTS.TOGGLE_COLLAPSE} 折叠`,
     )
     
     if (showGlobal) {
@@ -300,6 +300,6 @@ export function useBatchCollapseController() {
     collapseAll,
     expandAll,
     toggleAll,
-    count: controllers.size
+    count: controllers.size,
   }
 }

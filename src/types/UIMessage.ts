@@ -147,7 +147,7 @@ export function createAssistantMessage(
 export function createTextBlock(
   text: string, 
   collapsible?: CollapsibleState,
-  renderMetadata?: ContentRenderMetadata
+  renderMetadata?: ContentRenderMetadata,
 ): TextBlock {
   return {
     type: 'text',
@@ -162,7 +162,7 @@ export function createToolUseBlock(
   name: string,
   input: any,
   collapsible?: CollapsibleState,
-  renderMetadata?: ContentRenderMetadata
+  renderMetadata?: ContentRenderMetadata,
 ): ToolUseBlock {
   return {
     type: 'tool_use',
@@ -179,7 +179,7 @@ export function createToolResultBlock(
   content: string | any[],
   is_error: boolean = false,
   collapsible?: CollapsibleState,
-  renderMetadata?: ContentRenderMetadata
+  renderMetadata?: ContentRenderMetadata,
 ): ToolResultBlock {
   return {
     type: 'tool_result',
@@ -196,7 +196,7 @@ export function createLongContentBlock(
   contentType: LongContentBlock['contentType'],
   title?: string,
   collapsible?: Partial<CollapsibleState>,
-  renderMetadata?: Partial<ContentRenderMetadata>
+  renderMetadata?: Partial<ContentRenderMetadata>,
 ): LongContentBlock {
   const id = `long-content-${Date.now()}-${Math.random().toString(36).slice(2)}`
   
@@ -210,14 +210,14 @@ export function createLongContentBlock(
       collapsed: false,
       autoCollapse: true,
       maxLines: 15,
-      ...collapsible
+      ...collapsible,
     },
     renderMetadata: {
       estimatedLines: content.split('\n').length,
       hasLongContent: content.length > 1000,
       contentType: contentType,
-      ...renderMetadata
-    }
+      ...renderMetadata,
+    },
   }
 }
 

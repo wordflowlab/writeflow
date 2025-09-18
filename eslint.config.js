@@ -23,7 +23,17 @@ export default [
         global: 'readonly',
         module: 'readonly',
         __dirname: 'readonly',
-        React: 'readonly'
+        React: 'readonly',
+        // Jest globals
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        jest: 'readonly'
       }
     },
     plugins: {

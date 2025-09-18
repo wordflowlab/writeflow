@@ -78,7 +78,7 @@ export class LegacyToolManager {
         const context = {
           abortController: new AbortController(),
           readFileTimestamps: {},
-          options: { verbose: false, safeMode: true }
+          options: { verbose: false, safeMode: true },
         }
         
         const callResult = coreTool.call(input, context)
@@ -97,7 +97,7 @@ export class LegacyToolManager {
             success: true,
             content: finalResult?.resultForAssistant || finalResult?.data?.message || '工具执行成功',
             result: finalResult?.data,
-            executionTime: 0
+            executionTime: 0,
           }
         } else {
           const output = await callResult
@@ -105,7 +105,7 @@ export class LegacyToolManager {
             success: true,
             content: output?.message || '工具执行成功',
             result: output,
-            executionTime: 0
+            executionTime: 0,
           }
         }
       }
@@ -123,7 +123,7 @@ export class LegacyToolManager {
       return {
         success: false,
         error: `工具执行失败: ${(error as Error).message}`,
-        content: `❌ 工具 ${toolName} 执行失败`
+        content: `❌ 工具 ${toolName} 执行失败`,
       }
     }
   }

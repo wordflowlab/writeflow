@@ -64,7 +64,7 @@ export async function getAvailableTools(): Promise<WriteFlowTool[]> {
         return await tool.isEnabled()
       }
       return true // 默认启用
-    })
+    }),
   )
   
   const availableTools = allTools.filter((_, index) => enabledResults[index])
@@ -87,7 +87,7 @@ export async function getReadOnlyTools(): Promise<WriteFlowTool[]> {
         return await tool.isEnabled()
       }
       return true
-    })
+    }),
   )
   
   return readOnlyTools.filter((_, index) => enabledResults[index])

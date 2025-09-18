@@ -13,15 +13,15 @@ import type {
   ContentBlock,
   ContentBlockParam,
   ToolResultBlockParam,
-  Message as APIAssistantMessage
+  Message as APIAssistantMessage,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Tool, ToolUseContext } from '../Tool.js'
 
 // 📋 常量定义 - 标准架构
 export const INTERRUPT_MESSAGE = '[Request interrupted by user]'
 export const INTERRUPT_MESSAGE_FOR_TOOL_USE = '[Request interrupted by user for tool use]'
-export const CANCEL_MESSAGE = "The user doesn't want to take this action right now. STOP what you are doing and wait for the user to tell you how to proceed."
-export const REJECT_MESSAGE = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed."
+export const CANCEL_MESSAGE = 'The user doesn\'t want to take this action right now. STOP what you are doing and wait for the user to tell you how to proceed.'
+export const REJECT_MESSAGE = 'The user doesn\'t want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed.'
 export const NO_RESPONSE_REQUESTED = 'No response requested.'
 export const NO_CONTENT_MESSAGE = '[No content]'
 
@@ -105,7 +105,7 @@ function baseCreateAssistantMessage(
         cache_read_input_tokens: 0,
         cache_creation: null,
         server_tool_use: null,
-        service_tier: null
+        service_tier: null,
       },
       content,
     },
@@ -263,7 +263,7 @@ export function normalizeMessagesForAPI(messages: Message[]): MessageParam[] {
           // 普通用户消息
           apiMessages.push({
             role: 'user',
-            content: m.message.content
+            content: m.message.content,
           })
         } else if (Array.isArray(m.message.content)) {
           // 🎯 修复工具结果消息构造 - 改用DeepSeek兼容格式
@@ -283,20 +283,20 @@ export function normalizeMessagesForAPI(messages: Message[]): MessageParam[] {
             } else {
               // 其他类型的内容块
               const blockContent = (block as any).content || (block as any).text || JSON.stringify(block)
-              toolResultContent += String(blockContent) + '\n'
+              toolResultContent += `${String(blockContent)  }\n`
             }
           }
           
           if (toolResultContent.trim()) {
             apiMessages.push({
               role: 'user',
-              content: toolResultContent.trim()
+              content: toolResultContent.trim(),
             })
           }
         } else {
           apiMessages.push({
             role: 'user',
-            content: String(m.message.content || '')
+            content: String(m.message.content || ''),
           })
         }
         break
@@ -307,8 +307,8 @@ export function normalizeMessagesForAPI(messages: Message[]): MessageParam[] {
           content: typeof m.message.content === 'string' 
             ? m.message.content
             : m.message.content.map(block => 
-                block.type === 'text' ? block.text : JSON.stringify(block)
-              ).join('\n')
+                block.type === 'text' ? block.text : JSON.stringify(block),
+              ).join('\n'),
         })
         break
         
@@ -325,7 +325,7 @@ export function normalizeMessagesForAPI(messages: Message[]): MessageParam[] {
     debugLog(`🔧 [消息构造] 最后3条消息:`, apiMessages.slice(-3).map((msg: any) => ({
       role: msg.role,
       contentLength: typeof msg.content === 'string' ? msg.content.length : 'non-string',
-      preview: typeof msg.content === 'string' ? msg.content.slice(0, 50) + '...' : 'non-string'
+      preview: typeof msg.content === 'string' ? `${msg.content.slice(0, 50)  }...` : 'non-string',
     })))
   }
   

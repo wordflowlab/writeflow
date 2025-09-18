@@ -5,14 +5,14 @@
 import {
   DEFAULT_COLLAPSIBLE_OPTIONS,
   AUTO_COLLAPSE_THRESHOLDS,
-  CONTENT_TYPE_PATTERNS
+  CONTENT_TYPE_PATTERNS,
 } from '../types/CollapsibleContent.js'
 
 import {
   createTextBlock,
   createLongContentBlock,
   isCollapsibleBlock,
-  getBlockText
+  getBlockText,
 } from '../types/UIMessage.js'
 
 describe('CollapsibleContent 类型和常量', () => {
@@ -47,13 +47,13 @@ describe('UIMessage 扩展功能', () => {
       id: 'test-block',
       collapsed: true,
       autoCollapse: true,
-      maxLines: 10
+      maxLines: 10,
     }
     
     const renderMetadata = {
       estimatedLines: 20,
       hasLongContent: true,
-      contentType: 'long-text' as const
+      contentType: 'long-text' as const,
     }
     
     const textBlock = createTextBlock('Test content', collapsibleState, renderMetadata)
@@ -72,7 +72,7 @@ describe('UIMessage 扩展功能', () => {
       'tool-execution',
       'Test Tool Output',
       { collapsed: true, maxLines: 5 },
-      { toolName: 'TestTool' }
+      { toolName: 'TestTool' },
     )
     
     expect(longBlock.type).toBe('long_content')
@@ -90,7 +90,7 @@ describe('UIMessage 扩展功能', () => {
       id: 'test',
       collapsed: false,
       autoCollapse: true,
-      maxLines: 10
+      maxLines: 10,
     })
     const longBlock = createLongContentBlock('Long content', 'long-text')
     

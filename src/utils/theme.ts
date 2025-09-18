@@ -1,5 +1,6 @@
 // WriteFlow theme system with intelligent theme detection
 import { getGlobalConfig } from './config.js'
+import { execSync } from 'child_process'
 
 export type ThemeNames = 'dark' | 'light' | 'dark-accessible' | 'light-accessible' | 'auto'
 
@@ -230,7 +231,6 @@ export function detectSystemTheme(): 'dark' | 'light' | 'unknown' {
   try {
     // macOS detection
     if (process.platform === 'darwin') {
-      const { execSync } = require('child_process')
       try {
         const result = execSync('defaults read -g AppleInterfaceStyle', { 
           encoding: 'utf8', 
@@ -246,7 +246,6 @@ export function detectSystemTheme(): 'dark' | 'light' | 'unknown' {
 
     // Windows detection via registry
     if (process.platform === 'win32') {
-      const { execSync } = require('child_process')
       try {
         const result = execSync(
           'reg query HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize /v AppsUseLightTheme',
