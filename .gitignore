@@ -86,3 +86,7 @@ web-bundles/
 AGENTS.md
 .codebuddy
 CODEBUDDY.md
+.husky
+knip.json
+.lintstagedrc.json
+
