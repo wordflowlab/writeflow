@@ -18,8 +18,8 @@ export const planningCommands: SlashCommand[] = [
       '/outline 微服务架构设计 --style=技术 --length=3000'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const [topic, ...options] = args.split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const [topic, ...options] = _args.split(' ')
       const style = extractOption(options, 'style') || '技术性'
       const length = extractOption(options, 'length') || '2000'
       
@@ -60,8 +60,8 @@ export const planningCommands: SlashCommand[] = [
       '/specify "公司数字化转型策略报告"'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const topic = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const topic = _args.trim()
       
       if (!topic) {
         throw new Error('请提供写作主题。用法: /specify <主题描述>')
@@ -176,8 +176,8 @@ export const planningCommands: SlashCommand[] = [
       '/plan 请为技术文章"React性能优化"生成计划'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const planInput = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const planInput = _args.trim()
       
       return `请基于写作规范生成详细的内容计划：
 
@@ -301,8 +301,8 @@ ${planInput ? `计划输入：${planInput}` : '请基于之前生成的写作规
       '/task 请分解"技术文章写作"的具体任务'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const taskInput = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const taskInput = _args.trim()
       
       return `请将内容计划分解为具体的可执行写作任务：
 

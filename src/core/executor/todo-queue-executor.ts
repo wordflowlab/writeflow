@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog, logError, logWarn } from './../../utils/log.js'
 import { TodoQueueAgent } from '../agent/todo-queue-agent.js'
 import { Todo, TodoStatus } from '../../types/Todo.js'
 import { TodoManager } from '../../tools/TodoManager.js'
@@ -127,14 +127,14 @@ export class TodoQueueExecutor {
         summary
       }
 
-    } catch (error) {
-      this.log('error', '❌ TODO 队列执行失败:', error)
+    } catch (_error) {
+      this.log('_error', '❌ TODO 队列执行失败:', _error)
       
       return {
         success: false,
         stats: this.stats,
         summary: '执行失败',
-        errors: [error instanceof Error ? error.message : '未知错误']
+        errors: [_error instanceof Error ? _error.message : '未知错误']
       }
       
     } finally {
@@ -341,7 +341,7 @@ export class TodoQueueExecutor {
   /**
    * 日志记录
    */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]): void {
+  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ..._args: any[]): void {
     const levels = { debug: 0, info: 1, warn: 2, error: 3 }
     const configLevel = levels[this.config.logLevel]
     const messageLevel = levels[level]
@@ -352,16 +352,16 @@ export class TodoQueueExecutor {
       
       switch (level) {
         case 'debug':
-          console.debug(prefix, message, ...args)
+          console.debug(prefix, message, ..._args)
           break
         case 'info':
-          debugLog(prefix, message, ...args)
+          debugLog(prefix, message, ..._args)
           break
         case 'warn':
-          logWarn(`${prefix} ${message}`, args.length > 0 ? args[0] : undefined)
+          logWarn(`${prefix} ${message}`, _args.length > 0 ? args[0] : undefined)
           break
         case 'error':
-          logError(`${prefix} ${message}`, args.length > 0 ? args[0] : undefined)
+          logError(`${prefix} ${message}`, _args.length > 0 ? args[0] : undefined)
           break
       }
     }

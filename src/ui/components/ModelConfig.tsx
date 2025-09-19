@@ -58,8 +58,8 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
         id: p.modelName, 
         name: p.name || p.modelName 
       }))
-    } catch (error) {
-      console.error('获取模型列表失败:', error)
+    } catch (_error) {
+      console._error('获取模型列表失败:', _error)
       return []
     }
   }, [modelManager, refreshKey]) // 依赖refreshKey来强制更新

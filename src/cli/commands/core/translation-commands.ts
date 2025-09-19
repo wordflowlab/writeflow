@@ -18,8 +18,8 @@ export const translationCommands: SlashCommand[] = [
       '/translate 日文 AI技术发展趋势分析报告'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const [targetLang, ...contentParts] = args.split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const [targetLang, ...contentParts] = _args.split(' ')
       let content = contentParts.join(' ')
       
       if (!targetLang || !content) {

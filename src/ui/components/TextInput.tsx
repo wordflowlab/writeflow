@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Text } from 'ink'
-import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { getTheme } from '../../utils/theme.js'
 
 // Simplified cursor management

@@ -13,7 +13,7 @@ import type {
   CollapsibleContentType, 
   ContentAnalysis
 } from '../../../types/CollapsibleContent.js'
-import { parseAIResponse, type ParsedResponse } from '../ResponseParser.js'
+import { parseAIResponse } from '../ResponseParser.js'
 import { getContentAnalyzer } from './ContentAnalyzer.js'
 import { 
   getCollapsibleManager, 

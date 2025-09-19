@@ -147,8 +147,8 @@ export function ModelSelector({
     try {
       modelManager.addModelProfile(newProfile)
       onDone()
-    } catch (error) {
-      console.error('添加模型配置失败:', error)
+    } catch (_error) {
+      console._error('添加模型配置失败:', _error)
       onCancel()
     }
   }, [selectedProvider, selectedModel, apiKey, modelName, maxTokens, contextLength, modelManager, onDone, onCancel])

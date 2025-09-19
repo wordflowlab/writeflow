@@ -118,7 +118,7 @@ export class LegacyToolManager {
       
       throw new Error(`工具 ${toolName} 不存在`)
       
-    } catch (error) {
+    } catch (_error) {
       logError(`工具 ${toolName} 执行失败:`, error)
       return {
         success: false,

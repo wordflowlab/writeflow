@@ -1,6 +1,5 @@
 import { SlashCommand } from '../../../types/command.js'
 import { AgentContext } from '../../../types/agent.js'
-import { extractOption } from './utils.js'
 
 /**
  * 编辑类命令：rewrite, polish, expand, simplify
@@ -19,8 +18,8 @@ export const editingCommands: SlashCommand[] = [
       '/rewrite 正式 --tone=专业 --keep-structure'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const [style, ...contentParts] = args.split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const [style, ...contentParts] = _args.split(' ')
       let content = contentParts.join(' ')
       
       // 检查是否是文件路径
@@ -77,8 +76,8 @@ ${content}
       '/polish /path/to/article.md'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      let content = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      let content = _args.trim()
       
       if (!content) {
         throw new Error('请提供要润色的内容或文件路径。用法: /polish [内容或文件路径]')
@@ -124,8 +123,8 @@ ${content}
       '/expand 云计算的核心优势包括弹性扩展、成本优化'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      let content = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      let content = _args.trim()
       
       if (!content) {
         throw new Error('请提供需要扩展的内容。用法: /expand <内容或文件路径>')
@@ -172,8 +171,8 @@ ${content}
       '/simplify /path/to/technical-document.md'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      let content = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      let content = _args.trim()
       
       if (!content) {
         throw new Error('请提供需要简化的内容。用法: /simplify <内容或文件路径>')

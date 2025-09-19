@@ -57,7 +57,7 @@ export class OutlineGeneratorTool implements WritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `大纲生成失败: ${(error as Error).message}`

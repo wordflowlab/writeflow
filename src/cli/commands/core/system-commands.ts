@@ -1,6 +1,5 @@
 import { SlashCommand } from '../../../types/command.js'
 import { AgentContext } from '../../../types/agent.js'
-import { getCommandHelp } from './utils.js'
 import { generateCostSummary, getDetailedStats } from '../../../services/CostTracker.js'
 import { formatDuration } from '../../../utils/format.js'
 
@@ -15,7 +14,7 @@ export const systemCommands: SlashCommand[] = [
     description: '配置和管理 AI 模型设置',
     aliases: ['模型'],
     
-    async call(args: string, context: AgentContext): Promise<string> {
+    async call(_args: string, _context: AgentContext): Promise<string> {
       // 启动模型配置界面
       return 'LAUNCH_MODEL_CONFIG'
     },
@@ -29,8 +28,8 @@ export const systemCommands: SlashCommand[] = [
     description: '显示命令帮助信息',
     aliases: ['帮助', 'h', '?'],
     
-    async call(args: string, context: AgentContext): Promise<string> {
-      if (args.trim()) {
+    async call(_args: string, _context: AgentContext): Promise<string> {
+      if (_args.trim()) {
         // 显示特定命令的详细帮助
         // 注意：这里由于循环依赖问题，暂时返回通用帮助
         // 实际实现中应该通过 CommandExecutor 来处理具体命令帮助
@@ -112,8 +111,8 @@ export const systemCommands: SlashCommand[] = [
     description: '显示当前会话的 token 使用和成本统计',
     aliases: ['成本', 'tokens', 'usage', '使用量'],
     
-    async call(args: string, context: AgentContext): Promise<string> {
-      const option = args.trim().toLowerCase()
+    async call(_args: string, _context: AgentContext): Promise<string> {
+      const option = _args.trim().toLowerCase()
       
       if (option === 'detailed' || option === 'detail' || option === '详细') {
         // 显示详细统计信息

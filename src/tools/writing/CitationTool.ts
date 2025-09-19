@@ -109,7 +109,7 @@ export class CitationTool implements EnhancedWritingTool {
           throw new Error(`不支持的操作: ${action}`)
       }
 
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `引文管理操作失败: ${(error as Error).message}`
@@ -350,7 +350,7 @@ export class CitationTool implements EnhancedWritingTool {
           this.citations.set(citation.id, citation)
           importedCount++
         }
-      } catch (error) {
+      } catch (_error) {
         // 跳过无法解析的行
         continue
       }

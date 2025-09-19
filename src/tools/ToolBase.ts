@@ -3,7 +3,7 @@ import { WriteFlowTool, ToolUseContext, PermissionResult, ValidationResult } fro
 
 import { debugLog, logError, logWarn } from './../utils/log.js'
 /**
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { debugLog, logError, logWarn } from './../utils/log.js'
 
  * 工具调用事件类型 - 采用现代化设计
  */
@@ -168,7 +168,7 @@ export abstract class ToolBase<
   get inputJSONSchema(): Record<string, unknown> | undefined {
     try {
       return this.zodSchemaToJsonSchema(this.inputSchema)
-    } catch (error) {
+    } catch (_error) {
       logWarn(`[${this.name}] JSON Schema 生成失败:`, error)
       return undefined
     }
@@ -190,9 +190,9 @@ export abstract class ToolBase<
       }
       
       yield* operation()
-    } catch (error) {
+    } catch (_error) {
       success = false
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage = _error instanceof Error ? _error.message : String(_error)
       logError(`[${this.name}] 执行失败:`, errorMessage)
       
       yield {

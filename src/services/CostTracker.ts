@@ -6,7 +6,7 @@
  */
 
 import { formatDuration } from '../utils/format.js'
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { debugLog } from './../utils/log.js'
 
 // 成本跟踪状态
 interface CostState {

@@ -2,7 +2,7 @@
 import fetch from 'node-fetch'
 import { parse } from 'node-html-parser'
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { logError, logWarn } from './../../utils/log.js'
 
 export interface SearchResult {
   title: string
@@ -86,8 +86,8 @@ const duckDuckGoProvider: SearchProvider = {
 
       return results
 
-    } catch (error) {
-      logError('DuckDuckGo 搜索错误:', error)
+    } catch (_error) {
+      logError('DuckDuckGo 搜索错误:', _error)
       throw new Error(`搜索失败: ${(error as Error).message}`)
     }
   }
@@ -126,8 +126,8 @@ const baiduProvider: SearchProvider = {
       logWarn('百度搜索提供商暂未完全实现')
       return []
 
-    } catch (error) {
-      logError('百度搜索错误:', error)
+    } catch (_error) {
+      logError('百度搜索错误:', _error)
       throw new Error(`百度搜索失败: ${(error as Error).message}`)
     }
   }

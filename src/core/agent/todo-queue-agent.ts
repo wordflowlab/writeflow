@@ -1,8 +1,7 @@
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog, logError, logWarn } from './../../utils/log.js'
 import { NOMainAgentEngine } from './nO-engine.js'
-import { H2AAsyncMessageQueue } from '../queue/h2A-queue.js'
 import { Message, MessageType, MessagePriority } from '../../types/message.js'
-import { AgentResponse, AgentContext } from '../../types/agent.js'
+import { AgentResponse } from '../../types/agent.js'
 import { Todo, TodoStatus, TodoPriority } from '../../types/Todo.js'
 import { TodoManager } from '../../tools/TodoManager.js'
 import { LegacyToolManager } from '../../tools/LegacyToolManager.js'
@@ -86,8 +85,8 @@ export class TodoQueueAgent extends NOMainAgentEngine {
         await this.enqueueMessage(executeMessage)
       }
 
-    } catch (error) {
-      logError('[TodoQueueAgent] 启动队列执行失败:', error)
+    } catch (_error) {
+      logError('[TodoQueueAgent] 启动队列执行失败:', _error)
     }
   }
 
@@ -194,7 +193,7 @@ export class TodoQueueAgent extends NOMainAgentEngine {
         await this.onPrompt(prompt, ['TodoWrite'])
       }
       
-    } catch (error) {
+    } catch (_error) {
       logError(`[TodoQueueAgent] 执行任务失败: ${todo.content}`, error)
       
       // 更新执行记录
@@ -287,8 +286,8 @@ export class TodoQueueAgent extends NOMainAgentEngine {
         await this.enqueueMessage(nextExecuteMessage)
       }
       
-    } catch (error) {
-      logError('[TodoQueueAgent] 处理任务完成失败:', error)
+    } catch (_error) {
+      logError('[TodoQueueAgent] 处理任务完成失败:', _error)
     }
   }
 

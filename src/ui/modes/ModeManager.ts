@@ -3,7 +3,7 @@ import { PlanModeManager, PlanModeState, PlanModeEvents } from '../../modes/Plan
 import { SystemReminder } from '../../tools/SystemReminderInjector.js'
 import { PlanMode } from '../../types/agent.js'
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog } from './../../utils/log.js'
 
 export interface ModeState {
   currentMode: UIMode

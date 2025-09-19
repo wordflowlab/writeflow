@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { debugLog, logWarn } from '../../utils/log.js'
 
 /**
 
@@ -106,8 +106,8 @@ export class RenderFrequencyController {
         }
       }
       
-    } catch (error) {
-      logWarn('渲染执行失败:', error)
+    } catch (_error) {
+      logWarn('渲染执行失败:', _error)
     }
     
     const endTime = performance.now()
@@ -303,7 +303,7 @@ export class ContentIntegrityValidator {
 
       return { isValid: true }
 
-    } catch (error) {
+    } catch (_error) {
       return this.handleCorruption(streamId, 'VALIDATION_ERROR', chunk)
     }
   }

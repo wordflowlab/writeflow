@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { existsSync, mkdirSync, writeFileSync, readFileSync, statSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync, statSync } from 'fs'
 import { resolve, dirname, basename } from 'path'
 import { ToolBase } from '../../ToolBase.js'
 import { ToolUseContext, PermissionResult } from '../../../Tool.js'
@@ -7,7 +7,7 @@ import { PROMPT } from './prompt.js'
 import { hasWritePermission, pathInWorkingDirectory } from '../../../utils/permissions/filesystem.js'
 
 // 输入参数架构
-import { debugLog, logError, logWarn, infoLog } from './../../../utils/log.js'
+import { debugLog, logError, infoLog } from './../../../utils/log.js'
 
 const WriteToolInputSchema = z.object({
   file_path: z.string().describe('要写入的文件的绝对路径'),
@@ -132,9 +132,9 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
       if (!existsSync(fileDir)) {
         try {
           mkdirSync(fileDir, { recursive: true })
-        } catch (error) {
+        } catch (_error) {
           yield {
-            type: 'error',
+            type: '_error',
             error: new Error(`创建目录失败: ${error instanceof Error ? error.message : String(error)}`),
             message: '创建目录失败',
             resultForAssistant: `创建目录失败: ${error instanceof Error ? error.message : String(error)}`
@@ -147,10 +147,10 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
       try {
         writeFileSync(filePath, input.content, 'utf8')
         debugLog('文件写入成功:', filePath)
-      } catch (error) {
-        logError('写入文件失败:', error)
+      } catch (_error) {
+        logError('写入文件失败:', _error)
         yield {
-          type: 'error',
+          type: '_error',
           error: new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`),
           message: '写入文件失败',
           resultForAssistant: `写入文件失败: ${error instanceof Error ? error.message : String(error)}`
@@ -188,11 +188,11 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
         resultForAssistant: this.renderResultForAssistant(result)
       }
 
-    } catch (error) {
-      logError('WriteTool 执行失败:', error)
+    } catch (_error) {
+      logError('WriteTool 执行失败:', _error)
       yield {
-        type: 'error',
-        error: error instanceof Error ? error : new Error(String(error)),
+        type: '_error',
+        _error: _error instanceof Error ? _error : new Error(String(_error)),
         message: 'WriteTool 执行失败',
         resultForAssistant: `WriteTool 执行失败: ${error instanceof Error ? error.message : String(error)}`
       }

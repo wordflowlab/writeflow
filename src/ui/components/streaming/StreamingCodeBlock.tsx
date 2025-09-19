@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Text, Box } from 'ink'
 import { StreamingService, StreamingResponse } from '../../../services/streaming/StreamingService.js'
-import { formatCode, formatInlineCode, detectLanguage } from '../../utils/codeFormatter.js'
+import { formatCode, detectLanguage } from '../../utils/codeFormatter.js'
 import { figures } from '../../constants/figures.js'
 import { performance } from 'perf_hooks'
 
@@ -116,8 +116,8 @@ export const StreamingCodeBlock: React.FC<StreamingCodeBlockProps> = ({
       const detected = await detectLanguage(codeContent)
       highlightCacheRef.current.set(cacheKey, detected)
       return detected
-    } catch (error) {
-      console.warn('语言检测失败:', error)
+    } catch (_error) {
+      console.warn('语言检测失败:', _error)
       return 'text'
     }
   }, [language])
@@ -176,8 +176,8 @@ export const StreamingCodeBlock: React.FC<StreamingCodeBlockProps> = ({
 
       return highlightedLinesList
       
-    } catch (error) {
-      console.warn('渐进式高亮失败:', error)
+    } catch (_error) {
+      console.warn('渐进式高亮失败:', _error)
       return codeContent.split('\n') // 降级到无高亮
     }
   }, [enableSyntaxHighlight, theme, maxWidth, lazyHighlight])

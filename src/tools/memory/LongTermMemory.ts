@@ -2,10 +2,10 @@ import { promises as fs, mkdirSync } from 'fs'
 import path from 'path'
 import os from 'os'
 import { z } from 'zod'
-import { KnowledgeEntry, MemoryPriority } from '../../types/Memory.js'
+import { KnowledgeEntry } from '../../types/Memory.js'
 
 // 知识图谱构建器 - 基于 Claude Code 的知识管理
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { logError } from './../../utils/log.js'
 
 export class KnowledgeGraph {
   static generateKnowledgeId(): string {
@@ -127,8 +127,8 @@ export class LongTermMemory {
   private ensureDirectoryExistsSync(): void {
     try {
       mkdirSync(this.knowledgeDir, { recursive: true })
-    } catch (error) {
-      logError('创建长期记忆目录失败:', error)
+    } catch (_error) {
+      logError('创建长期记忆目录失败:', _error)
     }
   }
 
@@ -144,8 +144,8 @@ export class LongTermMemory {
       const validatedData = KnowledgeArraySchema.parse(parsed)
       
       return validatedData
-    } catch (error) {
-      logError('加载长期记忆失败:', error)
+    } catch (_error) {
+      logError('加载长期记忆失败:', _error)
       return []
     }
   }
@@ -154,9 +154,9 @@ export class LongTermMemory {
     try {
       const data = JSON.stringify(entries, null, 2)
       await fs.writeFile(this.knowledgeFile, data, { encoding: 'utf-8', flag: 'w' })
-    } catch (error) {
-      logError('保存长期记忆失败:', error)
-      throw error
+    } catch (_error) {
+      logError('保存长期记忆失败:', _error)
+      throw _error
     }
   }
 

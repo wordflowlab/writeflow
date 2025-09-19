@@ -78,10 +78,10 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
       }
 
       return { isAllowed: true }
-    } catch (error) {
+    } catch (_error) {
       return {
         isAllowed: false,
-        denialReason: error instanceof Error ? error.message : String(error),
+        denialReason: _error instanceof Error ? _error.message : String(_error),
         behavior: 'deny'
       }
     }
@@ -99,7 +99,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
       let originalContent: string
       try {
         originalContent = readFileSync(filePath, 'utf8')
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`读取文件失败: ${error instanceof Error ? error.message : String(error)}`)
       }
 
@@ -148,7 +148,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
       // 6. 写入文件
       try {
         writeFileSync(filePath, newContent, 'utf8')
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`)
       }
 

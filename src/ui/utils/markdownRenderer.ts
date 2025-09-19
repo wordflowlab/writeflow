@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 
 /**
 
@@ -43,7 +43,7 @@ export function renderMarkdown(content: string, options: MarkdownRenderOptions =
     })).join('')
 
     return rendered.trim()
-  } catch (error) {
+  } catch (_error) {
     logWarn(`Markdown 渲染失败: ${error}`)
     return formatInlineCode(content)
   }

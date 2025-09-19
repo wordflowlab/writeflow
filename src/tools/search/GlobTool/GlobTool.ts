@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { readdirSync, statSync } from 'fs'
-import { resolve, join, relative, sep } from 'path'
+import { resolve, join } from 'path'
 import { ToolBase } from '../../ToolBase.js'
 import { ToolUseContext } from '../../../Tool.js'
 import { PROMPT } from './prompt.js'
@@ -80,8 +80,8 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
         if (!stats.isDirectory()) {
           throw new Error(`搜索路径不是目录: ${searchPath}`)
         }
-      } catch (error) {
-        if ((error as any).code === 'ENOENT') {
+      } catch (_error) {
+        if ((_error as any).code === 'ENOENT') {
           throw new Error(`搜索路径不存在: ${searchPath}`)
         }
         throw error
@@ -278,13 +278,13 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
               }
             }
           }
-        } catch (error) {
+        } catch (_error) {
           debugLog(`[GlobTool] 无法访问文件/目录: ${fullEntryPath}`, (error as Error).message)
           // 忽略无法访问的文件/目录，继续处理
           continue
         }
       }
-    } catch (error) {
+    } catch (_error) {
       debugLog(`[GlobTool] 无法读取目录: ${fullPath}`, (error as Error).message)
       // 目录无法读取，但不应该终止整个搜索
       // 只是记录错误并返回已找到的结果

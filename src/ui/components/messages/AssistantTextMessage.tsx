@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react'
 import { Box, Text } from 'ink'
 import type { TextBlock } from '../../../types/UIMessage.js'
-import { isCollapsibleBlock, isLongContentBlock } from '../../../types/UIMessage.js'
 import { getTheme } from '../../../utils/theme.js'
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js'
 import { RichTextRenderer } from '../RichTextRenderer.js'

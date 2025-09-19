@@ -371,7 +371,7 @@ export class StreamingFormatter {
         return this.renderMarkdown(`\`\`\`json\n${jsonStr}\n\`\`\``)
       }
       return jsonStr
-    } catch (error) {
+    } catch (_error) {
       return String(message)
     }
   }

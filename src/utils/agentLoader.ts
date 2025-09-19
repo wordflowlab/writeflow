@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from './log.js'
+import { logWarn } from './log.js'
 
 /**
  * Agent 配置加载器
@@ -25,7 +25,7 @@ export interface AgentConfig {
 export interface AgentTool {
   name: string
   description: string | (() => Promise<string>)
-  execute: (args: any) => Promise<any>
+  execute: (_args: any) => Promise<any>
 }
 
 /**
@@ -193,7 +193,7 @@ export class AgentLoader {
         if (!loaded) {
           logWarn(`无法加载工具 ${toolName}: 未找到对应的工具类`)
         }
-      } catch (error) {
+      } catch (_error) {
         logWarn(`无法加载工具 ${toolName}:`, error)
       }
     }

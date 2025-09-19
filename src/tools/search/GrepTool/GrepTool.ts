@@ -94,7 +94,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
       let regex: RegExp
       try {
         regex = new RegExp(pattern, regexFlags)
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`无效的正则表达式: ${error instanceof Error ? error.message : String(error)}`)
       }
 
@@ -112,7 +112,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
             results.push(fileResult)
             totalMatches += fileResult.totalMatches
           }
-        } catch (error) {
+        } catch (_error) {
           // 忽略无法读取的文件
           continue
         }
@@ -198,7 +198,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
             }
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // 忽略无法读取的目录
       }
     }

@@ -89,7 +89,7 @@ export class ZhipuStreamAdapter extends StreamAdapter {
               } : undefined
             })
           }
-        } catch (error) {
+        } catch (_error) {
           // 解析错误，创建错误块
           chunks.push({
             content: '',

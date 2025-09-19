@@ -3,7 +3,6 @@
  * 专门处理可折叠内容的视觉格式化和色彩显示
  */
 
-import React from 'react'
 import { Box, Text } from 'ink'
 import { getTheme } from '../../utils/theme.js'
 import { CollapsibleContent } from './CollapsibleContent.js'

@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 
 /**
 
@@ -8,7 +8,7 @@ import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
  */
 
 import { EventEmitter } from 'events'
-import { OutputFormatter, OutputFormatOptions, FormattedOutput } from './outputFormatter.js'
+import { OutputFormatter, OutputFormatOptions } from './outputFormatter.js'
 import { extractCodeBlocks } from './codeFormatter.js'
 
 export interface StreamChunk {
@@ -270,7 +270,7 @@ export class StreamingPipeline extends EventEmitter {
         })
       }
 
-    } catch (error) {
+    } catch (_error) {
       logWarn(`流式格式化失败 [${streamId}]:`, error)
       buffer.formatted = buffer.content // 降级到原始内容
       this.emit('error', streamId, error)

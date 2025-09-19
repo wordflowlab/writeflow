@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 
 /**
 
@@ -55,7 +55,7 @@ export function formatCode(code: string, options: CodeFormatOptions = {}): Forma
       // 回退到通用语法高亮
       highlightedCode = highlight(code, { language: 'markdown' })
     }
-  } catch (error) {
+  } catch (_error) {
     // 高亮失败时使用原始代码
     logWarn(`代码高亮失败: ${error}`)
     highlightedCode = code

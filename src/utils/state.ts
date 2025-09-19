@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from './log.js'
+import { logError } from './log.js'
 
 /**
  * WriteFlow 状态管理工具
@@ -17,8 +17,8 @@ export function getCwd(): string {
 export function setCwd(path: string): void {
   try {
     process.chdir(path)
-  } catch (error) {
-    logError('设置工作目录失败:', error)
+  } catch (_error) {
+    logError('设置工作目录失败:', _error)
   }
 }
 

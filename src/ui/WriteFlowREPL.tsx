@@ -7,7 +7,7 @@ import { Box, Text } from 'ink'
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 import { getTheme } from '../utils/theme.js'
-import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
+import { debugLog, logError, logWarn } from '../utils/log.js'
 import { getVersion } from '../utils/version.js'
 import { PromptInput } from './components/PromptInput.js'
 import { TodoPanel } from './components/TodoPanel.js'
@@ -144,8 +144,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
   const commands = useMemo(() => {
     try {
       return writeFlowApp.getAllCommands()
-    } catch (error) {
-      logWarn('Failed to get commands:', error)
+    } catch (_error) {
+      logWarn('Failed to get commands:', _error)
       return []
     }
   }, [writeFlowApp])
@@ -371,9 +371,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         path,
         lineCount: typeof totalLines === 'number' ? totalLines : undefined
       }
-    } catch (error) {
+    } catch (_error) {
       if (process.env.WRITEFLOW_DEBUG_STREAM === 'verbose') {
-        debugLog('解析工具结果 JSON 失败:', error)
+        debugLog('解析工具结果 JSON 失败:', _error)
       }
       return null
     }
@@ -386,9 +386,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     let remainingText = text.replace(/\u001B\[[0-9;]*m/g, '')
 
     const consumePattern = (regex: RegExp, handler: (match: string, ...groups: string[]) => void) => {
-      remainingText = remainingText.replace(regex, (...args) => {
+      remainingText = remainingText.replace(regex, (..._args) => {
         if (updateState) {
-          handler(...args)
+          handler(..._args)
         }
         return ''
       })
@@ -524,8 +524,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       
       setShowPlanConfirmation(false)
       setPendingPlan('')
-    } catch (error) {
-      logError('处理 Plan 模式确认失败:', error)
+    } catch (_error) {
+      logError('处理 Plan 模式确认失败:', _error)
       setShowPlanConfirmation(false)
     }
   }, [writeFlowApp, pendingPlan])
@@ -579,8 +579,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
                 planManager.reset()
               }
             }
-          } catch (error) {
-            logError('退出Plan模式异常，强制重置:', error)
+          } catch (_error) {
+            logError('退出Plan模式异常，强制重置:', _error)
             // 异常情况下强制重置
             const planManager = writeFlowApp.getPlanModeManager()
             if (planManager) {
@@ -598,8 +598,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       setCurrentMode(nextMode)
       debugLog(`🔄 模式切换: ${currentMode} → ${nextMode}`)
       
-    } catch (error) {
-      logError('模式切换失败:', error)
+    } catch (_error) {
+      logError('模式切换失败:', _error)
       
       // 状态恢复逻辑：确保UI状态与应用层一致
       const actualPlanMode = writeFlowApp.isInPlanMode()
@@ -633,8 +633,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         setPlanModeStartTime(0)
         
         debugLog('Plan模式已强制退出')
-      } catch (error) {
-        logError('ESC强制退出失败:', error)
+      } catch (_error) {
+        logError('ESC强制退出失败:', _error)
         // 即使出错也要重置UI状态
         setCurrentMode(PlanMode.Default)
         setPlanModeStartTime(0)
@@ -669,8 +669,8 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           setTodos([])
         }
       }
-    } catch (error) {
-      logWarn('获取 TODOs 失败:', error)
+    } catch (_error) {
+      logWarn('获取 TODOs 失败:', _error)
       setTodos([])
     }
   }, [writeFlowApp])
@@ -970,7 +970,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
           setMessages(prev => [...prev, commandResultMessage])
           
           return // 早期返回，不继续处理为自由文本
-        } catch (error) {
+        } catch (_error) {
           // 如果命令执行失败，添加错误消息
           const errorMessage = createAssistantMessage([
             createTextBlock(`命令执行失败: ${error instanceof Error ? error.message : '未知错误'}`)
@@ -1134,13 +1134,13 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
             setTodos(pendingTodoUpdate)
             updateTodoStats(pendingTodoUpdate)
           }
-        } catch (error) {
-          logError('处理 TODO 更新失败:', error)
+        } catch (_error) {
+          logError('处理 TODO 更新失败:', _error)
         }
       }
 
-    } catch (error) {
-      logError('处理消息失败:', error)
+    } catch (_error) {
+      logError('处理消息失败:', _error)
       
       // 清除流式状态（错误时也要清理）
       setStreamingMessageId(null)

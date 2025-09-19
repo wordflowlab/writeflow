@@ -3,7 +3,6 @@ import { PermissionManager } from '../tools/PermissionManager.js'
 import { SystemReminderInjector, SystemReminder } from '../tools/SystemReminderInjector.js'
 import { ToolInterceptor, InterceptorConfig } from '../tools/ToolInterceptor.js'
 import { ExitPlanModeTool, ExitPlanModeResult } from '../tools/ExitPlanMode.js'
-import { WritingTool } from '../types/WritingTool.js'
 
 import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
 /**
@@ -246,8 +245,8 @@ export class PlanModeManager {
         reminders,
       }
 
-    } catch (error) {
-      logError('❌ 退出 Plan 模式时出错:', error)
+    } catch (_error) {
+      logError('❌ 退出 Plan 模式时出错:', _error)
       
       const errorReminder: SystemReminder = {
         type: 'permission_warning',

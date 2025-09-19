@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 
 /**
  * WriteFlow 网络优化器
@@ -219,12 +219,12 @@ export class NetworkOptimizer extends EventEmitter {
       
       return response
       
-    } catch (error) {
+    } catch (_error) {
       // 记录失败请求
-      this.recordRequestFailure(connectionId, error)
+      this.recordRequestFailure(connectionId, _error)
       
       // 尝试重试
-      if (this.shouldRetry(error, connection)) {
+      if (this.shouldRetry(_error, connection)) {
         return this.retryRequest(requestId, url, options, startTime, connection.requestCount)
       }
       
@@ -288,8 +288,8 @@ export class NetworkOptimizer extends EventEmitter {
           try {
             const response = await this.executeRequest(requestId, url, options, performance.now())
             resolve(response)
-          } catch (error) {
-            reject(error)
+          } catch (_error) {
+            reject(_error)
           }
         }
       })
@@ -443,8 +443,8 @@ export class NetworkOptimizer extends EventEmitter {
       })
       
       this.updateCacheMetrics()
-    } catch (error) {
-      logWarn('缓存响应失败:', error)
+    } catch (_error) {
+      logWarn('缓存响应失败:', _error)
     }
   }
 

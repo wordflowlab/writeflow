@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Box, Text } from 'ink'
 import { parseContent, ParsedContent, detectContentType } from '../../utils/contentParser.js'
-import { HighlightedCode, InlineCode, CodeBlock } from './HighlightedCode.js'
+import { InlineCode, CodeBlock } from './HighlightedCode.js'
 import { getTheme } from '../../utils/theme.js'
 
 interface RichTextRendererProps {

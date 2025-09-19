@@ -1,4 +1,3 @@
-import { Message } from './message.js'
 
 export interface ResearchItem {
   id: string

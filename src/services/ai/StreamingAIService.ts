@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logError, logWarn } from '../../utils/log.js'
 
 /**
 
@@ -100,7 +100,7 @@ export class StreamingAIService extends WriteFlowAIService {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       logError(`流式 AI 请求失败 [${streamId}]:`, error)
       
       // 清理流
@@ -186,7 +186,7 @@ export class StreamingAIService extends WriteFlowAIService {
           this.handleTextChunk(chunk, formatter)
       }
 
-    } catch (error) {
+    } catch (_error) {
       logWarn(`实时格式化失败 [${streamId}]:`, error)
     }
   }
@@ -241,7 +241,7 @@ export class StreamingAIService extends WriteFlowAIService {
       // 清理流
       this.cleanupStream(streamId)
       
-    } catch (error) {
+    } catch (_error) {
       logWarn(`流完成处理失败 [${streamId}]:`, error)
     }
   }

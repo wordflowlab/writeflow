@@ -1,9 +1,9 @@
 import { Message, ConversationSummary, KnowledgeEntry, MemoryStats, CompressionThreshold } from '../../types/Memory.js'
 import { ShortTermMemory, TokenCalculator } from './ShortTermMemory.js'
-import { MidTermMemory, ConversationSummarizer } from './MidTermMemory.js'
-import { LongTermMemory, KnowledgeGraph } from './LongTermMemory.js'
+import { MidTermMemory } from './MidTermMemory.js'
+import { LongTermMemory } from './LongTermMemory.js'
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { logError } from './../../utils/log.js'
 
 export interface MemoryConfig {
   sessionId?: string
@@ -69,8 +69,8 @@ export class MemoryManager {
       }
 
       return message
-    } catch (error) {
-      throw error
+    } catch (_error) {
+      throw _error
     }
   }
 
@@ -194,8 +194,8 @@ export class MemoryManager {
               extractedCount++
             }
           }
-        } catch (error) {
-          logError('知识提取失败:', error)
+        } catch (_error) {
+          logError('知识提取失败:', _error)
         }
       }
     }

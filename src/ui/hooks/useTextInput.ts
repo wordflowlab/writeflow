@@ -1,6 +1,4 @@
 import { useState, useCallback } from 'react'
-import { type Key } from 'ink'
-import chalk from 'chalk'
 
 type UseTextInputProps = {
   value: string
@@ -28,7 +26,7 @@ type UseTextInputProps = {
 
 type UseTextInputResult = {
   renderedValue: string
-  onInput: (input: string, key: Key) => void
+  onInput: (input: string, key: string) => void
   offset: number
   setOffset: (offset: number) => void
 }
@@ -83,7 +81,7 @@ export function useTextInput({
   }, [ctrlCPressed, onExit, onExitMessage])
 
   const onInput = useCallback(
-    (input: string, key: Key) => {
+    (input: string, key: string) => {
       // 处理特殊按键
       if (key.ctrl && input === 'c') {
         handleCtrlC()

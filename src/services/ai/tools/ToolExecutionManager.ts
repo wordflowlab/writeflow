@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+import { logWarn } from '../../../utils/log.js'
 
 /**
  * 工具执行管理器
@@ -15,7 +15,6 @@ import {
   type ToolExecutionResult,
   type WriteFlowTool
 } from '../../../tools/index.js'
-import { type ToolUseContext } from '../../../Tool.js'
 import { 
   getProgressManager,
   startToolProgress,
@@ -322,7 +321,7 @@ export class ToolExecutionManager {
       this.activeExecutions.set(executionId, finalResult)
       return finalResult
 
-    } catch (error) {
+    } catch (_error) {
       // 记录异常错误
       logToolProgress(executionId, `执行异常: ${error instanceof Error ? error.message : String(error)}`, 'error')
       
@@ -430,8 +429,8 @@ export class ToolExecutionManager {
   getAvailableToolsList(): string[] {
     try {
       return getAvailableTools().map(tool => tool.name)
-    } catch (error) {
-      logWarn('获取可用工具列表失败:', error)
+    } catch (_error) {
+      logWarn('获取可用工具列表失败:', _error)
       return ['Read', 'Grep', 'Glob', 'Bash', 'todo_write', 'todo_read']
     }
   }
@@ -443,7 +442,7 @@ export class ToolExecutionManager {
     try {
       const tool = getTool(toolName)
       return tool || null
-    } catch (error) {
+    } catch (_error) {
       logWarn(`获取工具 ${toolName} 信息失败:`, error)
       return null
     }

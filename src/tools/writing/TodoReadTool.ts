@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { WritingTool, ToolUseContext, ToolResult, ValidationResult } from '../../types/WritingTool.js'
 import { TodoManager } from '../TodoManager.js'
 import { Todo, TodoStatus } from '../../types/Todo.js'
-import { getTodoReadDescription, getTodoReadPrompt } from './todo-prompts.js'
+import { getTodoReadDescription } from './todo-prompts.js'
 
 // 定义输入 Schema - 参考 Claude Code FL6，不需要任何参数
 const InputSchema = z.object({}).describe(
@@ -79,7 +79,7 @@ export class TodoReadTool implements WritingTool<typeof InputSchema, string> {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = `读取任务列表失败: ${error instanceof Error ? error.message : '未知错误'}`
       
       return {

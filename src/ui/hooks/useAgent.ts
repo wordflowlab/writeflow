@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { WriteFlowApp } from '../../cli/writeflow-app.js'
 import { InputMode } from '../types/index.js'
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog } from './../../utils/log.js'
 
 interface AgentExecution {
   id: string
@@ -59,12 +59,12 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
       
       return result
       
-    } catch (error) {
-      const errorMessage = (error as Error).message
+    } catch (_error) {
+      const errorMessage = (_error as Error).message
       
       updateExecution(execution.id, {
-        status: 'error',
-        error: errorMessage,
+        status: '_error',
+        _error: errorMessage,
         endTime: new Date()
       })
       
@@ -104,12 +104,12 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
       
       return result
       
-    } catch (error) {
-      const errorMessage = (error as Error).message
+    } catch (_error) {
+      const errorMessage = (_error as Error).message
       
       updateExecution(execution.id, {
-        status: 'error',
-        error: errorMessage,
+        status: '_error',
+        _error: errorMessage,
         endTime: new Date()
       })
       
@@ -143,10 +143,10 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
         endTime: new Date()
       })
       
-    } catch (error) {
+    } catch (_error) {
       updateExecution(execution.id, {
-        status: 'error',
-        error: (error as Error).message,
+        status: '_error',
+        _error: (_error as Error).message,
         endTime: new Date()
       })
     }

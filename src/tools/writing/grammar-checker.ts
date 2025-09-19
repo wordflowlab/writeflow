@@ -76,7 +76,7 @@ export class GrammarCheckerTool implements WritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `语法检查失败: ${(error as Error).message}`

@@ -1,6 +1,6 @@
 import { ArticleContext } from '../../types/agent.js'
 import { Message } from '../../types/message.js'
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog } from './../../utils/log.js'
 import { 
   ResearchItem, 
   DialogueItem, 

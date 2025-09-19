@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { spawn, ChildProcess } from 'child_process'
-import { homedir, tmpdir, platform } from 'os'
-import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'fs'
-import { isAbsolute, resolve, relative, join } from 'path'
+import { tmpdir, platform } from 'os'
+import { existsSync, readFileSync, unlinkSync } from 'fs'
+import { resolve, join } from 'path'
 import { EnhancedWritingTool, ToolInput, ToolResult, ToolContext, PermissionResult, ToolConfig } from '../../types/tool.js'
 
 // 输入参数架构
@@ -135,8 +135,8 @@ class PersistentShell {
       try {
         const result = await this.runCommand(item.command, item.timeout)
         item.resolve(result)
-      } catch (error) {
-        item.reject(error as Error)
+      } catch (_error) {
+        item.reject(_error as Error)
       }
     }
     
@@ -158,7 +158,7 @@ class PersistentShell {
       // 构建实际执行的命令
       const wrappedCommand = this.buildWrappedCommand(command, statusFile, stdoutFile, stderrFile)
       
-      const child = spawn(this.shellType.bin, [...this.shellType.args, wrappedCommand], {
+      const child = spawn(this.shellType.bin, [...this.shellType._args, wrappedCommand], {
         stdio: 'pipe',
         env: { ...process.env },
         cwd: this.currentWorkingDir,
@@ -209,7 +209,7 @@ class PersistentShell {
             interrupted,
             workingDirectory: this.currentWorkingDir
           })
-        } catch (error) {
+        } catch (_error) {
           resolve({
             command,
             success: false,
@@ -429,7 +429,7 @@ export class UnifiedBashTool implements EnhancedWritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       const duration = Date.now() - startTime
       return {
         success: false,

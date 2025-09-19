@@ -116,9 +116,9 @@ export class AsyncStreamingManager {
         timestamp: Date.now()
       } as SystemMessage
 
-    } catch (error) {
+    } catch (_error) {
       yield {
-        type: 'error',
+        type: '_error',
         message: `流式处理错误: ${error instanceof Error ? error.message : String(error)}`,
         error: error as Error,
         context: { streamId, request }

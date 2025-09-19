@@ -262,7 +262,7 @@ export class ContentBlockRenderer {
       }
       
       return highlighted
-    } catch (error) {
+    } catch (_error) {
       // 高亮失败，返回原始内容
       return chalk.blue(content)
     }

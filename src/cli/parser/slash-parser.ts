@@ -27,7 +27,7 @@ export class SlashCommandParser {
     }
 
     if (!commandName) {
-      throw new Error('Commands are in the form `/command [args]`')
+      throw new Error('Commands are in the form `/command [_args]`')
     }
 
     // 命令分类
@@ -139,7 +139,7 @@ export class SlashCommandParser {
   /**
    * 解析命令参数
    */
-  parseArguments(args: string): Record<string, string | boolean> {
+  parseArguments(_args: string): Record<string, string | boolean> {
     const parsed: Record<string, string | boolean> = {}
     const parts = args.split(' ').filter(part => part.trim())
     

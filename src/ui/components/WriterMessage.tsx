@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink'
-import React from 'react'
 import { getTheme } from '../../utils/theme'
 import { useTerminalSize } from '../../hooks/useTerminalSize.js'
 import { RichTextRenderer, SimpleRichText } from './RichTextRenderer.js'

@@ -11,7 +11,7 @@ interface Props {
 }
 
 /**
- * 轻量模型编辑器：支持更新 API Key 与可选 Base URL
+ * 轻量模型编辑器：支持更新 API string 与可选 Base URL
  * - Enter 提交当前字段
  * - Esc 关闭
  */
@@ -85,7 +85,7 @@ export function ModelEditor({ profile, onClose }: Props): React.ReactNode {
               value={apiKey}
               onChange={setApiKey}
               onSubmit={handleSubmitApiKey}
-              placeholder={`输入 ${profile.provider} 的 API Key...`}
+              placeholder={`输入 ${profile.provider} 的 API string...`}
               focus={step === 'apikey'}
               mask="*"
               columns={80}
@@ -124,7 +124,7 @@ export function ModelEditor({ profile, onClose }: Props): React.ReactNode {
 
       <Box marginTop={1} paddingTop={1} borderColor={theme.secondaryBorder} borderStyle="single" borderBottom={false} borderLeft={false} borderRight={false} borderTop={true}>
         <Text dimColor>
-          {step === 'apikey' && '输入 API Key 后按 Enter 继续 · Esc 取消'}
+          {step === 'apikey' && '输入 API string 后按 Enter 继续 · Esc 取消'}
           {step === 'baseurl' && '输入 Base URL（可留空）后按 Enter 继续 · Esc 取消'}
           {step === 'confirm' && '按 Enter 保存配置 · Esc 取消'}
         </Text>

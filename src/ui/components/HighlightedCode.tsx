@@ -30,7 +30,7 @@ export function HighlightedCode({
         // 如果语言不支持，使用默认的代码块颜色
         return code
       }
-    } catch (error) {
+    } catch (_error) {
       console.error(`语法高亮失败 (${language}):`, error)
       // 发生错误时返回原始代码
       return code

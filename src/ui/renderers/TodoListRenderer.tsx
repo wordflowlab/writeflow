@@ -1,4 +1,3 @@
-import React from 'react'
 import { Box, Text } from 'ink'
 import { Todo, TodoStatus, TodoPriority } from '../../types/Todo.js'
 import type { TodoStats } from '../../types/Todo.js'

@@ -1,6 +1,5 @@
 import { PlanMode } from '../types/agent.js'
 import { ToolUseContext, WriteFlowTool, PermissionResult } from '../Tool.js'
-import { ToolCallEvent } from './ToolBase.js'
 import { pathInWorkingDirectory, grantWritePermissionForWorkingDir } from '../utils/permissions/filesystem.js'
 
 /**

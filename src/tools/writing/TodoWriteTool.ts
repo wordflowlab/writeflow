@@ -1,14 +1,13 @@
 // JSX 渲染交由适配器处理，此处工具逻辑保持纯文本
-import React from 'react'
 import { z } from 'zod'
 import { WritingTool, ToolUseContext, ToolResult, ValidationResult } from '../../types/WritingTool.js'
 import { TodoManager } from '../TodoManager.js'
 import { Todo, TodoStatus, TodoPriority } from '../../types/Todo.js'
 import { emitReminderEvent, TodoChangeEvent } from '../../services/SystemReminderService.js'
-import { getTodoWriteDescription, getTodoWritePrompt } from './todo-prompts.js'
+import { getTodoWriteDescription } from './todo-prompts.js'
 
 // 定义输入 Schema - 完全复刻 Claude Code 的结构
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog } from './../../utils/log.js'
 
 const TodoItemSchema = z.object({
   id: z.string().min(1, 'ID 不能为空'),
@@ -77,10 +76,10 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
       }
 
       return { result: true }
-    } catch (error) {
+    } catch (_error) {
       return {
         result: false,
-        message: error instanceof Error ? error.message : '验证失败',
+        message: _error instanceof Error ? _error.message : '验证失败',
         errorCode: 500
       }
     }
@@ -136,7 +135,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = `更新任务列表失败: ${error instanceof Error ? error.message : '未知错误'}`
       
       return {
@@ -345,7 +344,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
       debugLog(`📋 格式化完成，结果长度: ${result.length}`)
       return result
 
-    } catch (error) {
+    } catch (_error) {
       return null
     }
   }

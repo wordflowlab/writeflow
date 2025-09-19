@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { debugLog, logWarn } from '../../utils/log.js'
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { AIWritingConfig } from '../../types/writing.js'
 
@@ -90,7 +90,7 @@ export class DeepseekClientTool implements WritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `Deepseek API 调用失败: ${(error as Error).message}`
@@ -211,11 +211,11 @@ export class DeepseekClientTool implements WritingTool {
         thinkingContent
       }
 
-    } catch (error) {
+    } catch (_error) {
       // 如果API调用失败，回退到模拟响应
       // 仅在开发模式下输出错误信息
       if (process.env.NODE_ENV === 'development') {
-        logWarn('DeepSeek API 调用失败，回退到模拟响应:', error instanceof Error ? error.message : String(error))
+        logWarn('DeepSeek API 调用失败，回退到模拟响应:', _error instanceof Error ? _error.message : String(_error))
       }
       
       const mockResponse = this.generateMockResponse(params, Date.now() - startTime)

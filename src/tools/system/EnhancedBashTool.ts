@@ -77,7 +77,7 @@ export class EnhancedBashTool implements EnhancedWritingTool {
         return await this.executeCommand(command, timeout, startTime)
       }
 
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `命令执行失败: ${(error as Error).message}`
@@ -178,7 +178,7 @@ export class EnhancedBashTool implements EnhancedWritingTool {
         }
       }
       
-    } catch (error) {
+    } catch (_error) {
       yield {
         success: false,
         error: `流式执行失败: ${(error as Error).message}`,

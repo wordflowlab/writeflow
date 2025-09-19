@@ -73,7 +73,7 @@ export class SlideConverter implements Tool {
         content: slidevContent,
         conversionReport: report
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `转换失败: ${error instanceof Error ? error.message : String(error)}`

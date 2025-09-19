@@ -90,10 +90,10 @@ export class ToolInterceptor {
         reminder,
       }
 
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '工具执行失败',
+        _error: _error instanceof Error ? _error.message : '工具执行失败',
         reminder: this.reminderInjector.generateToolCallReminder(context) || undefined,
       }
     }
@@ -171,10 +171,10 @@ export class ToolInterceptor {
         data: result,
         reminder,
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Exit plan mode 执行失败',
+        _error: _error instanceof Error ? _error.message : 'Exit plan mode 执行失败',
         reminder,
       }
     }

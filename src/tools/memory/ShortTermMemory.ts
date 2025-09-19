@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { Message, CompressionThreshold } from '../../types/Memory.js'
 
 // Token 计算工具 - 基于 Claude Code 的 token 估算
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { logError } from './../../utils/log.js'
 
 export class TokenCalculator {
   private static readonly AVG_CHARS_PER_TOKEN = 4
@@ -62,8 +62,8 @@ export class ShortTermMemory {
   private ensureDirectoryExistsSync(): void {
     try {
       mkdirSync(this.messagesDir, { recursive: true })
-    } catch (error) {
-      logError('创建短期记忆目录失败:', error)
+    } catch (_error) {
+      logError('创建短期记忆目录失败:', _error)
     }
   }
 
@@ -112,8 +112,8 @@ export class ShortTermMemory {
       }))
       
       return result
-    } catch (error) {
-      logError('加载短期记忆失败:', error)
+    } catch (_error) {
+      logError('加载短期记忆失败:', _error)
       return []
     }
   }
@@ -125,9 +125,9 @@ export class ShortTermMemory {
       await fs.writeFile(this.sessionFile, data, { encoding: 'utf-8', flag: 'w' })
       
       this.messages = messages
-    } catch (error) {
-      logError('保存短期记忆失败:', error)
-      throw error
+    } catch (_error) {
+      logError('保存短期记忆失败:', _error)
+      throw _error
     }
   }
 
@@ -152,9 +152,9 @@ export class ShortTermMemory {
       await this.saveMessages(messages)
       
       return newMessage
-    } catch (error) {
-      console.error('💾 [ShortTermMemory] addMessage 错误:', error)
-      throw error
+    } catch (_error) {
+      console._error('💾 [ShortTermMemory] addMessage 错误:', _error)
+      throw _error
     }
   }
 

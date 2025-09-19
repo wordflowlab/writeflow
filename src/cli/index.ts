@@ -5,7 +5,7 @@
  * 主入口文件
  */
 
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { debugLog, logError } from './../utils/log.js'
 import { WriteFlowCLI } from './writeflow-cli.js'
 
 async function main() {
@@ -14,7 +14,7 @@ async function main() {
 }
 
 // 处理未捕获的错误
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   logError('未处理的Promise拒绝:', reason)
   if (!(global as any).WRITEFLOW_INTERACTIVE) process.exit(1)
 })

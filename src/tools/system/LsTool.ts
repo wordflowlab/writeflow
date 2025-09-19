@@ -2,7 +2,6 @@ import { z } from 'zod'
 import { EnhancedWritingTool, ToolInput, ToolResult, ToolContext, PermissionResult, ToolConfig } from '../../types/tool.js'
 import { promises as fs, readdirSync } from 'fs'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'path'
-import { getTheme } from '../../utils/theme.js'
 
 // 输入参数架构
 const LsToolInputSchema = z.object({
@@ -106,7 +105,7 @@ export class LsTool implements EnhancedWritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       const duration = Date.now() - startTime
       return {
         success: false,
@@ -266,7 +265,7 @@ export class LsTool implements EnhancedWritingTool {
       let children
       try {
         children = readdirSync(currentPath, { withFileTypes: true })
-      } catch (error) {
+      } catch (_error) {
         // 权限错误或其他IO错误，跳过
         continue
       }

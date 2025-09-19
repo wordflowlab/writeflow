@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { debugLog, logError } from '../../utils/log.js'
 
 /**
  * WriteFlow 流式服务使用示例
@@ -55,8 +55,8 @@ async function example1_BasicStreaming() {
       maxTokens: 200,
       temperature: 0.7
     })
-  } catch (error) {
-    logError('启动流式服务失败:', error)
+  } catch (_error) {
+    logError('启动流式服务失败:', _error)
   }
 }
 
@@ -89,8 +89,8 @@ async function example2_CompatibleStreaming() {
       model: 'deepseek-chat',
       maxTokens: 150
     })
-  } catch (error) {
-    logError('处理流式请求失败:', error)
+  } catch (_error) {
+    logError('处理流式请求失败:', _error)
   }
 }
 
@@ -112,8 +112,8 @@ async function example3_ConvenienceFunctions() {
     debugLog(completeResponse.content)
     debugLog(`📊 Token 使用: ${completeResponse.usage.inputTokens}→${completeResponse.usage.outputTokens}`)
     
-  } catch (error) {
-    logError('便捷函数使用失败:', error)
+  } catch (_error) {
+    logError('便捷函数使用失败:', _error)
   }
 }
 
@@ -148,8 +148,8 @@ async function example4_ZhipuStreaming() {
       maxTokens: 200,
       temperature: 0.7
     })
-  } catch (error) {
-    logError('智谱 AI 流式服务失败:', error)
+  } catch (_error) {
+    logError('智谱 AI 流式服务失败:', _error)
   }
 }
 
@@ -182,8 +182,8 @@ async function example5_KimiStreaming() {
       model: 'moonshot-v1-8k',
       maxTokens: 150
     })
-  } catch (error) {
-    logError('Kimi 流式请求失败:', error)
+  } catch (_error) {
+    logError('Kimi 流式请求失败:', _error)
   }
 }
 
@@ -205,8 +205,8 @@ async function example6_QwenStreaming() {
     debugLog(completeResponse.content)
     debugLog(`📊 Token 使用: ${completeResponse.usage.inputTokens}→${completeResponse.usage.outputTokens}`)
     
-  } catch (error) {
-    logError('Qwen 流式函数使用失败:', error)
+  } catch (_error) {
+    logError('Qwen 流式函数使用失败:', _error)
   }
 }
 
@@ -243,7 +243,7 @@ async function runAllExamples() {
       
       await example.fn()
       
-    } catch (error) {
+    } catch (_error) {
       logError(`❌ ${example.name} 执行失败:`, (error as Error).message)
     }
     

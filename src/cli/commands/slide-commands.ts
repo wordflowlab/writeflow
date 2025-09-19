@@ -3,11 +3,11 @@
  * 通过 Agent 系统动态加载，避免污染主工具列表
  */
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog, logWarn } from './../../utils/log.js'
 import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
 import { AgentLoader } from '../../utils/agentLoader.js'
-import { existsSync, readFileSync, mkdirSync, writeFileSync, readdirSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import { SlideConverter } from '../../tools/slidev/SlideConverter.js'
 import { spawnSync } from 'child_process'
@@ -28,13 +28,13 @@ export const slideCommand: SlashCommand = {
     '/slide outline "Rust 性能优化" --slides=15'
   ],
 
-  async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
+  async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
     // 加载 Slidev Agent
     const loader = AgentLoader.getInstance('slidev-ppt')
     const agent = await loader.loadAgent()
 
     // 解析子命令
-    const [subcommand, ...rest] = args.split(' ')
+    const [subcommand, ...rest] = _args.split(' ')
     const params = rest.join(' ')
 
     // 构建带有 Agent 系统提示的 prompt
@@ -63,11 +63,11 @@ export const slideCommand: SlashCommand = {
 
       default:
         // 智能判断：如果输入看起来是主题，使用 intelligent 模式
-        if (isTopicLike(args)) {
-          return slideIntelligentCommand.getPromptForCommand!(args, context)
+        if (isTopicLike(_args)) {
+          return slideIntelligentCommand.getPromptForCommand!(_args, _context)
         }
         // 否则使用通用 Agent 模式
-        basePrompt += `用户请求: ${args}\n\n请根据用户需求，使用你的 Slidev 专业能力提供帮助。`
+        basePrompt += `用户请求: ${_args}\n\n请根据用户需求，使用你的 Slidev 专业能力提供帮助。`
     }
 
     return basePrompt
@@ -291,7 +291,7 @@ ${content ? `\n当前内容：\n${content}\n` : ''}
 /**
  * 判断输入参数是否为主题内容（应该使用 intelligent 模式）
  */
-function isTopicLike(args: string): boolean {
+function isTopicLike(_args: string): boolean {
   const trimmed = args.trim()
   if (!trimmed) return false
   
@@ -334,9 +334,9 @@ export const slideCreateCommand: SlashCommand = {
     '/slide-create "Vue 3 新特性" --duration=30 --theme=seriph'
   ],
 
-  async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
+  async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
     // 委托给主命令
-    return slideCommand.getPromptForCommand!(`create ${args}`, context)
+    return slideCommand.getPromptForCommand!(`create ${_args}`, context)
   },
 
   allowedTools: ['SlidevGenerator'],
@@ -357,9 +357,9 @@ export const slideConvertCommand: SlashCommand = {
     '/slide-convert ./article.md --theme=default --slides=20'
   ],
 
-  async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
+  async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
     // 委托给主命令
-    return slideCommand.getPromptForCommand!(`convert ${args}`, context)
+    return slideCommand.getPromptForCommand!(`convert ${_args}`, context)
   },
 
   allowedTools: ['SlideConverter'],
@@ -388,8 +388,8 @@ export const slideIntelligentCommand: SlashCommand = {
     '/slide-intelligent "React Hooks 最佳实践" --style=technical --theme=seriph',
   ],
 
-  async getPromptForCommand(args: string, _context: AgentContext): Promise<string> {
-    const trimmedArgs = args.trim()
+  async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+    const trimmedArgs = _args.trim()
     
     if (!trimmedArgs) {
       return '请提供演示文稿的主题或描述。\n\n用法：/slide-intelligent "你的主题" [选项]\n\n示例：\n- /slide-intelligent "深度学习在计算机视觉中的应用" --style=academic --duration=40\n- /slide-intelligent "Vue 3 新特性" --style=technical\n- /slide-intelligent "季度业务汇报" --style=business'
@@ -482,8 +482,8 @@ export const slidePreviewCommand: SlashCommand = {
     '/slide-preview --help'
   ],
 
-  async call(args: string): Promise<string> {
-    const trimmedArgs = args.trim()
+  async call(_args: string): Promise<string> {
+    const trimmedArgs = _args.trim()
     
     // 处理特殊选项
     if (trimmedArgs === '--list' || trimmedArgs === '-l') {
@@ -544,8 +544,8 @@ ${dependencyCheck.solutions.map(solution => `- ${solution}`).join('\n')}
     
     try {
       // 检查是否需要自动打开浏览器
-      const autoOpen = !args.includes('--no-open')
-      const port = extractOption(args, 'port') || '3030'
+      const autoOpen = !_args.includes('--no-open')
+      const port = extractOption(_args, 'port') || '3030'
       
       const launchParams = ['-y', '@slidev/cli', targetFile]
       if (autoOpen) launchParams.push('--open')
@@ -585,7 +585,7 @@ npx @slidev/cli ${targetFile} --open
 - 是否包含有效的 frontmatter
 - 网络连接是否正常`
       }
-    } catch (error) {
+    } catch (_error) {
       return `❌ 启动失败：${error}
 
 🔧 故障排除：
@@ -648,7 +648,7 @@ async function checkSlidevDependency(): Promise<{
         ]
       }
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       available: false,
       message: `依赖检查失败: ${error}`,
@@ -688,8 +688,8 @@ function listAvailableSlides(): string {
     }
     
     searchDir('.')
-  } catch (error) {
-    logWarn('搜索文件时出错:', error)
+  } catch (_error) {
+    logWarn('搜索文件时出错:', _error)
     
     // 备用方式：仅检查当前目录
     try {
@@ -771,8 +771,8 @@ function getSlidesHistory(): Array<{file: string, timestamp: number}> {
     if (existsSync(historyFile)) {
       return JSON.parse(readFileSync(historyFile, 'utf-8'))
     }
-  } catch (error) {
-    logWarn('读取历史记录失败:', error)
+  } catch (_error) {
+    logWarn('读取历史记录失败:', _error)
   }
   return []
 }
@@ -794,8 +794,8 @@ function addToSlidesHistory(filePath: string): void {
     
     const historyFile = join(process.cwd(), '.writeflow-slides-history.json')
     writeFileSync(historyFile, JSON.stringify(trimmedHistory, null, 2), 'utf-8')
-  } catch (error) {
-    logWarn('保存历史记录失败:', error)
+  } catch (_error) {
+    logWarn('保存历史记录失败:', _error)
   }
 }
 

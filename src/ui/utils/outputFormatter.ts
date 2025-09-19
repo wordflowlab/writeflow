@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 
 /**
 
@@ -112,7 +112,7 @@ export class OutputFormatter {
         renderTime: Date.now() - startTime
       }
 
-    } catch (error) {
+    } catch (_error) {
       logWarn(`输出格式化失败: ${error}`)
       return {
         content,

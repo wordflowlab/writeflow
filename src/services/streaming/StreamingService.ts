@@ -6,7 +6,7 @@
 import EventEmitter from 'events'
 import { getModelCapabilities } from '../models/modelCapabilities.js'
 import { getModelManager } from '../models/ModelManager.js'
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { debugLog, logError } from '../../utils/log.js'
 import { createStreamAdapterFromModel, StreamChunk, StreamAdapter } from './index.js'
 
 export interface StreamingConfig {
@@ -400,8 +400,8 @@ export class StreamingService extends EventEmitter {
       // 发起 API 请求
       await this.makeStreamingRequest(apiRequest)
       
-    } catch (error) {
-      await this.handleStreamError(error, request)
+    } catch (_error) {
+      await this.handleStreamError(_error, request)
     }
   }
   
@@ -813,9 +813,9 @@ export class StreamingService extends EventEmitter {
       // 处理流式响应
       await this.processStreamResponse(response.body)
       
-    } catch (error) {
-      logError('流式请求失败', error)
-      throw error
+    } catch (_error) {
+      logError('流式请求失败', _error)
+      throw _error
     }
   }
   

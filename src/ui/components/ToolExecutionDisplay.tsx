@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink'
-import React from 'react'
 import { getTheme } from '../../utils/theme.js'
 import { CollapsibleContent } from './CollapsibleContent.js'
 

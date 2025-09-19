@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useInput } from 'ink'
 
 interface KeyboardShortcuts {

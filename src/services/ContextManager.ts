@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
+import { debugLog } from '../utils/log.js'
 
 /**
  * 智能上下文管理器
@@ -6,7 +6,6 @@ import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
  * 优化上下文管理，实现智能压缩和内容筛选
  */
 
-import { formatDuration } from '../utils/format.js'
 
 export interface ContextEntry {
   id: string

@@ -3,7 +3,7 @@
  * 管理全局的可折叠内容交互逻辑
  */
 
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { debugLog } from './../utils/log.js'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useInput } from 'ink'
 import type { 

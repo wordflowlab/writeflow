@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 
 /**
 
@@ -162,12 +162,12 @@ export function useAIStreaming(options: AIStreamingOptions = {}) {
 
       onComplete?.(response)
 
-    } catch (error) {
-      const errorObj = error instanceof Error ? error : new Error(String(error))
+    } catch (_error) {
+      const errorObj = _error instanceof Error ? _error : new Error(String(_error))
       
       setState(prev => ({
         ...prev,
-        error: errorObj,
+        _error: errorObj,
         isLoading: false,
         isStreaming: false
       }))

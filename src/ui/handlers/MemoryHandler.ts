@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { logError } from './../../utils/log.js'
 
 interface MemoryNote {
   id: string
@@ -72,7 +72,7 @@ export class MemoryHandler {
         ...note,
         timestamp: new Date(note.timestamp)
       }))
-    } catch (error) {
+    } catch (_error) {
       // 文件不存在或格式错误，使用空数组
       this.notes = []
     }
@@ -81,8 +81,8 @@ export class MemoryHandler {
   private async saveMemory(): Promise<void> {
     try {
       await fs.writeFile(this.memoryFile, JSON.stringify(this.notes, null, 2))
-    } catch (error) {
-      logError('保存笔记失败:', error)
+    } catch (_error) {
+      logError('保存笔记失败:', _error)
     }
   }
 

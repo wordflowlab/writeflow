@@ -289,8 +289,8 @@ export function getModelManager(): ModelManager {
     try {
       const config = getGlobalConfig()
       globalModelManager = new ModelManager(config)
-    } catch (error) {
-      logError('Failed to initialize ModelManager', error)
+    } catch (_error) {
+      logError('Failed to initialize ModelManager', _error)
       // 返回一个带有默认配置的管理器
       globalModelManager = new ModelManager({ 
         numStartups: 0,

@@ -4,7 +4,7 @@
  * 支持实时工具执行显示的消息类型和创建函数
  */
 
-import { debugLog, logError, logWarn, infoLog } from './log.js'
+import { debugLog } from './log.js'
 
 import { randomUUID } from 'crypto'
 type UUID = string
@@ -15,7 +15,7 @@ import type {
   ToolResultBlockParam,
   Message as APIAssistantMessage,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import type { Tool, ToolUseContext } from '../Tool.js'
+import type { Tool } from '../Tool.js'
 
 // 📋 常量定义 - 标准架构
 export const INTERRUPT_MESSAGE = '[Request interrupted by user]'

@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { logWarn } from './../../utils/log.js'
 import { Message, MessageType, QueueMetrics } from '../../types/message.js'
 
 /**
@@ -67,9 +67,9 @@ export class H2AAsyncMessageQueue {
         
         this.recordThroughputAndLatency(message)
         yield message
-      } catch (error) {
+      } catch (_error) {
         if (!this.closed) {
-          throw error
+          throw _error
         }
         break
       }

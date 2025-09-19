@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs'
-import { join, extname, relative, basename } from 'path'
+import { join, extname, relative } from 'path'
 import { debugLog } from '../utils/log.js'
 
 /**
@@ -126,7 +126,7 @@ export class FileCompletionService {
       // 返回限制数量的结果
       return filtered.slice(0, opts.maxResults)
       
-    } catch (error) {
+    } catch (_error) {
       debugLog(`文件补全失败: ${error}`)
       return []
     }
@@ -189,7 +189,7 @@ export class FileCompletionService {
     
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true })
-      const files: FileCompletionItem[] = []
+      const files: typeof FileCompletionItem[] = []
       
       for (const entry of entries) {
         const fullPath = join(dirPath, entry.name)
@@ -241,7 +241,7 @@ export class FileCompletionService {
       
       return files
       
-    } catch (error) {
+    } catch (_error) {
       debugLog(`读取目录失败: ${dirPath} - ${error}`)
       return []
     }
@@ -251,10 +251,10 @@ export class FileCompletionService {
    * 过滤和排序文件
    */
   private filterAndSort(
-    files: FileCompletionItem[],
+    files: typeof FileCompletionItem[],
     query: string,
     options: Required<FileCompletionOptions>,
-  ): FileCompletionItem[] {
+  ): typeof FileCompletionItem[] {
     if (!query) {
       // 没有查询时，返回所有文件，目录优先
       return files
@@ -324,7 +324,7 @@ export class FileCompletionService {
   /**
    * 获取文件图标
    */
-  public getFileIcon(item: FileCompletionItem): string {
+  public getFileIcon(item: typeof FileCompletionItem): string {
     if (item.type === 'directory') {
       return '󰉋' // 目录图标
     }

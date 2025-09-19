@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { Todo, TodoStatus, TodoPriority, CreateTodoParams, UpdateTodoParams, TodoStats } from '../types/Todo.js'
 
 // Zod Schema 验证 - 基于 Claude Code 的严格验证
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { logError } from './../utils/log.js'
 
 const TodoStatusSchema = z.enum(['pending', 'in_progress', 'completed'])
 const TodoPrioritySchema = z.enum(['high', 'medium', 'low'])
@@ -46,16 +46,16 @@ export class TodoStorage {
   private async ensureDirectoryExists(): Promise<void> {
     try {
       await fs.mkdir(this.todosDir, { recursive: true })
-    } catch (error) {
-      logError('创建 todos 目录失败:', error)
+    } catch (_error) {
+      logError('创建 todos 目录失败:', _error)
     }
   }
 
   private ensureDirectoryExistsSync(): void {
     try {
       fsSync.mkdirSync(this.todosDir, { recursive: true })
-    } catch (error) {
-      logError('同步创建 todos 目录失败:', error)
+    } catch (_error) {
+      logError('同步创建 todos 目录失败:', _error)
     }
   }
 
@@ -87,8 +87,8 @@ export class TodoStorage {
         status: item.status as TodoStatus,
         priority: item.priority as TodoPriority,
       }))
-    } catch (error) {
-      logError('加载 Todo 数据失败:', error)
+    } catch (_error) {
+      logError('加载 Todo 数据失败:', _error)
       return []
     }
   }
@@ -102,9 +102,9 @@ export class TodoStorage {
         encoding: 'utf-8',
         flag: 'w',  // 确保原子写入
       })
-    } catch (error) {
-      logError('保存 Todo 数据失败:', error)
-      throw error
+    } catch (_error) {
+      logError('保存 Todo 数据失败:', _error)
+      throw _error
     }
   }
 

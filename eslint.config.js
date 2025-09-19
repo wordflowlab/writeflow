@@ -60,6 +60,7 @@ export default [
       // 代码质量
       'no-duplicate-imports': 'error',
       'no-return-await': 'error',
+      'no-control-regex': 'off',
       'prefer-template': 'error',
       'no-useless-concat': 'error'
     }

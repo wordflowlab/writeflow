@@ -283,7 +283,7 @@ export function detectSystemTheme(): 'dark' | 'light' | 'unknown' {
     }
 
     return 'unknown'
-  } catch (error) {
+  } catch (_error) {
     return 'unknown'
   }
 }

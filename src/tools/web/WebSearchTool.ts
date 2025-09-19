@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { EnhancedWritingTool, ToolInput, ToolResult, ToolContext, PermissionResult, ToolConfig } from '../../types/tool.js'
-import { SearchResult, searchProviders, selectBestProvider, SearchOptions } from './search-providers.js'
+import { SearchResult, searchProviders, selectBestProvider } from './search-providers.js'
 
 // 输入参数架构
 const WebSearchToolInputSchema = z.object({
@@ -76,7 +76,7 @@ export class WebSearchTool implements EnhancedWritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       const duration = Date.now() - startTime
       return {
         success: false,
@@ -134,7 +134,7 @@ export class WebSearchTool implements EnhancedWritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       yield {
         success: false,
         error: `搜索流程失败: ${(error as Error).message}`,

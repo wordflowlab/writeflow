@@ -1,6 +1,6 @@
 import { H2AAsyncMessageQueue } from '../queue/h2A-queue.js'
 import { Message, MessageType } from '../../types/message.js'
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog, logError, logWarn } from './../../utils/log.js'
 import {
   AgentResponse,
   AgentContext,
@@ -94,7 +94,7 @@ export class NOMainAgentEngine {
           // 4. 更新统计
           this.updateStatistics(message)
 
-        } catch (error) {
+        } catch (_error) {
           // 即使出错也要更新统计信息
           if (currentMessage) {
             this.updateStatistics(currentMessage)
@@ -102,10 +102,10 @@ export class NOMainAgentEngine {
           yield* this.handleError(error as Error)
         }
       }
-    } catch (error) {
-      logError('[nO] Agent 引擎致命错误:', error)
+    } catch (_error) {
+      logError('[nO] Agent 引擎致命错误:', _error)
       yield {
-        type: 'error',
+        type: '_error',
         content: `Agent 引擎错误: ${(error as Error).message}`
       }
     } finally {
@@ -165,7 +165,7 @@ export class NOMainAgentEngine {
 
     switch (intent.type) {
       case 'slash_command':
-        yield* this.executeSlashCommand(intent.command!, intent.args!)
+        yield* this.executeSlashCommand(intent.command!, intent._args!)
         break
       case 'article_request':
         yield* this.handleArticleGeneration(intent)
@@ -276,7 +276,7 @@ export class NOMainAgentEngine {
   /**
    * 执行斜杠命令（占位实现）
    */
-  private async *executeSlashCommand(command: string, args: string): AsyncGenerator<AgentResponse> {
+  private async *executeSlashCommand(command: string, _args: string): AsyncGenerator<AgentResponse> {
     yield {
       type: 'progress',
       content: `正在执行命令: /${command} ${args}`

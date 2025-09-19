@@ -2,7 +2,7 @@ import { Todo, TodoStatus, TodoPriority, CreateTodoParams, UpdateTodoParams, Tod
 import { TodoStorage } from './TodoStorage.js'
 import { STATUS_PRIORITIES, TASK_PRIORITIES } from '../types/Todo.js'
 
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { logError } from './../utils/log.js'
 
 export class TodoManager {
   private storage: TodoStorage
@@ -208,8 +208,8 @@ export class TodoManager {
       const todos = JSON.parse(jsonData) as Todo[]
       await this.storage.saveTodos(todos)
       return true
-    } catch (error) {
-      logError('导入 Todo 数据失败:', error)
+    } catch (_error) {
+      logError('导入 Todo 数据失败:', _error)
       return false
     }
   }
@@ -247,10 +247,10 @@ export class TodoManager {
       }
 
       return { isValid: true }
-    } catch (error) {
+    } catch (_error) {
       return { 
         isValid: false, 
-        error: error instanceof Error ? error.message : '验证失败', 
+        _error: _error instanceof Error ? _error.message : '验证失败', 
       }
     }
   }
@@ -401,7 +401,7 @@ export class TodoManager {
           ? `开始执行任务: ${startedTask.content}`
           : '启动任务失败',
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         startedTask: null,

@@ -76,7 +76,7 @@ export interface WriteFlowTool<
 export interface Tool {
   name: string
   description: string | (() => Promise<string>)
-  execute: (args: any) => Promise<any>
+  execute: (_args: any) => Promise<any>
 }
 
 export type SetToolJSXFn = (jsx: React.ReactNode | null, shouldHidePromptInput?: boolean) => void

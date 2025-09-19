@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog, logError } from './../../utils/log.js'
 import { 
   SecurityRequest, 
   SecurityResponse, 
@@ -90,8 +90,8 @@ export class SixLayerSecurityValidator {
         mitigations
       }
       
-    } catch (error) {
-      logError('[Security] 验证过程出错:', error)
+    } catch (_error) {
+      logError('[Security] 验证过程出错:', _error)
       
       return {
         allowed: false,

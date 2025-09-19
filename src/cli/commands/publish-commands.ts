@@ -18,8 +18,8 @@ export const publishCommands: SlashCommand[] = [
       '/publish medium ./articles/english-post.md --lang=en'
     ],
     
-    async getPromptForCommand(args: string, _context: AgentContext): Promise<string> {
-      const parts = args.trim().split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const parts = _args.trim().split(' ')
       
       if (parts.length < 2) {
         throw new Error('请提供平台名称和文件路径')
@@ -84,7 +84,7 @@ export const publishCommands: SlashCommand[] = [
           } else {
             throw new Error(`无法读取文件: ${(result as any)?.error || '未知错误'}`)
           }
-        } catch (error) {
+        } catch (_error) {
           throw new Error(`读取文件失败: ${(error as Error).message}`)
         }
       } else {
@@ -132,8 +132,8 @@ ${getPlatformRequirements(platform)}
       '/format pdf ./articles/report.md'
     ],
     
-    async getPromptForCommand(args: string, _context: AgentContext): Promise<string> {
-      const parts = args.trim().split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const parts = _args.trim().split(' ')
       
       if (parts.length < 2) {
         throw new Error('请提供目标格式和文件路径')
@@ -201,7 +201,7 @@ ${getPlatformRequirements(platform)}
           } else {
             throw new Error(`无法读取文件: ${(result as any)?.error || '未知错误'}`)
           }
-        } catch (error) {
+        } catch (_error) {
           throw new Error(`读取文件失败: ${(error as Error).message}`)
         }
       } else {

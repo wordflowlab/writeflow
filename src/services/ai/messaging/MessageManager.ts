@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+import { debugLog, logError, logWarn } from '../../../utils/log.js'
 
 /**
 

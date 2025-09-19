@@ -9,10 +9,8 @@
  * - 错误处理和回退
  */
 
-import { getGlobalConfig, type ModelProfile } from '../../utils/config.js'
 import { getModelManager } from '../models/ModelManager.js'
-import { getModelCapabilities } from '../models/modelCapabilities.js'
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { debugLog, logError, logWarn } from '../../utils/log.js'
 // 工具管理模块
 import { 
   getToolExecutionManager,
@@ -62,9 +60,7 @@ import type {
 } from '../../types/UIMessage.js'
 import { parseAIResponse } from './ResponseParser.js'
 import { generateOptimizedSystemPrompt } from '../../tools/SystemPromptOptimizer.js'
-import { addCostEntry } from '../CostTracker.js'
-import { getContextManager, estimateTokens, ContextEntry } from '../ContextManager.js'
-import { emitReminderEvent } from '../SystemReminderService.js'
+import { getContextManager } from '../ContextManager.js'
 
 // 权限确认系统
 import { 
@@ -299,9 +295,9 @@ export class WriteFlowAIService {
         timestamp: Date.now()
       } as StreamMessage
 
-    } catch (error) {
+    } catch (_error) {
       yield {
-        type: 'error',
+        type: '_error',
         message: `AI请求处理失败: ${error instanceof Error ? error.message : String(error)}`,
         error: error as Error,
         context: { request }
@@ -383,8 +379,8 @@ export class WriteFlowAIService {
       
       return finalResponse
       
-    } catch (error) {
-      return this.handleError(error, request, startTime)
+    } catch (_error) {
+      return this.handleError(_error, request, startTime)
     }
   }
   
@@ -479,8 +475,8 @@ export class WriteFlowAIService {
         request.systemPrompt = (request.systemPrompt || '') + orderReminder
       }
 
-    } catch (error) {
-      logWarn('任务顺序验证失败，继续执行:', error)
+    } catch (_error) {
+      logWarn('任务顺序验证失败，继续执行:', _error)
       // 验证失败时不阻止执行，只记录警告
     }
   }
@@ -589,8 +585,8 @@ export class WriteFlowAIService {
       }
       
       return optimizedPrompt
-    } catch (error) {
-      logWarn('生成优化系统提示词失败，使用默认提示词:', error)
+    } catch (_error) {
+      logWarn('生成优化系统提示词失败，使用默认提示词:', _error)
       return request.systemPrompt || '你是 WriteFlow AI 写作助手，请帮助用户完成各种写作和分析任务。'
     }
   }
@@ -614,7 +610,7 @@ export class WriteFlowAIService {
       case 'openai': return 'gpt-3.5-turbo'
       case 'kimi': return 'moonshot-v1-8k'
       default:
-        // 检查可用的 API Key，智能选择默认模型
+        // 检查可用的 API string，智能选择默认模型
         if (process.env.DEEPSEEK_API_KEY) return 'deepseek-chat'
         if (process.env.ANTHROPIC_API_KEY) return 'claude-3-sonnet-20240229'
         if (process.env.OPENAI_API_KEY) return 'gpt-3.5-turbo'
@@ -836,7 +832,7 @@ export class WriteFlowAIService {
               success: result.status === ToolExecutionStatus.COMPLETED,
               error: result.error?.message
             })
-          } catch (error) {
+          } catch (_error) {
             // 对于 TODO 相关工具，尝试使用 legacy 执行方式
             if (['todo_write', 'todo_read', 'exit_plan_mode'].includes(toolCall.toolName)) {
               try {
@@ -847,7 +843,7 @@ export class WriteFlowAIService {
                     callId: toolCall.callId,
                     result: legacyResult.result,
                     success: legacyResult.success,
-                    error: legacyResult.error
+                    _error: legacyResult._error
                   })
                   continue
                 }
@@ -912,7 +908,7 @@ export class WriteFlowAIService {
             parameters,
             fullMatch
           })
-        } catch (error) {
+        } catch (_error) {
           this.messageLogger.systemWarning(`解析工具调用参数失败 ${toolName}: ${error}`)
         }
       }
@@ -929,9 +925,9 @@ export class WriteFlowAIService {
     const args = argsStr.split(',').map(arg => arg.trim().replace(/['"]/g, ''))
     
     // 根据参数数量确定参数结构
-    if (args.length === 1) {
+    if (_args.length === 1) {
       return { input: args[0] }
-    } else if (args.length === 2) {
+    } else if (_args.length === 2) {
       return { path: args[0], content: args[1] }
     } else {
       return { args }
@@ -1082,7 +1078,7 @@ Write("analysis.md", "# 分析结果\\n基于您的请求进行的分析...")
         return { result: '已退出计划模式', success: true }
       }
       return null
-    } catch (error) {
+    } catch (_error) {
       return { result: '', success: false, error: (error as Error).message }
     }
   }
@@ -1115,7 +1111,7 @@ Write("analysis.md", "# 分析结果\\n基于您的请求进行的分析...")
 
       // 默认需要确认
       return false
-    } catch (error) {
+    } catch (_error) {
       this.messageLogger.systemError(`权限检查失败: ${error}`)
       return false
     }

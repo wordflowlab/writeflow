@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+import { debugLog } from '../../../utils/log.js'
 
 /**
  * 进度管理器 - 实现渐进式工具执行展示
@@ -7,7 +7,7 @@ import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
 
 import { ToolExecutionResult, ToolExecutionStatus } from '../../../tools/ToolOrchestrator.js'
 import { format } from '../../../utils/colorScheme.js'
-import { getMessageLogger, MessageType } from '../messaging/MessageManager.js'
+import { getMessageLogger } from '../messaging/MessageManager.js'
 
 export interface ToolProgressState {
   toolName: string

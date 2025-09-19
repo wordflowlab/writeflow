@@ -67,9 +67,9 @@ export class StreamingAIService extends EventEmitter {
       // 开始流式处理
       await this.streamingService.startStream(streamingRequest)
       
-    } catch (error) {
-      logError('流式 AI 请求处理失败', error)
-      this.emit('error', error instanceof Error ? error : new Error(String(error)))
+    } catch (_error) {
+      logError('流式 AI 请求处理失败', _error)
+      this.emit('_error', _error instanceof Error ? _error : new Error(String(_error)))
     }
   }
   

@@ -1,11 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs'
-import { resolve, join } from 'path'
+import { join } from 'path'
 import { homedir } from 'os'
 import { randomBytes } from 'crypto'
 import { getCwd } from './state.js'
 
 // 简单的工具函数替代 lodash
-import { debugLog, logError, logWarn, infoLog } from './log.js'
+import { logError } from './log.js'
 
 function cloneDeep<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') return obj
@@ -22,12 +22,12 @@ function cloneDeep<T>(obj: T): T {
   return cloned
 }
 
-function memoize<T extends (...args: any[]) => any>(fn: T): T & { cache: Map<string, any> } {
+function memoize<T extends (..._args: any[]) => any>(fn: T): T & { cache: Map<string, any> } {
   const cache = new Map()
-  const memoized = ((...args: any[]) => {
-    const key = JSON.stringify(args)
+  const memoized = ((..._args: any[]) => {
+    const key = JSON.stringify(_args)
     if (cache.has(key)) return cache.get(key)
-    const result = fn(...args)
+    const result = fn(..._args)
     cache.set(key, result)
     return result
   }) as T & { cache: Map<string, any> }
@@ -339,8 +339,8 @@ export const getGlobalConfig: (() => GlobalConfig) & { cache: { clear: () => voi
           ...config.modelPointers,
         },
       }
-    } catch (error) {
-      logError('解析全局配置失败:', error)
+    } catch (_error) {
+      logError('解析全局配置失败:', _error)
       return cloneDeep(DEFAULT_GLOBAL_CONFIG)
     }
   }
@@ -369,8 +369,8 @@ export const getProjectConfig = memoize((): ProjectConfig => {
       ...defaultConfigForProject(cwd),
       ...config,
     }
-  } catch (error) {
-    logError('解析项目配置失败:', error)
+  } catch (_error) {
+    logError('解析项目配置失败:', _error)
     return defaultConfigForProject(cwd)
   }
 })
@@ -385,9 +385,9 @@ export function saveGlobalConfig(config: GlobalConfig): void {
     writeFileSync(configPath, JSON.stringify(config, null, 2))
     // 清除memoization缓存
     getGlobalConfig.cache.clear?.()
-  } catch (error) {
-    logError('保存全局配置失败:', error)
-    throw error
+  } catch (_error) {
+    logError('保存全局配置失败:', _error)
+    throw _error
   }
 }
 
@@ -401,9 +401,9 @@ export function saveProjectConfig(config: ProjectConfig): void {
     writeFileSync(configPath, JSON.stringify(config, null, 2))
     // 清除memoization缓存
     getProjectConfig.cache.clear?.()
-  } catch (error) {
-    logError('保存项目配置失败:', error)
-    throw error
+  } catch (_error) {
+    logError('保存项目配置失败:', _error)
+    throw _error
   }
 }
 

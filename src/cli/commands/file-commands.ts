@@ -20,8 +20,8 @@ export const fileCommands: SlashCommand[] = [
       '/read ./README.md'
     ],
     
-    async call(args: string, _context: AgentContext): Promise<string> {
-      const filePath = args.trim()
+    async call(_args: string, _context: AgentContext): Promise<string> {
+      const filePath = _args.trim()
       
       if (!filePath) {
         return `请提供文件路径
@@ -99,7 +99,7 @@ export const fileCommands: SlashCommand[] = [
         
         return output
         
-      } catch (error) {
+      } catch (_error) {
         return `❌ 读取文件失败: ${(error as Error).message}
         
 文件路径: ${filePath}
@@ -122,8 +122,8 @@ export const fileCommands: SlashCommand[] = [
       '/edit ./README.md'
     ],
     
-    async call(args: string, _context: AgentContext): Promise<string> {
-      const filePath = args.trim()
+    async call(_args: string, _context: AgentContext): Promise<string> {
+      const filePath = _args.trim()
       
       if (!filePath) {
         return `请提供文件路径
@@ -197,7 +197,7 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
 - 字数: ${((readResult as any).metadata as any).wordCount}
 - 格式: ${((readResult as any).metadata as any).format}` : '暂无元数据'}`
         
-      } catch (error) {
+      } catch (_error) {
         return `❌ 编辑失败: ${(error as Error).message}
         
 文件路径: ${filePath}
@@ -220,8 +220,8 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
       '/search "export" ./src/**/*.ts'
     ],
     
-    async call(args: string, _context: AgentContext): Promise<string> {
-      const parts = args.trim().split(' ')
+    async call(_args: string, _context: AgentContext): Promise<string> {
+      const parts = _args.trim().split(' ')
       
       if (parts.length === 0 || !parts[0]) {
         return `请提供搜索关键词
@@ -264,7 +264,7 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
         
         return output
         
-      } catch (error) {
+      } catch (_error) {
         return `❌ 搜索失败: ${(error as Error).message}
         
 关键词: ${keyword}
@@ -289,8 +289,8 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
       '/glob *.json .'
     ],
     
-    async call(args: string, _context: AgentContext): Promise<string> {
-      const parts = args.trim().split(' ')
+    async call(_args: string, _context: AgentContext): Promise<string> {
+      const parts = _args.trim().split(' ')
       
       if (parts.length === 0 || !parts[0]) {
         return `请提供 glob 模式
@@ -397,7 +397,7 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
         
         return output
         
-      } catch (error) {
+      } catch (_error) {
         return `❌ Glob 搜索失败: ${(error as Error).message}
         
 模式: ${pattern}
@@ -444,7 +444,7 @@ async function searchInFiles(keyword: string, searchPath: string): Promise<Array
               })
             }
           })
-        } catch (error) {
+        } catch (_error) {
           // 跳过无法读取的文件
         }
       }
@@ -475,7 +475,7 @@ async function searchInFiles(keyword: string, searchPath: string): Promise<Array
               }
             }
           }
-        } catch (error) {
+        } catch (_error) {
           // 跳过无法访问的目录
         }
       }
@@ -487,7 +487,7 @@ async function searchInFiles(keyword: string, searchPath: string): Promise<Array
         } else if (stat.isDirectory()) {
           await scanDirectory(searchPath)
         }
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`无法访问路径: ${searchPath}`)
       }
       

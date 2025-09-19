@@ -85,8 +85,8 @@ export function WriteFlowOnboarding({
       
       setWritingPreferences(preferences)
       onComplete()
-    } catch (error) {
-      console.error('保存配置时出错:', error)
+    } catch (_error) {
+      console._error('保存配置时出错:', _error)
     }
   }, [onComplete])
 
@@ -112,8 +112,8 @@ export function WriteFlowOnboarding({
               hasCompletedOnboarding: true,
             })
             onComplete()
-          } catch (error) {
-            console.error('保存引导完成状态时出错:', error)
+          } catch (_error) {
+            console._error('保存引导完成状态时出错:', _error)
           }
         } else {
           goToNextStep()

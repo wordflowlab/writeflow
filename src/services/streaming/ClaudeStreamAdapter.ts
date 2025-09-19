@@ -161,7 +161,7 @@ export class ClaudeStreamAdapter extends StreamAdapter {
           // 未知事件类型
           return null
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         content: '',
         done: false,

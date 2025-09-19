@@ -73,7 +73,7 @@ export class AIConfigLoader {
           this.guideCache.set(cacheKey, content)
           return content
         }
-      } catch (error) {
+      } catch (_error) {
         // 文件不存在或无法读取，继续尝试下一个
         continue
       }
@@ -114,7 +114,7 @@ export class AIConfigLoader {
         const config = { ...DEFAULT_CONFIG, ...userConfig }
         this.configCache.set(cacheKey, config)
         return config
-      } catch (error) {
+      } catch (_error) {
         // 文件不存在或解析错误，继续尝试下一个
         continue
       }
@@ -232,8 +232,8 @@ export class AIConfigLoader {
       const cacheKey = `config:${root}`
       this.configCache.set(cacheKey, mergedConfig)
 
-    } catch (error) {
-      logError('保存配置失败:', error)
+    } catch (_error) {
+      logError('保存配置失败:', _error)
       throw new Error(`配置保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }

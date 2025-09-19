@@ -12,8 +12,8 @@ export const mcpCommands: SlashCommand[] = [
       '/mcp list',
       '/mcp help'
     ],
-    async call(args: string): Promise<string> {
-      const [sub] = args.trim().split(/\s+/)
+    async call(_args: string): Promise<string> {
+      const [sub] = _args.trim().split(/\s+/)
       switch ((sub || 'list').toLowerCase()) {
         case 'list':
           return listServers()
@@ -33,7 +33,7 @@ export const mcpCommands: SlashCommand[] = [
           if (s.type === 'sse') {
             out += `   url: ${s.url}\n`
           } else {
-            out += `   command: ${s.command} ${s.args?.join(' ') || ''}\n`
+            out += `   command: ${s.command} ${s._args?.join(' ') || ''}\n`
           }
         }
         out += '\n提示: 某些工具需要模型支持 function calling 或特定插件。'

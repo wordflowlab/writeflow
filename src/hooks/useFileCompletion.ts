@@ -10,7 +10,7 @@ import { debugLog } from '../utils/log.js'
 
 export interface FileCompletionState {
   /** 补全建议列表 */
-  suggestions: FileCompletionItem[]
+  suggestions: typeof FileCompletionItem[]
   /** 当前选中的索引 */
   selectedIndex: number
   /** 是否激活补全 */
@@ -126,7 +126,7 @@ export function useFileCompletion({
         isActive: suggestions.length > 0,
       }))
       
-    } catch (error) {
+    } catch (_error) {
       debugLog(`文件补全失败: ${error}`)
       setState(prev => ({
         ...prev,
@@ -141,7 +141,7 @@ export function useFileCompletion({
   /**
    * 应用选中的补全
    */
-  const applyCompletion = useCallback((item: FileCompletionItem) => {
+  const applyCompletion = useCallback((item: typeof FileCompletionItem) => {
     if (!state.context) return
     
     const { atPosition, endPosition } = state.context

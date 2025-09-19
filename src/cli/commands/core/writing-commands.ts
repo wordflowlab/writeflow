@@ -19,12 +19,12 @@ export const writingCommands: SlashCommand[] = [
       '/write 如何构建高性能Web应用'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      if (!args.trim()) {
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      if (!_args.trim()) {
         throw new Error('请提供写作任务或主题。用法: /write <具体任务或主题>')
       }
 
-      const input = args.trim()
+      const input = _args.trim()
       
       // 检测是否为任务驱动的写作（包含Task关键词或具体任务描述）
       const isTaskDriven = input.includes('Task ') || 
@@ -127,12 +127,12 @@ export const writingCommands: SlashCommand[] = [
       '/draft 云计算技术趋势'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      if (!args.trim()) {
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      if (!_args.trim()) {
         throw new Error('请提供起草主题。用法: /draft <主题>')
       }
 
-      const topic = args.trim()
+      const topic = _args.trim()
       
       return `请为以下主题快速起草一个内容框架：
 
@@ -165,12 +165,12 @@ export const writingCommands: SlashCommand[] = [
       '/compose 技术分享：前端性能优化经验'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      if (!args.trim()) {
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      if (!_args.trim()) {
         throw new Error('请提供创作主题。用法: /compose <创作主题>')
       }
 
-      const topic = args.trim()
+      const topic = _args.trim()
       
       return `请进行组合式创意写作，主题如下：
 
@@ -209,12 +209,12 @@ export const writingCommands: SlashCommand[] = [
       '/continue 请基于前面的内容继续写下一部分'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      if (!args.trim()) {
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      if (!_args.trim()) {
         throw new Error('请提供需要续写的内容或描述。用法: /continue <需要续写的内容>')
       }
 
-      const content = args.trim()
+      const content = _args.trim()
       
       return `请基于以下内容进行续写：
 

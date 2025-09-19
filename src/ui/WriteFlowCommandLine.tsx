@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Box, Text, render } from 'ink'
+import { render } from 'ink'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
-import { getTheme } from '../utils/theme.js'
 import { 
   ToolExecutionMessage, 
   EnhancedAssistantMessage,
@@ -176,7 +175,7 @@ export async function startEnhancedCommandLineMode(app: WriteFlowApp) {
           render(assistantMessage)
         }
       }
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = React.createElement(SystemMessage, {
         content: `处理失败: ${error instanceof Error ? error.message : String(error)}`,
         type: 'error',

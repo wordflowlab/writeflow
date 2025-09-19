@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { debugLog, logError, logWarn } from './../utils/log.js'
 import { Command } from 'commander'
 import chalk from 'chalk'
 import ora from 'ora'
 import React from 'react'
 import { render } from 'ink'
 import { WriteFlowApp } from './writeflow-app.js'
-import { AIWritingConfig } from '../types/writing.js'
 import { displayCLILogo, displayMiniLogo } from '../utils/cli-logo.js'
 import { getVersion } from '../utils/version.js'
-import { getGlobalConfig, shouldShowOnboarding } from '../utils/config.js'
+import { shouldShowOnboarding } from '../utils/config.js'
 import { WriteFlowOnboarding } from '../ui/components/onboarding/WriteFlowOnboarding.js'
 import { WriteFlowREPL } from '../ui/WriteFlowREPL.js'
 import { startEnhancedCommandLineMode } from '../ui/WriteFlowCommandLine.js'
@@ -22,7 +21,7 @@ import { startEnhancedCommandLineMode } from '../ui/WriteFlowCommandLine.js'
 export class WriteFlowCLI {
   private app: WriteFlowApp
   private program: Command
-  private keepAlive?: NodeJS.Timeout
+  private keepAlive?: ReturnType<typeof setInterval>
 
   constructor() {
     this.program = new Command()
@@ -105,7 +104,7 @@ export class WriteFlowCLI {
       // 启动 React UI
       this.startReactUI()
 
-    } catch (error) {
+    } catch (_error) {
       logError(chalk.red(`启动失败: ${(error as Error).message}`))
       process.exit(1)
     }
@@ -125,9 +124,9 @@ export class WriteFlowCLI {
             setTimeout(() => {
               resolve()
             }, 100)
-          } catch (error) {
-            logError(chalk.red('引导完成时出错:'), error)
-            reject(error)
+          } catch (_error) {
+            logError(chalk.red('引导完成时出错:'), _error)
+            reject(_error)
           }
         },
         onExit: () => {
@@ -168,8 +167,8 @@ export class WriteFlowCLI {
         debugLog('Raw Mode 不支持：实际测试失败', testError instanceof Error ? testError.message : String(testError))
         return false
       }
-    } catch (error) {
-      debugLog('Raw Mode 检测异常:', error instanceof Error ? error.message : String(error))
+    } catch (_error) {
+      debugLog('Raw Mode 检测异常:', _error instanceof Error ? _error.message : String(_error))
       return false
     }
   }
@@ -221,8 +220,8 @@ export class WriteFlowCLI {
         }
       })
 
-    } catch (error) {
-      if (error instanceof Error && error.message?.includes('Raw mode is not supported')) {
+    } catch (_error) {
+      if (_error instanceof Error && _error.message?.includes('Raw mode is not supported')) {
         logWarn(chalk.yellow('⚠️  Raw mode 不支持，切换到命令行模式'))
         this.startCommandLineMode().catch(err => {
           logError(chalk.red('启动命令行模式失败:'), err)
@@ -245,7 +244,7 @@ export class WriteFlowCLI {
     try {
       // 使用增强的命令行模式，支持结构化工具执行显示
       await startEnhancedCommandLineMode(this.app)
-    } catch (error) {
+    } catch (_error) {
       // 如果增强模式失败，回退到简单命令行模式
       logWarn(chalk.yellow('⚠️  增强模式启动失败，使用简单命令行模式'))
       await this.startSimpleCommandLineMode()
@@ -296,8 +295,8 @@ export class WriteFlowCLI {
           const result = await this.app.handleFreeTextInput(trimmedInput, {})
           console.log(result)
         }
-      } catch (error) {
-        console.error(chalk.red('处理失败:'), error instanceof Error ? error.message : String(error))
+      } catch (_error) {
+        console._error(chalk.red('处理失败:'), _error instanceof Error ? _error.message : String(_error))
       }
 
       rl.prompt()
@@ -331,9 +330,9 @@ export class WriteFlowCLI {
       spinner.succeed('命令执行完成')
       debugLog(result)
 
-    } catch (error) {
+    } catch (_error) {
       spinner.fail('命令执行失败')
-      logError(chalk.red((error as Error).message))
+      logError(chalk.red((_error as Error).message))
       process.exit(1)
     }
   }
@@ -361,8 +360,8 @@ export class WriteFlowCLI {
         debugLog(chalk.yellow('请指定配置操作: --set, --get, 或 --list'))
       }
 
-    } catch (error) {
-      logError(chalk.red((error as Error).message))
+    } catch (_error) {
+      logError(chalk.red((_error as Error).message))
       process.exit(1)
     }
   }
@@ -405,8 +404,8 @@ export class WriteFlowCLI {
         debugLog(`  long-term: ${chalk.green(`${mem.longTerm.knowledge} knowledge, ${mem.longTerm.topics} topics`)}`)
       }
 
-    } catch (error) {
-      logError(chalk.red((error as Error).message))
+    } catch (_error) {
+      logError(chalk.red((_error as Error).message))
       process.exit(1)
     }
   }
@@ -417,7 +416,7 @@ export class WriteFlowCLI {
   async run(): Promise<void> {
     try {
       await this.program.parseAsync()
-    } catch (error) {
+    } catch (_error) {
       logError(chalk.red(`WriteFlow CLI 错误: ${(error as Error).message}`))
       process.exit(1)
     }

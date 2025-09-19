@@ -3,7 +3,6 @@
  * 负责渲染命令补全的建议列表
  */
 
-import React from 'react'
 import { Box, Text } from 'ink'
 import { CommandSuggestion } from '../../utils/commandRegistry.js'
 import { getTheme } from '../../utils/theme.js'

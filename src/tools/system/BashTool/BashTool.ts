@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { spawn, SpawnOptions } from 'child_process'
+import { spawn } from 'child_process'
 import { ToolBase } from '../../ToolBase.js'
 import { ToolUseContext, PermissionResult } from '../../../Tool.js'
 import { PROMPT } from './prompt.js'
@@ -140,8 +140,8 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
             resultForAssistant: this.formatResult(result),
           }
         }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
+      } catch (_error) {
+        const errorMessage = _error instanceof Error ? _error.message : String(_error)
         const duration = Date.now() - startTime
         
         const result: BashToolOutput = {
@@ -370,7 +370,7 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
       proc.process.kill('SIGTERM')
       BashTool.backgroundProcesses.delete(processId)
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }

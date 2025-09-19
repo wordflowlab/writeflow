@@ -17,8 +17,8 @@ export const styleCommands: SlashCommand[] = [
       '/style 学术 --tone=专业 --audience=研究人员'
     ],
     
-    async getPromptForCommand(args: string, _context: AgentContext): Promise<string> {
-      const parts = args.trim().split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const parts = _args.trim().split(' ')
       
       if (parts.length === 0) {
         throw new Error('请提供写作风格')

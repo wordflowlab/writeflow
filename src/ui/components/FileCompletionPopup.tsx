@@ -5,12 +5,12 @@
 
 import React from 'react'
 import { Box, Text } from 'ink'
-import { type FileCompletionItem, fileCompletionService } from '../../services/FileCompletionService.js'
+import { fileCompletionService } from '../../services/FileCompletionService.js'
 import { getTheme } from '../../utils/theme.js'
 
 interface FileCompletionPopupProps {
   /** 补全建议列表 */
-  suggestions: FileCompletionItem[]
+  suggestions: typeof FileCompletionItem[]
   /** 当前选中的索引 */
   selectedIndex: number
   /** 是否显示 */
@@ -103,7 +103,7 @@ export function FileCompletionPopup({
  * 单个文件补全项组件
  */
 interface FileCompletionItemProps {
-  item: FileCompletionItem
+  item: typeof FileCompletionItem
   isSelected: boolean
   query: string
 }
@@ -112,7 +112,7 @@ function FileCompletionItem({
   item, 
   isSelected, 
   query 
-}: FileCompletionItemProps): React.ReactNode {
+}: typeof FileCompletionItemProps): React.ReactNode {
   const theme = getTheme()
   const icon = fileCompletionService.getFileIcon(item)
   

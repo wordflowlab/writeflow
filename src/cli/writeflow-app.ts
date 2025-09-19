@@ -2,7 +2,6 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import readline from 'readline'
 import chalk from 'chalk'
-import enquirer from 'enquirer'
 import { EventEmitter } from 'events'
 import { getVersion } from '../utils/version.js'
 
@@ -25,15 +24,11 @@ import { slideCommands } from './commands/slide-commands.js'
 import { SlashCommand } from '../types/command.js'
 
 // 新工具系统集成
-import { 
-  coreTools,
-  getToolOrchestrator, 
+import {
   getPermissionManager,
-  getAvailableTools as getCoreTools, 
 } from '../tools/index.js'
-import { TodoWriteTool } from '../tools/writing/TodoWriteTool.js'
 import { LegacyToolManager } from '../tools/LegacyToolManager.js'
-import { debugLog, logError, logWarn, infoLog } from './../utils/log.js'
+import { debugLog, logError, logWarn } from './../utils/log.js'
 
 import {
   OutlineGeneratorTool,
@@ -59,10 +54,9 @@ import { MemoryManager } from '../tools/memory/MemoryManager.js'
 import { PlanModeManager } from '../modes/PlanModeManager.js'
 
 // 权限确认系统
-import { 
-  getPermissionConfirmationService, 
-  PermissionRequest, 
-  PermissionResponse, 
+import {
+  getPermissionConfirmationService,
+  PermissionRequest,
 } from '../services/PermissionConfirmationService.js'
 
 // 类型定义
@@ -298,7 +292,7 @@ TODO 管理规范：
       this.isInitialized = true
       debugLog(chalk.green('✅ WriteFlow 初始化完成'))
 
-    } catch (error) {
+    } catch (_error) {
       logError(chalk.red(`初始化失败: ${(error as Error).message}`))
       throw error
     }
@@ -510,8 +504,8 @@ TODO 管理规范：
       try {
         // 发射权限请求事件给UI层处理
         this.emit('permission-request', request)
-      } catch (error) {
-        logError('处理权限请求失败:', error)
+      } catch (_error) {
+        logError('处理权限请求失败:', _error)
         // 如果UI处理失败，自动拒绝权限请求
         this.permissionService.respondToPermission(request.id, { decision: 'deny' })
       }
@@ -527,8 +521,8 @@ TODO 管理规范：
       permissionManager.setCurrentMode(PlanMode.Default)
       
       debugLog('🔐 新工具系统权限管理器已配置')
-    } catch (error) {
-      logWarn('配置新工具系统权限管理器失败:', error)
+    } catch (_error) {
+      logWarn('配置新工具系统权限管理器失败:', _error)
     }
 
     debugLog('🔐 权限确认系统已初始化')
@@ -588,7 +582,7 @@ TODO 管理规范：
           debugLog(chalk.blue(response))
         }
 
-      } catch (error) {
+      } catch (_error) {
         logError(chalk.red(`错误: ${(error as Error).message}`))
       }
 
@@ -611,7 +605,7 @@ TODO 管理规范：
         // 将命令包装为消息并通过 h2A 队列处理（最小试点）
         const message = H2AAsyncMessageQueue.createMessage(
           MessageType.SlashCommand,
-          `${command} ${options?.args || ''}`.trim(),
+          `${command} ${options?._args || ''}`.trim(),
           MessagePriority.Normal,
           'cli',
         )
@@ -665,7 +659,7 @@ TODO 管理规范：
       // 返回直接结果
       return result.messages?.[0]?.content || '命令执行完成'
 
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`命令执行失败: ${(error as Error).message}`)
     }
   }
@@ -762,8 +756,8 @@ ${this.projectWritingConfig}`
         if (fileReferences.length > 0) {
           debugLog(`✅ 成功处理 ${fileReferences.length} 个文件引用`)
         }
-      } catch (error) {
-        logWarn('文件引用处理失败:', (error as Error).message)
+      } catch (_error) {
+        logWarn('文件引用处理失败:', (_error as Error).message)
         // 文件引用失败时仍使用原始输入
       }
     }
@@ -841,7 +835,7 @@ ${fileList}
 
       // 直接返回响应内容，TODO 显示由 TodoPanel 处理
       return response.content
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`AI查询失败: ${error instanceof Error ? error.message : '未知错误'}`)
     }
   }
@@ -867,7 +861,7 @@ ${fileList}
       let processedInput = input
       let fileReferences: any[] = []
       
-      if (false && this.mentionProcessor.hasFileReferences(input)) {
+      if (this.mentionProcessor && this.mentionProcessor.hasFileReferences(input)) {
         debugLog('🔍 检测到文件引用，开始处理...')
         const result = await this.mentionProcessor.processFileReferences(input)
         processedInput = result.processedInput
@@ -907,8 +901,8 @@ ${fileList}
       if (this.memoryManager) {
         try {
           await this.memoryManager.addMessage('user', processedInput)
-        } catch (error) {
-          console.warn('⚠️ 记忆系统处理失败，继续执行:', error instanceof Error ? error.message : String(error))
+        } catch (_error) {
+          console.warn('⚠️ 记忆系统处理失败，继续执行:', _error instanceof Error ? _error.message : String(_error))
         }
       } else {
         console.log('🧠 记忆管理器不存在')
@@ -983,8 +977,8 @@ ${systemPrompt}`
             contextualPrompt = `${contextInfo  }当前请求:\n${  processedInput}`
           }
           
-        } catch (error) {
-          console.warn('⚠️ 获取记忆上下文失败，使用原始输入:', error instanceof Error ? error.message : String(error))
+        } catch (_error) {
+          console.warn('⚠️ 获取记忆上下文失败，使用原始输入:', _error instanceof Error ? _error.message : String(_error))
         }
       }
 
@@ -1044,15 +1038,15 @@ ${systemPrompt}`
             console.log(`🧠 记忆系统需要压缩: ${compressionCheck.reason}`)
           }
           
-        } catch (error) {
-          console.warn('⚠️ 响应保存到记忆系统失败:', error instanceof Error ? error.message : String(error))
+        } catch (_error) {
+          console.warn('⚠️ 响应保存到记忆系统失败:', _error instanceof Error ? _error.message : String(_error))
         }
       }
 
       return response.content
 
-    } catch (error) {
-      logWarn('AI对话失败，回退到意图检测:', error)
+    } catch (_error) {
+      logWarn('AI对话失败，回退到意图检测:', _error)
       return this.fallbackToIntentDetection(input)
     }
   }
@@ -1065,13 +1059,13 @@ ${systemPrompt}`
 
     switch (intent.type) {
       case 'outline':
-        return await this.executeCommand(`/outline ${intent.topic}`)
+        return this.executeCommand(`/outline ${intent.topic}`)
 
       case 'rewrite':
-        return await this.executeCommand(`/rewrite ${intent.style} "${intent.content}"`)
+        return this.executeCommand(`/rewrite ${intent.style} "${intent.content}"`)
 
       case 'research':
-        return await this.executeCommand(`/research ${intent.topic}`)
+        return this.executeCommand(`/research ${intent.topic}`)
 
       default:
         // 提供更友好的响应，而不是错误
@@ -1123,7 +1117,7 @@ ${systemPrompt}`
         const configContent = await fs.readFile(configPath, 'utf8')
         const userConfig = JSON.parse(configContent)
         this.config = { ...this.config, ...userConfig }
-      } catch (error) {
+      } catch (_error) {
         logWarn(chalk.yellow(`配置文件加载失败: ${(error as Error).message}`))
       }
     }
@@ -1216,7 +1210,7 @@ ${systemPrompt}`
     if (!this.memoryManager) {
       throw new Error('记忆系统未初始化')
     }
-    return await this.memoryManager.forceCompression()
+    return this.memoryManager.forceCompression()
   }
 
   /**
@@ -1226,7 +1220,7 @@ ${systemPrompt}`
     if (!this.memoryManager) {
       throw new Error('记忆系统未初始化')
     }
-    return await this.memoryManager.search(query)
+    return this.memoryManager.search(query)
   }
 
   /**
@@ -1308,7 +1302,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
     }
 
     // 执行其他工具
-    return await this.toolManager.executeTool(toolName, input)
+    return this.toolManager.executeTool(toolName, input)
   }
   /**
    * 拦截并处理 AI 响应中的工具调用
@@ -1391,7 +1385,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
             // 兼容大小写/历史命名
             const name = (c.name || '').toLowerCase()
             const mapped = name === 'todowrite' ? 'todo_write' : name === 'todoread' ? 'todo_read' : c.name
-            toolCalls.push({ toolName: mapped, input: c.args })
+            toolCalls.push({ toolName: mapped, input: c._args })
           }
         }
         // 再兜底清理
@@ -1525,7 +1519,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
         this.projectWritingConfig = await fs.readFile(writeflowConfigPath, 'utf-8')
         debugLog(chalk.blue('📋 已加载项目写作配置: WRITEFLOW.md'))
       }
-    } catch (error) {
+    } catch (_error) {
       // 配置文件不存在或读取失败，静默处理
       console.debug('WRITEFLOW.md 配置文件未找到或读取失败')
     }

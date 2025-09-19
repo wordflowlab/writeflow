@@ -90,7 +90,7 @@ export class GeminiStreamAdapter extends StreamAdapter {
           chunks.push(chunk)
         }
         
-      } catch (error) {
+      } catch (_error) {
         // JSON 解析失败，创建错误块
         chunks.push({
           content: '',

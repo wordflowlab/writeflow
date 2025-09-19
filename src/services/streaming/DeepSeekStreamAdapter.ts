@@ -100,7 +100,7 @@ export class DeepSeekStreamAdapter extends OpenAIStreamAdapter {
               usage
             })
           }
-        } catch (error) {
+        } catch (_error) {
           // 解析错误，创建错误块
           chunks.push({
             content: '',

@@ -28,9 +28,9 @@ export async function startWriteFlowUI(writeFlowApp: WriteFlowApp) {
     )
     
     return await waitUntilExit()
-  } catch (error) {
+  } catch (_error) {
     // 更详细的错误信息
-    console.error('❌ UI启动失败:', error)
+    console._error('❌ UI启动失败:', _error)
     debugLog('📋 回退到传统CLI界面...')
     return await writeFlowApp.startLegacySession()
   }

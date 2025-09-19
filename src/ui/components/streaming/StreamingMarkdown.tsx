@@ -6,7 +6,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Text, Box } from 'ink'
 import { StreamingService, StreamingResponse } from '../../../services/streaming/StreamingService.js'
-import { renderMarkdown } from '../../utils/markdownRenderer.js'
 import { extractCodeBlocks } from '../../utils/codeFormatter.js'
 import { StreamingText } from './StreamingText.js'
 import { StreamingCodeBlock } from './StreamingCodeBlock.js'
@@ -265,9 +264,9 @@ export const StreamingMarkdown: React.FC<StreamingMarkdownProps> = ({
 
       return segments_temp
 
-    } catch (error) {
-      console.warn('增量解析失败:', error)
-      setError(error instanceof Error ? error : new Error(String(error)))
+    } catch (_error) {
+      console.warn('增量解析失败:', _error)
+      setError(_error instanceof Error ? _error : new Error(String(_error)))
       return []
     } finally {
       setIsParsing(false)

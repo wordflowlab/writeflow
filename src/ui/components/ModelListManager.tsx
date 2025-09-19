@@ -121,7 +121,7 @@ export function ModelListManager({ onClose }: Props): React.ReactNode {
           }
           handleDeleteModel(item.id)
         } else if (item.type === 'model') {
-          // 打开编辑器，允许设置/更新 API Key 和 Base URL
+          // 打开编辑器，允许设置/更新 API string 和 Base URL
           const profile = availableModels.find(p => p.modelName === item.id)
           if (profile) setEditingProfile(profile)
         } else if (item.type === 'action') {

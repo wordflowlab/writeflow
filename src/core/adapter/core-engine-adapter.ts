@@ -1,9 +1,9 @@
 import { H2AAsyncMessageQueue } from '../queue/h2A-queue.js'
 import { AgentContext } from '../../types/agent.js'
-import { Message, MessageType } from '../../types/message.js'
+import { MessageType } from '../../types/message.js'
 import { NOMainAgentEngine } from '../agent/nO-engine.js'
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { logWarn } from './../../utils/log.js'
 
 export type ExecuteCommandFn = (command: string, agentContext?: AgentContext) => Promise<{
   success: boolean

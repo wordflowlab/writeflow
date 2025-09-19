@@ -69,7 +69,7 @@ export class SlidevGenerator implements Tool {
           features: this.detectFeatures(slidevContent)
         }
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `生成失败: ${error instanceof Error ? error.message : String(error)}`

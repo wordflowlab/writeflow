@@ -148,8 +148,8 @@ export abstract class StreamAdapter extends EventEmitter {
       } else {
         this.processBuffered()
       }
-    } catch (error) {
-      this.handleError(error as Error)
+    } catch (_error) {
+      this.handleError(_error as Error)
     }
   }
 

@@ -112,7 +112,7 @@ export function truncateText(text: string, maxLength: number, ellipsis: string =
 export function formatJSON(obj: any, indent: number = 2): string {
   try {
     return JSON.stringify(obj, null, indent)
-  } catch (error) {
+  } catch (_error) {
     return String(obj)
   }
 }

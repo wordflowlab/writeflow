@@ -5,7 +5,7 @@
 
 import { getMessageLogger } from '../messaging/MessageManager.js'
 import { ToolExecutionResult, ToolExecutionStatus } from '../../../tools/ToolOrchestrator.js'
-import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+import { debugLog } from '../../../utils/log.js'
 
 export enum ExecutionStage {
   PLANNING = 'planning',           // 计划阶段 - 分析需要执行的工具
@@ -215,7 +215,7 @@ export class InteractiveExecutionManager {
           }
         }
 
-      } catch (error) {
+      } catch (_error) {
         this.messageLogger.systemError(`工具执行异常: ${error}`, {
           toolName: tool.toolName,
           category: 'execution-error'

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { Text, Box } from 'ink'
-import { StreamingPipeline, StreamChunk, RenderBuffer, getStreamingPipeline } from '../../utils/streamingPipeline.js'
+import { StreamChunk, getStreamingPipeline } from '../../utils/streamingPipeline.js'
 import { StreamingText } from './StreamingText.js'
 import { StreamingMarkdown } from './StreamingMarkdown.js'
 import { StreamingCodeBlock } from './StreamingCodeBlock.js'

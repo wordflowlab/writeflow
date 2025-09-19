@@ -1,9 +1,7 @@
-import React from 'react'
-import { SlashCommand, CommandResult, CommandMessage } from '../../types/command.js'
+import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
 import { TodoManager } from '../../tools/TodoManager.js'
 import { TodoStatus, TodoPriority } from '../../types/Todo.js'
-import { TodoListRenderer } from '../../ui/renderers/TodoListRenderer.js'
 
 // 全局 TodoManager 实例 - 基于会话ID
 let globalTodoManager: TodoManager | null = null
@@ -33,12 +31,12 @@ export const todoAddCommand: SlashCommand = {
   
   userFacingName: () => '添加任务',
   
-  async call(args: string, context: AgentContext): Promise<string> {
-    if (!args.trim()) {
+  async call(_args: string, _context: AgentContext): Promise<string> {
+    if (!_args.trim()) {
       return '错误: 请提供任务内容。用法: /todo add <任务内容> [优先级]'
     }
 
-    const parts = args.trim().split(' ')
+    const parts = _args.trim().split(' ')
     const priority = parts[parts.length - 1]?.toLowerCase()
     let content: string
     let taskPriority: TodoPriority = TodoPriority.MEDIUM
@@ -48,7 +46,7 @@ export const todoAddCommand: SlashCommand = {
       taskPriority = priority as TodoPriority
       content = parts.slice(0, -1).join(' ')
     } else {
-      content = args.trim()
+      content = _args.trim()
     }
 
     // 生成 activeForm
@@ -81,9 +79,9 @@ export const todoListCommand: SlashCommand = {
 
   userFacingName: () => '任务列表',
 
-  async call(args: string, context: AgentContext): Promise<string> {
+  async call(_args: string, _context: AgentContext): Promise<string> {
     const todoManager = getTodoManager(context.sessionId)
-    const status = args.trim().toLowerCase() as TodoStatus
+    const status = _args.trim().toLowerCase() as TodoStatus
 
     let todos
     if (status && Object.values(TodoStatus).includes(status)) {
@@ -117,8 +115,8 @@ export const todoUpdateCommand: SlashCommand = {
 
   userFacingName: () => '更新任务',
 
-  async call(args: string, context: AgentContext): Promise<string> {
-    const parts = args.trim().split(' ')
+  async call(_args: string, _context: AgentContext): Promise<string> {
+    const parts = _args.trim().split(' ')
     if (parts.length !== 2) {
       return '错误: 用法 /todo update <ID> <状态>\n可用状态: pending, in_progress, completed'
     }
@@ -158,8 +156,8 @@ export const todoRemoveCommand: SlashCommand = {
 
   userFacingName: () => '删除任务',
 
-  async call(args: string, context: AgentContext): Promise<string> {
-    const id = args.trim()
+  async call(_args: string, _context: AgentContext): Promise<string> {
+    const id = _args.trim()
     if (!id) {
       return '错误: 请提供任务 ID。用法: /todo remove <ID>'
     }
@@ -190,7 +188,7 @@ export const todoStatsCommand: SlashCommand = {
 
   userFacingName: () => '任务统计',
 
-  async call(args: string, context: AgentContext): Promise<string> {
+  async call(_args: string, _context: AgentContext): Promise<string> {
     const todoManager = getTodoManager(context.sessionId)
     const report = await todoManager.getProgressReport()
 
@@ -233,7 +231,7 @@ export const todoClearCommand: SlashCommand = {
 
   userFacingName: () => '清空任务',
 
-  async call(args: string, context: AgentContext): Promise<string> {
+  async call(_args: string, _context: AgentContext): Promise<string> {
     const todoManager = getTodoManager(context.sessionId)
     await todoManager.clearAllTodos()
     return '🧹 所有任务已清空'
@@ -250,8 +248,8 @@ export const todoStartCommand: SlashCommand = {
 
   userFacingName: () => '开始任务',
 
-  async call(args: string, context: AgentContext): Promise<string> {
-    const id = args.trim()
+  async call(_args: string, _context: AgentContext): Promise<string> {
+    const id = _args.trim()
     if (!id) {
       return '错误: 请提供任务 ID。用法: /todo start <ID>'
     }
@@ -277,8 +275,8 @@ export const todoDoneCommand: SlashCommand = {
 
   userFacingName: () => '完成任务',
 
-  async call(args: string, context: AgentContext): Promise<string> {
-    const id = args.trim()
+  async call(_args: string, _context: AgentContext): Promise<string> {
+    const id = _args.trim()
     if (!id) {
       return '错误: 请提供任务 ID。用法: /todo done <ID>'
     }

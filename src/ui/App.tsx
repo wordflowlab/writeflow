@@ -1,4 +1,3 @@
-import React from 'react'
 import { WriteFlowREPL } from './WriteFlowREPL.js'
 import { WriteFlowApp } from '../cli/writeflow-app.js'
 

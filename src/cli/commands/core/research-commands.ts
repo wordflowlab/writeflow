@@ -19,8 +19,8 @@ export const researchCommands: SlashCommand[] = [
       '/research 量子计算应用 --lang=中文 --time=最近一年'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const [topic, ...options] = args.split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const [topic, ...options] = _args.split(' ')
       const depth = extractOption(options, 'depth') || '标准'
       const maxSources = extractOption(options, 'sources') || '8'
       const timeRange = extractOption(options, 'time') || '无限制'
@@ -93,8 +93,8 @@ export const researchCommands: SlashCommand[] = [
       '/deep-research "量子计算商业化前景" --sources=20 --format=商业'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      const parts = args.split(' ')
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      const parts = _args.split(' ')
       const topic = parts.find(part => !part.startsWith('--')) || parts[0]
       const options = parts.filter(part => part.startsWith('--'))
       

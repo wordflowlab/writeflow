@@ -3,7 +3,6 @@ import { Text, useInput } from 'ink'
 import chalk from 'chalk'
 import { useTextInput } from '../../hooks/useTextInput.js'
 import { getTheme } from '../../../utils/theme.js'
-import { type Key } from 'ink'
 
 type Props = {
   /**
@@ -111,7 +110,7 @@ type Props = {
    * Optional callback to handle special key combinations before input processing
    * Return true to prevent default handling
    */
-  readonly onSpecialKey?: (input: string, key: Key) => boolean
+  readonly onSpecialKey?: (input: string, key: string) => boolean
 
   readonly cursorOffset: number
 
@@ -192,7 +191,7 @@ export default function TextInput({
     }, 100)
   }
 
-  const wrappedOnInput = (input: string, key: Key): void => {
+  const wrappedOnInput = (input: string, key: string): void => {
     // Check for special key combinations first
     if (onSpecialKey && onSpecialKey(input, key)) {
       // Special key was handled, don't process further

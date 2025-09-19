@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 
 /**
 
@@ -45,9 +45,9 @@ export function parseAIResponse(response: string): ParsedResponse {
         
         // 从文本中移除 JSON 部分
         textContent = textContent.replace(match.json, '').trim()
-      } catch (error) {
+      } catch (_error) {
         // JSON 解析失败，当作文本处理
-        logWarn('工具调用 JSON 解析失败:', error)
+        logWarn('工具调用 JSON 解析失败:', _error)
       }
     }
     

@@ -149,8 +149,8 @@ export function ModelConfigStep({ onComplete, onSkip }: ModelConfigStepProps): R
         setMode('provider-selection')
       }
       
-    } catch (error) {
-      console.error('自动配置失败:', error)
+    } catch (_error) {
+      console._error('自动配置失败:', _error)
       setMode('provider-selection')
     } finally {
       setIsVerifying(false)
@@ -218,8 +218,8 @@ export function ModelConfigStep({ onComplete, onSkip }: ModelConfigStepProps): R
           onComplete()
         }, 1500)
         
-      } catch (error) {
-        console.error('保存模型配置失败:', error)
+      } catch (_error) {
+        console._error('保存模型配置失败:', _error)
       }
     }
   }, [configState, modelManager, config.modelPointers, onComplete])

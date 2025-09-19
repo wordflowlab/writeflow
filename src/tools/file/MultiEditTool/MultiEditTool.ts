@@ -110,10 +110,10 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
       }
 
       return { isAllowed: true }
-    } catch (error) {
+    } catch (_error) {
       return {
         isAllowed: false,
-        denialReason: error instanceof Error ? error.message : String(error),
+        denialReason: _error instanceof Error ? _error.message : String(_error),
         behavior: 'deny',
       }
     }
@@ -131,7 +131,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
       let originalContent: string
       try {
         originalContent = readFileSync(filePath, 'utf8')
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`读取文件失败: ${error instanceof Error ? error.message : String(error)}`)
       }
 
@@ -160,13 +160,13 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
           })
           
           successfulOperations++
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error)
+        } catch (_error) {
+          const errorMessage = _error instanceof Error ? _error.message : String(_error)
           operations.push({
             index: i + 1,
             success: false,
             replacements: 0,
-            error: errorMessage,
+            _error: errorMessage,
           })
           
           // 如果任何一个操作失败，停止执行并抛出错误
@@ -177,7 +177,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
       // 4. 写入文件
       try {
         writeFileSync(filePath, currentContent, 'utf8')
-      } catch (error) {
+      } catch (_error) {
         throw new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`)
       }
 

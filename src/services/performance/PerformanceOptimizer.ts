@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { debugLog, logError } from '../../utils/log.js'
 
 /**
 
@@ -194,9 +194,9 @@ export class PerformanceOptimizer extends EventEmitter {
       // 分析性能并执行优化
       await this.analyzeAndOptimize(metrics)
       
-    } catch (error) {
-      logError('性能指标收集失败:', error)
-      this.emit('collection-error', error)
+    } catch (_error) {
+      logError('性能指标收集失败:', _error)
+      this.emit('collection-_error', _error)
     }
   }
 

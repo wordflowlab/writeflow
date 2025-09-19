@@ -17,7 +17,7 @@ function getWriteFlowRoot(): string {
           return currentPath
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // 继续向上查找
     }
     currentPath = dirname(currentPath)
@@ -42,7 +42,7 @@ function getWriteFlowRoot(): string {
             possiblePaths.push(join(nvmPath, version, 'lib', 'node_modules', 'writeflow'))
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // 忽略错误，继续其他路径
       }
     }
@@ -64,12 +64,12 @@ function getWriteFlowRoot(): string {
           if (packageJson.name === 'writeflow') {
             return path
           }
-        } catch (error) {
+        } catch (_error) {
           // 继续尝试下一个路径
         }
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // 忽略错误，继续使用其他方法
   }
   
@@ -92,7 +92,7 @@ export function getVersion(): string {
     
     // 如果找不到package.json，使用后备版本
     return FALLBACK_VERSION
-  } catch (error) {
+  } catch (_error) {
     // 发生任何错误都使用后备版本，不再打印错误信息
     return FALLBACK_VERSION
   }

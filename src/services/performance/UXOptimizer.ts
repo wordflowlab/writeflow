@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { debugLog, logWarn } from '../../utils/log.js'
 
 /**
 
@@ -187,8 +187,8 @@ export class UXOptimizer extends EventEmitter {
         const preferences = JSON.parse(saved)
         this.userPreferences = { ...this.userPreferences, ...preferences }
       }
-    } catch (error) {
-      logWarn('加载用户偏好失败:', error)
+    } catch (_error) {
+      logWarn('加载用户偏好失败:', _error)
     }
     
     // 应用偏好设置
@@ -572,8 +572,8 @@ export class UXOptimizer extends EventEmitter {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('writeflow-ux-preferences', JSON.stringify(this.userPreferences))
       }
-    } catch (error) {
-      logWarn('保存用户偏好失败:', error)
+    } catch (_error) {
+      logWarn('保存用户偏好失败:', _error)
     }
     
     // 重新应用偏好设置

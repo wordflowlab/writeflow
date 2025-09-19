@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../utils/log.js'
+import { logWarn } from '../../utils/log.js'
 import { WritingTool, ToolInput, ToolResult } from '../../types/tool.js'
 import { AIWritingConfig } from '../../types/writing.js'
 
@@ -79,7 +79,7 @@ export class GLMClientTool implements WritingTool {
         }
       }
 
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         error: `GLM-4.5 API 调用失败: ${(error as Error).message}`
@@ -130,10 +130,10 @@ export class GLMClientTool implements WritingTool {
         id: completion.id
       }
 
-    } catch (error) {
+    } catch (_error) {
       // 如果API调用失败，回退到模拟响应
       if (process.env.NODE_ENV !== 'test') {
-        logWarn('GLM-4.5 API 调用失败，使用模拟响应:', error instanceof Error ? error.message : String(error))
+        logWarn('GLM-4.5 API 调用失败，使用模拟响应:', _error instanceof Error ? _error.message : String(_error))
       }
       
       const mockResponse = {

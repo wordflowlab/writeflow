@@ -20,8 +20,8 @@ export interface SlashCommand {
   progressMessage?: string
   
   // 不同类型的执行方法
-  call?: (args: string, context: AgentContext) => Promise<string>
-  getPromptForCommand?: (args: string, context: AgentContext) => Promise<string>
+  call?: (_args: string, _context: AgentContext) => Promise<string>
+  getPromptForCommand?: (_args: string, _context: AgentContext) => Promise<string>
   
   userFacingName(): string
 }

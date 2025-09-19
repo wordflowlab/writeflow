@@ -3,10 +3,8 @@
  * 基于最佳实践的工具编排设计，提供统一的工具调用管理
  */
 
-import { debugLog, logError, logWarn, infoLog } from '../utils/log.js'
-import { z } from 'zod'
-import { WriteFlowTool, ToolUseContext, PermissionResult } from '../Tool.js'
-import { ToolCallEvent, ToolBase } from './ToolBase.js'
+import { debugLog, logError } from '../utils/log.js'
+import { WriteFlowTool, ToolUseContext } from '../Tool.js'
 import { PermissionManager, getPermissionManager, PermissionGrantType } from './PermissionManager.js'
 
 /**
@@ -241,7 +239,7 @@ export class ToolOrchestrator {
               this.permissionManager.grantPermission(request.toolName, 
                 userChoice === 'session' ? PermissionGrantType.SESSION_GRANT : PermissionGrantType.ONE_TIME_GRANT)
               
-            } catch (error) {
+            } catch (_error) {
               result.status = ToolExecutionStatus.FAILED
               result.error = new Error(`权限确认失败: ${error}`)
               result.endTime = Date.now()

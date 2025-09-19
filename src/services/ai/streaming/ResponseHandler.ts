@@ -1,4 +1,4 @@
-import { debugLog, logError, logWarn, infoLog } from '../../../utils/log.js'
+import { logWarn } from '../../../utils/log.js'
 
 /**
 
@@ -176,8 +176,8 @@ export class ResponseHandler {
         theme: 'dark'
       })
       return result.content
-    } catch (error) {
-      logWarn('响应格式化失败:', error)
+    } catch (_error) {
+      logWarn('响应格式化失败:', _error)
       return content
     }
   }

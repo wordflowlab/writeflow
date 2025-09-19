@@ -18,8 +18,8 @@ export const analysisCommands: SlashCommand[] = [
       '/grammar /path/to/document.md'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      let content = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      let content = _args.trim()
       
       if (!content) {
         throw new Error('请提供要检查的内容或文件路径。用法: /grammar [内容或文件路径]')
@@ -66,8 +66,8 @@ ${content}
       '/check GPT-4的参数量超过1万亿'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      let content = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      let content = _args.trim()
       
       if (!content) {
         throw new Error('请提供需要核查的内容。用法: /check <内容或文件路径>')
@@ -118,8 +118,8 @@ ${content}
       '/summarize /path/to/article.md'
     ],
     
-    async getPromptForCommand(args: string, context: AgentContext): Promise<string> {
-      let content = args.trim()
+    async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
+      let content = _args.trim()
       
       if (!content) {
         throw new Error('请提供需要总结的内容或文件路径。用法: /summarize <内容或文件路径>')

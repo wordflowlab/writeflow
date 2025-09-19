@@ -4,7 +4,7 @@
  * 处理 AsyncGenerator 消息流并提供优雅的终端展示
  */
 
-import { debugLog, logError, logWarn, infoLog } from './../../utils/log.js'
+import { debugLog, logError } from './../../utils/log.js'
 import { getStreamingFormatter, formatStreamMessage } from '../formatting/StreamingFormatter.js'
 import type { StreamMessage } from '../../services/ai/streaming/AsyncStreamingManager.js'
 
@@ -94,10 +94,10 @@ export class StreamingDisplay {
           await this.handlePause()
         }
       }
-    } catch (error) {
-      logError('流式处理错误:', error)
+    } catch (_error) {
+      logError('流式处理错误:', _error)
       await this.processMessage({
-        type: 'error',
+        type: '_error',
         message: `流式处理异常: ${error instanceof Error ? error.message : String(error)}`,
         error: error as Error
       })
