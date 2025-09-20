@@ -386,9 +386,9 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
     let remainingText = text.replace(/\u001B\[[0-9;]*m/g, '')
 
     const consumePattern = (regex: RegExp, handler: (match: string, ...groups: string[]) => void) => {
-      remainingText = remainingText.replace(regex, (..._args) => {
+      remainingText = remainingText.replace(regex, (...args) => {
         if (updateState) {
-          handler(..._args)
+          handler(...args)
         }
         return ''
       })
@@ -973,7 +973,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
         } catch (_error) {
           // 如果命令执行失败，添加错误消息
           const errorMessage = createAssistantMessage([
-            createTextBlock(`命令执行失败: ${error instanceof Error ? error.message : '未知错误'}`)
+            createTextBlock(`命令执行失败: ${_error instanceof Error ? _error.message : '未知错误'}`)
           ])
           setMessages(prev => [...prev, errorMessage])
           return
@@ -1147,7 +1147,7 @@ export function WriteFlowREPL({ writeFlowApp, onExit }: WriteFlowREPLProps) {
       
       // 添加错误消息
       const errorMessage = createAssistantMessage([
-        createTextBlock(`处理请求时发生错误: ${error instanceof Error ? error.message : '未知错误'}`)
+        createTextBlock(`处理请求时发生错误: ${_error instanceof Error ? _error.message : '未知错误'}`)
       ])
       setMessages(prev => [...prev, errorMessage])
     } finally {

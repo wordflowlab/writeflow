@@ -72,15 +72,15 @@ export class EnhancedBashTool implements EnhancedWritingTool {
       const startTime = Date.now()
       
       if (run_in_background) {
-        return await this.executeInBackground(command, timeout)
+        return this.executeInBackground(command, timeout)
       } else {
-        return await this.executeCommand(command, timeout, startTime)
+        return this.executeCommand(command, timeout, startTime)
       }
 
     } catch (_error) {
       return {
         success: false,
-        error: `命令执行失败: ${(error as Error).message}`
+        error: `命令执行失败: ${(_error as Error).message}`
       }
     }
   }
@@ -181,7 +181,7 @@ export class EnhancedBashTool implements EnhancedWritingTool {
     } catch (_error) {
       yield {
         success: false,
-        error: `流式执行失败: ${(error as Error).message}`,
+        error: `流式执行失败: ${(_error as Error).message}`,
         metadata: { status: 'error' }
       }
     }

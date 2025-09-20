@@ -165,7 +165,7 @@ export class ClaudeStreamAdapter extends StreamAdapter {
       return {
         content: '',
         done: false,
-        error: `Failed to parse Claude event: ${error}`,
+        error: `Failed to parse Claude event: ${_error}`,
         raw: { event, data }
       }
     }

@@ -88,7 +88,7 @@ const duckDuckGoProvider: SearchProvider = {
 
     } catch (_error) {
       logError('DuckDuckGo 搜索错误:', _error)
-      throw new Error(`搜索失败: ${(error as Error).message}`)
+      throw new Error(`搜索失败: ${(_error as Error).message}`)
     }
   }
 }
@@ -128,7 +128,7 @@ const baiduProvider: SearchProvider = {
 
     } catch (_error) {
       logError('百度搜索错误:', _error)
-      throw new Error(`百度搜索失败: ${(error as Error).message}`)
+      throw new Error(`百度搜索失败: ${(_error as Error).message}`)
     }
   }
 }

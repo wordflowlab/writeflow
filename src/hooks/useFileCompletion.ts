@@ -5,12 +5,12 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useInput } from 'ink'
-import { fileCompletionService, FileCompletionItem } from '../services/FileCompletionService.js'
+import { fileCompletionService, type FileCompletionItem } from '../services/FileCompletionService.js'
 import { debugLog } from '../utils/log.js'
 
 export interface FileCompletionState {
   /** 补全建议列表 */
-  suggestions: typeof FileCompletionItem[]
+  suggestions: FileCompletionItem[]
   /** 当前选中的索引 */
   selectedIndex: number
   /** 是否激活补全 */
@@ -46,8 +46,7 @@ interface UseFileCompletionProps {
 const INITIAL_STATE: FileCompletionState = {
   suggestions: [],
   selectedIndex: 0,
-  isActive: false,
-  context: null,
+  isActive: false, context: null,
   isLoading: false,
 }
 
@@ -59,7 +58,7 @@ export function useFileCompletion({
   enabled = true,
 }: UseFileCompletionProps) {
   const [state, setState] = useState<FileCompletionState>(INITIAL_STATE)
-  const loadingRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const loadingRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   
   /**
    * 检测当前光标位置是否在文件引用上下文中
@@ -127,7 +126,7 @@ export function useFileCompletion({
       }))
       
     } catch (_error) {
-      debugLog(`文件补全失败: ${error}`)
+      debugLog(`文件补全失败: ${_error}`)
       setState(prev => ({
         ...prev,
         suggestions: [],
@@ -141,7 +140,7 @@ export function useFileCompletion({
   /**
    * 应用选中的补全
    */
-  const applyCompletion = useCallback((item: typeof FileCompletionItem) => {
+  const applyCompletion = useCallback((item: FileCompletionItem) => {
     if (!state.context) return
     
     const { atPosition, endPosition } = state.context
@@ -233,13 +232,13 @@ export function useFileCompletion({
   useInput((input, key) => {
     if (!state.isActive) return
     
-    if (key.upArrow) {
+    if ((key as any).upArrow) {
       navigateCompletion('up')
-    } else if (key.downArrow) {
+    } else if ((key as any).downArrow) {
       navigateCompletion('down')
-    } else if (key.tab || key.return) {
+    } else if (key.tab || (key as any).return) {
       applySelectedCompletion()
-    } else if (key.escape) {
+    } else if ((key as any).escape) {
       closeCompletion()
     }
   })

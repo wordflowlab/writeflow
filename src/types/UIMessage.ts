@@ -4,8 +4,7 @@
  * 扩展支持可折叠内容功能
  */
 
-import { randomUUID } from 'crypto'
-import type { UUID } from 'crypto'
+import { randomUUID, type UUID } from 'crypto'
 import type { CollapsibleState, ContentRenderMetadata, CollapsibleContentType } from './CollapsibleContent.js'
 
 // 基础内容块类型

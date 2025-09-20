@@ -25,8 +25,7 @@ export interface BinaryFeedbackResult {
 
 export async function* query(
   messages: Message[],
-  systemPrompt: string,
-  context: string,
+  systemPrompt: string, _context: string,
   canUseTool: any,
   options: any,
   getBinaryFeedbackResponse?: any

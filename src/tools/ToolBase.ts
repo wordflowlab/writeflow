@@ -33,8 +33,7 @@ export abstract class ToolBase<
   // 子类必须实现的核心方法
   abstract description(): Promise<string>
   abstract call(
-    input: z.infer<TInput>,
-    context: ToolUseContext,
+    input: z.infer<TInput>, _context: ToolUseContext,
   ): Promise<TOutput> | AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown>
 
   // 工具版本 - 用于兼容性检查
@@ -78,15 +77,14 @@ export abstract class ToolBase<
   }
 
   async checkPermissions(
-    input: z.infer<TInput>,
-    context: ToolUseContext,
+    input: z.infer<TInput>, _context: ToolUseContext,
   ): Promise<PermissionResult> {
     if (!this.needsPermissions(input)) {
       return { isAllowed: true }
     }
     
     // 默认实现：安全模式下拒绝非只读操作
-    if (context.safeMode && !this.isReadOnly()) {
+    if (_context.safeMode && !this.isReadOnly()) {
       return {
         isAllowed: false,
         denialReason: `工具 ${this.name} 需要写入权限，但当前处于安全模式`,
@@ -169,22 +167,21 @@ export abstract class ToolBase<
     try {
       return this.zodSchemaToJsonSchema(this.inputSchema)
     } catch (_error) {
-      logWarn(`[${this.name}] JSON Schema 生成失败:`, error)
+      logWarn(`[${this.name}] JSON Schema 生成失败:`, _error)
       return undefined
     }
   }
 
   // 工具执行包装器 - 提供完整的生命周期管理
   protected async *executeWithErrorHandling(
-    operation: () => AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown>,
-    context: ToolUseContext,
+    operation: () => AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown>, _context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: TOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     const startTime = Date.now()
     let success = true
     
     try {
       // 检查中止信号
-      if (context.abortController.signal.aborted) {
+      if (_context.abortController.signal.aborted) {
         yield { type: 'error', error: new Error('工具执行被中止'), message: '工具执行被用户中止' }
         return
       }
@@ -197,13 +194,13 @@ export abstract class ToolBase<
       
       yield {
         type: 'error',
-        error: error instanceof Error ? error : new Error(errorMessage),
+        error: _error instanceof Error ? _error : new Error(errorMessage),
         message: `${this.name} 执行失败: ${errorMessage}`,
         resultForAssistant: `工具 ${this.name} 执行失败: ${errorMessage}`,
       }
     } finally {
       const duration = Date.now() - startTime
-      if (context.options?.verbose) {
+      if (_context.options?.verbose) {
         debugLog(`[${this.name}] 执行${success ? '成功' : '失败'}, 耗时: ${duration}ms`)
       }
     }
@@ -279,10 +276,11 @@ export abstract class ToolBase<
         }
       case 'ZodOptional':
         return this.zodTypeToJsonSchema(zodType._def.innerType)
-      case 'ZodDefault':
+      case 'ZodDefault': {
         const innerSchema = this.zodTypeToJsonSchema(zodType._def.innerType)
         innerSchema.default = zodType._def.defaultValue()
         return innerSchema
+      }
       case 'ZodArray':
         return {
           type: 'array',
@@ -325,14 +323,13 @@ export abstract class ToolBase<
   // 通用文件权限检查
   protected async checkFilePermissions(
     filePath: string,
-    operation: 'read' | 'write',
-    context: ToolUseContext,
+    operation: 'read' | 'write', _context: ToolUseContext,
   ): Promise<void> {
     // 基础路径验证
     this.validateFilePath(filePath)
     
     // 安全模式检查
-    if (context.safeMode && operation === 'write') {
+    if (_context.safeMode && operation === 'write') {
       throw new Error('安全模式下不允许写入文件')
     }
     

@@ -8,7 +8,7 @@ class DefaultAdapter implements ProviderAdapter {
     try {
       if (response && typeof response === 'object') {
         if (typeof (response as any).json === 'function') {
-          return await (response as any).json()
+          return (response as any).json()
         }
         if ('data' in response && typeof (response as any).data === 'string') {
           try {

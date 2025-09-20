@@ -91,7 +91,7 @@ export class CommandExecutor {
   /**
    * 执行命令
    */
-  async executeCommand(input: string, context: AgentContext): Promise<CommandResult> {
+  async executeCommand(input: string, _context: AgentContext): Promise<CommandResult> {
     try {
       // 解析命令
       const parsed = this.parser.parseCommand(input)
@@ -134,15 +134,15 @@ export class CommandExecutor {
 
         switch (command.type) {
           case 'local':
-            result = await this.executeLocalCommand(command, parsed._args, context)
+            result = await this.executeLocalCommand(command, parsed.args, _context)
             break
             
           case 'prompt':
-            result = await this.executePromptCommand(command, parsed._args, context)
+            result = await this.executePromptCommand(command, parsed.args, _context)
             break
             
           case 'local-jsx':
-            result = await this.executeJSXCommand(command, parsed._args, context)
+            result = await this.executeJSXCommand(command, parsed.args, _context)
             break
             
           default:
@@ -159,7 +159,7 @@ export class CommandExecutor {
     } catch (_error) {
       return {
         success: false,
-        error: `命令执行失败: ${(error as Error).message}`
+        error: `命令执行失败: ${(_error as Error).message}`
       }
     }
   }
@@ -169,14 +169,13 @@ export class CommandExecutor {
    */
   private async executeLocalCommand(
     command: SlashCommand, 
-    _args: string, 
-    context: AgentContext
+    args: string, _context: AgentContext
   ): Promise<CommandResult> {
     if (!command.call) {
       throw new Error(`本地命令 ${command.name} 缺少 call 方法`)
     }
 
-    const content = await command.call(_args, _context)
+    const content = await command.call(args, _context)
     
     return {
       success: true,
@@ -192,14 +191,13 @@ export class CommandExecutor {
    */
   private async executePromptCommand(
     command: SlashCommand,
-    _args: string, 
-    context: AgentContext
+    args: string, _context: AgentContext
   ): Promise<CommandResult> {
     if (!command.getPromptForCommand) {
       throw new Error(`提示命令 ${command.name} 缺少 getPromptForCommand 方法`)
     }
 
-    const prompt = await command.getPromptForCommand(_args, _context)
+    const prompt = await command.getPromptForCommand(args, _context)
     
     return {
       success: true,
@@ -219,8 +217,7 @@ export class CommandExecutor {
    */
   private async executeJSXCommand(
     command: SlashCommand,
-    _args: string,
-    context: AgentContext
+    args: string, _context: AgentContext
   ): Promise<CommandResult> {
     if (!command.call) {
       throw new Error(`JSX命令 ${command.name} 缺少 call 方法`)
@@ -228,7 +225,7 @@ export class CommandExecutor {
 
     try {
       // 调用命令获取 JSON 格式的结果
-      const result = await command.call(_args, _context)
+      const result = await command.call(args, _context)
       
       // 解析 JSON 结果
       let data
@@ -258,7 +255,7 @@ export class CommandExecutor {
         skipHistory: false
       }
     } catch (_error) {
-      throw new Error(`JSX命令执行失败: ${(error as Error).message}`)
+      throw new Error(`JSX命令执行失败: ${(_error as Error).message}`)
     }
   }
 

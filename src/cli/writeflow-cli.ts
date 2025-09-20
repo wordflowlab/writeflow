@@ -105,7 +105,7 @@ export class WriteFlowCLI {
       this.startReactUI()
 
     } catch (_error) {
-      logError(chalk.red(`启动失败: ${(error as Error).message}`))
+      logError(chalk.red(`启动失败: ${(_error as Error).message}`))
       process.exit(1)
     }
   }
@@ -230,7 +230,7 @@ export class WriteFlowCLI {
         return
       }
       
-      logError(chalk.red('启动主界面失败:'), error)
+      logError(chalk.red('启动主界面失败:'), _error)
       debugLog(chalk.yellow('请尝试重新运行 writeflow 或联系支持'))
       process.exit(1)
     }
@@ -296,7 +296,7 @@ export class WriteFlowCLI {
           console.log(result)
         }
       } catch (_error) {
-        console._error(chalk.red('处理失败:'), _error instanceof Error ? _error.message : String(_error))
+        console.error(chalk.red('处理失败:'), _error instanceof Error ? _error.message : String(_error))
       }
 
       rl.prompt()
@@ -417,7 +417,7 @@ export class WriteFlowCLI {
     try {
       await this.program.parseAsync()
     } catch (_error) {
-      logError(chalk.red(`WriteFlow CLI 错误: ${(error as Error).message}`))
+      logError(chalk.red(`WriteFlow CLI 错误: ${(_error as Error).message}`))
       process.exit(1)
     }
   }

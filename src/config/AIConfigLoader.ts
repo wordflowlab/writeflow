@@ -234,7 +234,7 @@ export class AIConfigLoader {
 
     } catch (_error) {
       logError('保存配置失败:', _error)
-      throw new Error(`配置保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      throw new Error(`配置保存失败: ${_error instanceof Error ? _error.message : '未知错误'}`)
     }
   }
 

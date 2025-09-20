@@ -101,7 +101,7 @@ export class StreamingAIService extends WriteFlowAIService {
       }
 
     } catch (_error) {
-      logError(`流式 AI 请求失败 [${streamId}]:`, error)
+      logError(`流式 AI 请求失败 [${streamId}]:`, _error)
       
       // 清理流
       this.cleanupStream(streamId)
@@ -187,7 +187,7 @@ export class StreamingAIService extends WriteFlowAIService {
       }
 
     } catch (_error) {
-      logWarn(`实时格式化失败 [${streamId}]:`, error)
+      logWarn(`实时格式化失败 [${streamId}]:`, _error)
     }
   }
 
@@ -242,7 +242,7 @@ export class StreamingAIService extends WriteFlowAIService {
       this.cleanupStream(streamId)
       
     } catch (_error) {
-      logWarn(`流完成处理失败 [${streamId}]:`, error)
+      logWarn(`流完成处理失败 [${streamId}]:`, _error)
     }
   }
 

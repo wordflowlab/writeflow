@@ -48,8 +48,8 @@ export function useExitHandler(onExit: () => void): ExitState {
   const handleCtrlD = createDoublePress('Ctrl-D')
 
   useInput((input, key) => {
-    if (key.ctrl && input === 'c') handleCtrlC()
-    if (key.ctrl && input === 'd') handleCtrlD()
+    if ((key as any).ctrl && input === 'c') handleCtrlC()
+    if ((key as any).ctrl && input === 'd') handleCtrlD()
   })
 
   return exitState

@@ -94,7 +94,7 @@ export class CitationTool implements EnhancedWritingTool {
       
       switch (action) {
         case 'add':
-          return await this.addCitation(citation, searchResult)
+          return this.addCitation(citation, searchResult)
         case 'remove':
           return this.removeCitation(citationId!)
         case 'list':
@@ -104,7 +104,7 @@ export class CitationTool implements EnhancedWritingTool {
         case 'generate':
           return this.generateBibliography(format!)
         case 'import':
-          return await this.importFromContent(content!)
+          return this.importFromContent(content!)
         default:
           throw new Error(`不支持的操作: ${action}`)
       }
@@ -112,7 +112,7 @@ export class CitationTool implements EnhancedWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `引文管理操作失败: ${(error as Error).message}`
+        error: `引文管理操作失败: ${(_error as Error).message}`
       }
     }
   }

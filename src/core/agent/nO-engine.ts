@@ -99,14 +99,14 @@ export class NOMainAgentEngine {
           if (currentMessage) {
             this.updateStatistics(currentMessage)
           }
-          yield* this.handleError(error as Error)
+          yield* this.handleError(_error as Error)
         }
       }
     } catch (_error) {
       logError('[nO] Agent 引擎致命错误:', _error)
       yield {
-        type: '_error',
-        content: `Agent 引擎错误: ${(error as Error).message}`
+        type: "error",
+        content: `Agent 引擎错误: ${(_error as Error).message}`
       }
     } finally {
       this.currentContext.currentState = AgentState.Idle
@@ -165,7 +165,7 @@ export class NOMainAgentEngine {
 
     switch (intent.type) {
       case 'slash_command':
-        yield* this.executeSlashCommand(intent.command!, intent._args!)
+        yield* this.executeSlashCommand(intent.command!, intent.args!)
         break
       case 'article_request':
         yield* this.handleArticleGeneration(intent)
@@ -276,7 +276,7 @@ export class NOMainAgentEngine {
   /**
    * 执行斜杠命令（占位实现）
    */
-  private async *executeSlashCommand(command: string, _args: string): AsyncGenerator<AgentResponse> {
+  private async *executeSlashCommand(command: string, args: string): AsyncGenerator<AgentResponse> {
     yield {
       type: 'progress',
       content: `正在执行命令: /${command} ${args}`

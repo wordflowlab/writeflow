@@ -77,7 +77,7 @@ export function useCollapsibleKeyboard(
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const [isFocused, setIsFocused] = useState(false)
   const [globalCollapsed, setGlobalCollapsed] = useState<boolean | null>(null)
-  const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   // 切换折叠状态
   const toggleCollapse = useCallback(() => {
@@ -113,20 +113,20 @@ export function useCollapsibleKeyboard(
     if (!enabled) return
     
     // Ctrl+R 切换当前元素折叠状态
-    if (key.ctrl && !key.shift && input.toLowerCase() === toggleKey) {
+    if ((key as any).ctrl && !(key as any).shift && input.toLowerCase() === toggleKey) {
       toggleCollapse()
       setFocused(true)
       return
     }
     
     // Ctrl+Shift+R 全局切换
-    if (key.ctrl && key.shift && input.toLowerCase() === toggleKey) {
+    if ((key as any).ctrl && (key as any).shift && input.toLowerCase() === toggleKey) {
       toggleGlobalCollapse()
       return
     }
     
     // 方向键聚焦
-    if (key.upArrow || key.downArrow) {
+    if ((key as any).upArrow || (key as any).downArrow) {
       setFocused(true)
     }
   })
@@ -181,7 +181,7 @@ export function useGlobalKeyboardHandler(config: KeyboardConfig = {}) {
     if (!enabled) return
     
     // Ctrl+Shift+R 全局切换所有元素
-    if (key.ctrl && key.shift && input.toLowerCase() === globalToggleKey) {
+    if ((key as any).ctrl && (key as any).shift && input.toLowerCase() === globalToggleKey) {
       setGlobalCollapsed(prev => prev === null ? true : !prev)
     }
   })
@@ -241,24 +241,24 @@ export function useKeyboardDebugger(enabled: boolean = false) {
     if (!enabled) return
     
     const keyInfo = []
-    if (key.ctrl) keyInfo.push('Ctrl')
-    if (key.shift) keyInfo.push('Shift')
+    if ((key as any).ctrl) keyInfo.push('Ctrl')
+    if ((key as any).shift) keyInfo.push('Shift')
     // if (key.alt) keyInfo.push('Alt') // alt 属性在 ink 中不存在
-    if (key.meta) keyInfo.push('Meta')
+    if ((key as any).meta) keyInfo.push('Meta')
     
     if (input) {
       keyInfo.push(input)
-    } else if (key.upArrow) {
+    } else if ((key as any).upArrow) {
       keyInfo.push('↑')
-    } else if (key.downArrow) {
+    } else if ((key as any).downArrow) {
       keyInfo.push('↓')
-    } else if (key.leftArrow) {
+    } else if ((key as any).leftArrow) {
       keyInfo.push('←')
-    } else if (key.rightArrow) {
+    } else if ((key as any).rightArrow) {
       keyInfo.push('→')
-    } else if (key.return) {
+    } else if ((key as any).return) {
       keyInfo.push('Enter')
-    } else if (key.escape) {
+    } else if ((key as any).escape) {
       keyInfo.push('Esc')
     } else if (key.tab) {
       keyInfo.push('Tab')

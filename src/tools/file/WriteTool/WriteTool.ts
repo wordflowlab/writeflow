@@ -67,8 +67,7 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
   }
 
   async checkPermissions(
-    input: WriteToolInput,
-    context: ToolUseContext,
+    input: WriteToolInput, context: ToolUseContext,
   ): Promise<PermissionResult> {
     // 基础权限检查
     const baseResult = await super.checkPermissions(input, context)
@@ -97,8 +96,7 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
   }
 
   async *call(
-    input: WriteToolInput,
-    context: ToolUseContext,
+    input: WriteToolInput, context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: WriteToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     try {
       // 1. 路径处理和验证
@@ -134,10 +132,10 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
           mkdirSync(fileDir, { recursive: true })
         } catch (_error) {
           yield {
-            type: '_error',
-            error: new Error(`创建目录失败: ${error instanceof Error ? error.message : String(error)}`),
+            type: "error",
+            error: new Error(`创建目录失败: ${_error instanceof Error ? _error.message : String(_error)}`),
             message: '创建目录失败',
-            resultForAssistant: `创建目录失败: ${error instanceof Error ? error.message : String(error)}`
+            resultForAssistant: `创建目录失败: ${_error instanceof Error ? _error.message : String(_error)}`
           }
           return
         }
@@ -150,10 +148,10 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
       } catch (_error) {
         logError('写入文件失败:', _error)
         yield {
-          type: '_error',
-          error: new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`),
+          type: "error",
+          error: new Error(`写入文件失败: ${_error instanceof Error ? _error.message : String(_error)}`),
           message: '写入文件失败',
-          resultForAssistant: `写入文件失败: ${error instanceof Error ? error.message : String(error)}`
+          resultForAssistant: `写入文件失败: ${_error instanceof Error ? _error.message : String(_error)}`
         }
         return
       }
@@ -161,6 +159,7 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
       // 5. 更新文件时间戳记录（类似 Kode 实现）
       if (context.readFileTimestamps) {
         const stats = statSync(filePath)
+        
         context.readFileTimestamps[filePath] = stats.mtimeMs
       }
 
@@ -191,10 +190,10 @@ export class WriteTool extends ToolBase<typeof WriteToolInputSchema, WriteToolOu
     } catch (_error) {
       logError('WriteTool 执行失败:', _error)
       yield {
-        type: '_error',
-        _error: _error instanceof Error ? _error : new Error(String(_error)),
+        type: "error",
+        error: _error instanceof Error ? _error : new Error(String(_error)),
         message: 'WriteTool 执行失败',
-        resultForAssistant: `WriteTool 执行失败: ${error instanceof Error ? error.message : String(error)}`
+        resultForAssistant: `WriteTool 执行失败: ${_error instanceof Error ? _error.message : String(_error)}`
       }
     }
   }

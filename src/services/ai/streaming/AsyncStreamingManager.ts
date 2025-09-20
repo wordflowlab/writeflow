@@ -118,10 +118,9 @@ export class AsyncStreamingManager {
 
     } catch (_error) {
       yield {
-        type: '_error',
-        message: `流式处理错误: ${error instanceof Error ? error.message : String(error)}`,
-        error: error as Error,
-        context: { streamId, request }
+        type: "error",
+        message: `流式处理错误: ${_error instanceof Error ? _error.message : String(_error)}`,
+        _error: _error as Error, _context: { streamId, request }
       } as ErrorMessage
     } finally {
       this.activeStreams.delete(streamId)

@@ -46,6 +46,8 @@ export interface FileCompletionOptions {
  * 为 WriteFlow 的 @ 文件引用功能提供智能文件补全
  * 参考现代 IDE 的文件补全体验
  */
+
+// FileCompletionItem 类型定义已在上面定义
 export class FileCompletionService {
   
   // 默认配置
@@ -127,7 +129,7 @@ export class FileCompletionService {
       return filtered.slice(0, opts.maxResults)
       
     } catch (_error) {
-      debugLog(`文件补全失败: ${error}`)
+      debugLog(`文件补全失败: ${_error}`)
       return []
     }
   }
@@ -189,7 +191,7 @@ export class FileCompletionService {
     
     try {
       const entries = await fs.readdir(dirPath, { withFileTypes: true })
-      const files: typeof FileCompletionItem[] = []
+      const files: FileCompletionItem[] = []
       
       for (const entry of entries) {
         const fullPath = join(dirPath, entry.name)
@@ -242,7 +244,7 @@ export class FileCompletionService {
       return files
       
     } catch (_error) {
-      debugLog(`读取目录失败: ${dirPath} - ${error}`)
+      debugLog(`读取目录失败: ${dirPath} - ${_error}`)
       return []
     }
   }
@@ -251,10 +253,10 @@ export class FileCompletionService {
    * 过滤和排序文件
    */
   private filterAndSort(
-    files: typeof FileCompletionItem[],
+    files: FileCompletionItem[],
     query: string,
     options: Required<FileCompletionOptions>,
-  ): typeof FileCompletionItem[] {
+  ): FileCompletionItem[] {
     if (!query) {
       // 没有查询时，返回所有文件，目录优先
       return files
@@ -324,7 +326,7 @@ export class FileCompletionService {
   /**
    * 获取文件图标
    */
-  public getFileIcon(item: typeof FileCompletionItem): string {
+  public getFileIcon(item: FileCompletionItem): string {
     if (item.type === 'directory') {
       return '󰉋' // 目录图标
     }

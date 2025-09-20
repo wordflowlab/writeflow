@@ -12,6 +12,6 @@ export class OpenAIAdapter implements ProviderAdapter {
   }
 
   async parseJSONResponse(response: any): Promise<any> {
-    return await response.json()
+    return response.json()
   }
 }

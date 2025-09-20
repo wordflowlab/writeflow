@@ -1,4 +1,5 @@
 import { SlashCommand } from '../../types/command.js'
+import type { ToolUseContext } from '../../Tool.js'
 import { AgentContext } from '../../types/agent.js'
 import { getTool } from '../../tools/index.js'
 import { promises as fs } from 'fs'
@@ -45,7 +46,7 @@ export const fileCommands: SlashCommand[] = [
       }
       
       // 调用新工具
-      const callResult = readTool.call({ file_path: filePath }, context)
+      const callResult = readTool.call({ file_path: filePath }, { ..._context, abortController: new AbortController(), readFileTimestamps: new Map() } as unknown as ToolUseContext)
       let result = null
       
       // 处理异步生成器结果
@@ -100,7 +101,7 @@ export const fileCommands: SlashCommand[] = [
         return output
         
       } catch (_error) {
-        return `❌ 读取文件失败: ${(error as Error).message}
+        return `❌ 读取文件失败: ${(_error as Error).message}
         
 文件路径: ${filePath}
 请检查文件是否存在和权限设置`
@@ -148,7 +149,7 @@ export const fileCommands: SlashCommand[] = [
         }
         
         // 调用新工具
-        const callResult = readTool.call({ file_path: filePath }, context)
+        const callResult = readTool.call({ file_path: filePath }, { ..._context, abortController: new AbortController(), readFileTimestamps: new Map() } as unknown as ToolUseContext)
         let readResult = null
         
         // 处理异步生成器结果
@@ -198,7 +199,7 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
 - 格式: ${((readResult as any).metadata as any).format}` : '暂无元数据'}`
         
       } catch (_error) {
-        return `❌ 编辑失败: ${(error as Error).message}
+        return `❌ 编辑失败: ${(_error as Error).message}
         
 文件路径: ${filePath}
 请检查文件权限设置`
@@ -265,7 +266,7 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
         return output
         
       } catch (_error) {
-        return `❌ 搜索失败: ${(error as Error).message}
+        return `❌ 搜索失败: ${(_error as Error).message}
         
 关键词: ${keyword}
 搜索路径: ${searchPath}
@@ -325,7 +326,7 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
           pattern, 
           path: searchPath,
           max_depth: 10 
-        }, context)
+        }, { ..._context, abortController: new AbortController(), readFileTimestamps: new Map() } as unknown as ToolUseContext)
         let result = null
         
         // 处理异步生成器结果
@@ -398,7 +399,7 @@ ${(readResult as any).metadata ? `- 大小: ${((readResult as any).metadata as a
         return output
         
       } catch (_error) {
-        return `❌ Glob 搜索失败: ${(error as Error).message}
+        return `❌ Glob 搜索失败: ${(_error as Error).message}
         
 模式: ${pattern}
 搜索路径: ${searchPath}

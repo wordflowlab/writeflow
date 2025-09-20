@@ -77,8 +77,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
   }
 
   async *call(
-    input: GrepToolInput,
-    context: ToolUseContext,
+    input: GrepToolInput, _context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: GrepToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: GrepTool) {
       // 1. 参数处理
@@ -95,7 +94,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
       try {
         regex = new RegExp(pattern, regexFlags)
       } catch (_error) {
-        throw new Error(`无效的正则表达式: ${error instanceof Error ? error.message : String(error)}`)
+        throw new Error(`无效的正则表达式: ${_error instanceof Error ? _error.message : String(_error)}`)
       }
 
       // 3. 获取要搜索的文件列表
@@ -152,7 +151,7 @@ export class GrepTool extends ToolBase<typeof GrepToolInputSchema, GrepToolOutpu
         resultForAssistant,
       }
 
-    }.bind(this), context)
+    }.bind(this), _context)
   }
 
   renderResultForAssistant(output: GrepToolOutput): string {

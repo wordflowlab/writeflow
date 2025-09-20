@@ -253,7 +253,7 @@ export class PlanModeManager {
         content: [
           '❌ 退出 Plan 模式失败',
           '',
-          `错误信息：${error instanceof Error ? error.message : '未知错误'}`,
+          `错误信息：${_error instanceof Error ? _error.message : '未知错误'}`,
           '',
           '请重新制定计划并再次尝试',
         ].join('\n'),

@@ -177,8 +177,8 @@ export async function startEnhancedCommandLineMode(app: WriteFlowApp) {
       }
     } catch (_error) {
       const errorMessage = React.createElement(SystemMessage, {
-        content: `处理失败: ${error instanceof Error ? error.message : String(error)}`,
-        type: 'error',
+        content: `处理失败: ${_error instanceof Error ? _error.message : String(_error)}`,
+        type: "error",
         addMargin: true
       })
       

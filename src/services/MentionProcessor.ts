@@ -131,10 +131,10 @@ export class MentionProcessor {
       return { processedInput, fileReferences }
       
     } catch (_error) {
-      debugLog(`文件引用处理失败: ${error}`)
+      debugLog(`文件引用处理失败: ${_error}`)
       // 如果是安全相关的错误，重新抛出
-      if ((error as Error).message.includes('单次请求最多只能引用')) {
-        throw error
+      if ((_error as Error).message.includes('单次请求最多只能引用')) {
+        throw _error
       }
       // 其他错误则返回原始输入
       return { processedInput: input, fileReferences }
@@ -222,7 +222,7 @@ export class MentionProcessor {
       return fileRef
       
     } catch (_error) {
-      fileRef.error = `读取文件失败: ${(error as Error).message}`
+      fileRef.error = `读取文件失败: ${(_error as Error).message}`
       return fileRef
     }
   }

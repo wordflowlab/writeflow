@@ -109,10 +109,10 @@ export class LsTool implements EnhancedWritingTool {
       const duration = Date.now() - startTime
       return {
         success: false,
-        error: `列出目录失败: ${(error as Error).message}`,
+        error: `列出目录失败: ${(_error as Error).message}`,
         metadata: {
           duration,
-          error: (error as Error).message
+          error: (_error as Error).message
         }
       }
     }

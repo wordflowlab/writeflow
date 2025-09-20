@@ -328,7 +328,7 @@ export class ModeManager {
     reason?: string
   }> {
     if (this.state.currentMode === UIMode.Plan) {
-      return await this.planModeManager.checkToolPermission(toolName, parameters)
+      return this.planModeManager.checkToolPermission(toolName, parameters)
     }
 
     // 其他模式的权限检查

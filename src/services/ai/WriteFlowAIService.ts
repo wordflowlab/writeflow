@@ -1,3 +1,12 @@
+// ModelProfile interface
+interface ModelProfile {
+  id: string
+  name: string
+  provider: string
+  contextWindow?: number
+  maxOutputTokens?: number
+}
+
 /**
  * WriteFlow AI 服务 - 重构版本
  * 专为写作场景优化的 AI 服务协调器
@@ -297,10 +306,9 @@ export class WriteFlowAIService {
 
     } catch (_error) {
       yield {
-        type: '_error',
-        message: `AI请求处理失败: ${error instanceof Error ? error.message : String(error)}`,
-        error: error as Error,
-        context: { request }
+        type: "error",
+        message: `AI请求处理失败: ${_error instanceof Error ? _error.message : String(_error)}`,
+        error: _error as Error, _context: { request }
       } as StreamMessage
     }
   }
@@ -624,16 +632,16 @@ export class WriteFlowAIService {
   /**
    * 查找或创建模型配置
    */
-  private findOrCreateModelProfile(modelName: string): ModelProfile | null {
+  private findOrCreateModelProfile(name: string): ModelProfile | null {
     // 先尝试从模型管理器中查找
     const profiles = this.modelManager.getAllProfiles()
-    const existing = profiles.find(p => p.modelName === modelName || p.name === modelName)
+    const existing = profiles.find(p => p.name === name)
     if (existing) {
-      return existing
+      return { ...existing, id: (existing as any).id || existing.name } as ModelProfile
     }
     
     // 创建临时模型配置
-    return this.createTempModelProfile(modelName)
+    return this.createTempModelProfile(name)
   }
   
   /**
@@ -703,15 +711,12 @@ export class WriteFlowAIService {
     }
     
     return {
-      name: `temp-${modelName}`,
+      id: `temp-${modelName}`,
+      name: modelName,
       provider: providerName as any,
-      modelName: modelName,
-      baseURL: config.baseURL,
-      apiKey: apiKey,
-      maxTokens: 4000,
-      contextLength: 128000,
-      isActive: true
-    }
+      contextWindow: 128000,
+      maxOutputTokens: 4000
+    } as ModelProfile
   }
   
   /**
@@ -843,7 +848,7 @@ export class WriteFlowAIService {
                     callId: toolCall.callId,
                     result: legacyResult.result,
                     success: legacyResult.success,
-                    _error: legacyResult._error
+                    error: legacyResult.error
                   })
                   continue
                 }
@@ -859,7 +864,7 @@ export class WriteFlowAIService {
               callId: toolCall.callId,
               result: '',
               success: false,
-              error: error instanceof Error ? error.message : String(error)
+              error: _error instanceof Error ? _error.message : String(_error)
             })
           }
         }
@@ -909,7 +914,7 @@ export class WriteFlowAIService {
             fullMatch
           })
         } catch (_error) {
-          this.messageLogger.systemWarning(`解析工具调用参数失败 ${toolName}: ${error}`)
+          this.messageLogger.systemWarning(`解析工具调用参数失败 ${toolName}: ${_error}`)
         }
       }
     }
@@ -925,9 +930,9 @@ export class WriteFlowAIService {
     const args = argsStr.split(',').map(arg => arg.trim().replace(/['"]/g, ''))
     
     // 根据参数数量确定参数结构
-    if (_args.length === 1) {
+    if (args.length === 1) {
       return { input: args[0] }
-    } else if (_args.length === 2) {
+    } else if (args.length === 2) {
       return { path: args[0], content: args[1] }
     } else {
       return { args }
@@ -1079,7 +1084,7 @@ Write("analysis.md", "# 分析结果\\n基于您的请求进行的分析...")
       }
       return null
     } catch (_error) {
-      return { result: '', success: false, error: (error as Error).message }
+      return { result: '', success: false, error: (_error as Error).message }
     }
   }
   
@@ -1112,7 +1117,7 @@ Write("analysis.md", "# 分析结果\\n基于您的请求进行的分析...")
       // 默认需要确认
       return false
     } catch (_error) {
-      this.messageLogger.systemError(`权限检查失败: ${error}`)
+      this.messageLogger.systemError(`权限检查失败: ${_error}`)
       return false
     }
   }

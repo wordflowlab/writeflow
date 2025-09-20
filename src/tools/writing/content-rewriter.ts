@@ -134,7 +134,7 @@ export class ContentRewriterTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `内容改写失败: ${(error as Error).message}`
+        error: `内容改写失败: ${(_error as Error).message}`
       }
     }
   }

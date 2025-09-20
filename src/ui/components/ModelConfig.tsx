@@ -59,7 +59,7 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
         name: p.name || p.modelName 
       }))
     } catch (_error) {
-      console._error('获取模型列表失败:', _error)
+      console.error('获取模型列表失败:', _error)
       return []
     }
   }, [modelManager, refreshKey]) // 依赖refreshKey来强制更新
@@ -153,7 +153,7 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
   // Handle keyboard input - completely following Config component pattern
   const handleInput = useCallback(
     (input: string, key: any) => {
-      if (key.escape) {
+      if ((key as any).escape) {
         if (isDeleteMode) {
           setIsDeleteMode(false) // Exit delete mode
         } else {
@@ -161,11 +161,11 @@ export function ModelConfig({ onClose }: Props): React.ReactNode {
         }
       } else if (input === 'd' && !isDeleteMode) {
         setIsDeleteMode(true) // Enter delete mode
-      } else if (key.upArrow) {
+      } else if ((key as any).upArrow) {
         setSelectedIndex(prev => Math.max(0, prev - 1))
-      } else if (key.downArrow) {
+      } else if ((key as any).downArrow) {
         setSelectedIndex(prev => Math.min(menuItems.length - 1, prev + 1))
-      } else if (key.return || input === ' ') {
+      } else if ((key as any).return || input === ' ') {
         const setting = menuItems[selectedIndex]
 
         if (isDeleteMode && setting.type === 'modelPointer' && setting.value) {

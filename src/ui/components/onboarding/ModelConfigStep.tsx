@@ -150,7 +150,7 @@ export function ModelConfigStep({ onComplete, onSkip }: ModelConfigStepProps): R
       }
       
     } catch (_error) {
-      console._error('自动配置失败:', _error)
+      console.error('自动配置失败:', _error)
       setMode('provider-selection')
     } finally {
       setIsVerifying(false)
@@ -219,7 +219,7 @@ export function ModelConfigStep({ onComplete, onSkip }: ModelConfigStepProps): R
         }, 1500)
         
       } catch (_error) {
-        console._error('保存模型配置失败:', _error)
+        console.error('保存模型配置失败:', _error)
       }
     }
   }, [configState, modelManager, config.modelPointers, onComplete])
@@ -234,18 +234,18 @@ export function ModelConfigStep({ onComplete, onSkip }: ModelConfigStepProps): R
         return
       }
       
-      if (key.escape && onSkip) {
+      if ((key as any).escape && onSkip) {
         onSkip()
         return
       }
       
-      if (key.upArrow) {
+      if ((key as any).upArrow) {
         const options = getCurrentOptions()
         setSelectedIndex(prev => Math.max(0, prev - 1))
-      } else if (key.downArrow) {
+      } else if ((key as any).downArrow) {
         const options = getCurrentOptions()
         setSelectedIndex(prev => Math.min(options.length - 1, prev + 1))
-      } else if (key.return) {
+      } else if ((key as any).return) {
         const options = getCurrentOptions()
         const selectedOption = options[selectedIndex]
         

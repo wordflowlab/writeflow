@@ -61,11 +61,10 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
   }
 
   async checkPermissions(
-    input: BashToolInput,
-    context: ToolUseContext,
+    input: BashToolInput, _context: ToolUseContext,
   ): Promise<PermissionResult> {
     // 基础权限检查
-    const baseResult = await super.checkPermissions(input, context)
+    const baseResult = await super.checkPermissions(input, _context)
     if (!baseResult.isAllowed) {
       return baseResult
     }
@@ -94,7 +93,7 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
     const networkCommands = ['curl', 'wget', 'nc', 'telnet', 'ssh', 'scp', 'rsync']
     const hasNetworkCommand = networkCommands.some(cmd => command.includes(cmd))
     
-    if (hasNetworkCommand && context.safeMode) {
+    if (hasNetworkCommand && _context.safeMode) {
       return {
         isAllowed: false,
         denialReason: '安全模式下不允许网络访问命令',
@@ -106,8 +105,7 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
   }
 
   async *call(
-    input: BashToolInput,
-    context: ToolUseContext,
+    input: BashToolInput, _context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: BashToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: BashTool) {
       const startTime = Date.now()
@@ -161,7 +159,7 @@ export class BashTool extends ToolBase<typeof BashToolInputSchema, BashToolOutpu
         }
       }
 
-    }.bind(this), context)
+    }.bind(this), _context)
   }
 
   renderResultForAssistant(output: BashToolOutput): string {

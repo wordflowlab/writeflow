@@ -63,31 +63,31 @@ export class MCPTool implements EnhancedWritingTool {
       
       switch (action) {
         case 'list':
-          return await this.listServers()
+          return this.listServers()
         
         case 'connect':
           if (!server) throw new Error('连接 MCP 服务器需要指定服务器名称')
-          return await this.connectServer(server)
+          return this.connectServer(server)
         
         case 'disconnect':
           if (!server) throw new Error('断开连接需要指定服务器名称')
-          return await this.disconnectServer(server)
+          return this.disconnectServer(server)
         
         case 'tools':
           if (!server) throw new Error('列出工具需要指定服务器名称')
-          return await this.listTools(server)
+          return this.listTools(server)
         
         case 'resources':
           if (!server) throw new Error('列出资源需要指定服务器名称')
-          return await this.listResources(server)
+          return this.listResources(server)
         
         case 'prompts':
           if (!server) throw new Error('列出提示词需要指定服务器名称')
-          return await this.listPrompts(server)
+          return this.listPrompts(server)
         
         case 'call':
           if (!server || !tool) throw new Error('调用工具需要指定服务器名称和工具名称')
-          return await this.callTool(server, tool, parameters || {})
+          return this.callTool(server, tool, parameters || {})
         
         default:
           throw new Error(`不支持的操作: ${action}`)
@@ -96,7 +96,7 @@ export class MCPTool implements EnhancedWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `MCP 操作失败: ${(error as Error).message}`
+        error: `MCP 操作失败: ${(_error as Error).message}`
       }
     }
   }
@@ -134,7 +134,7 @@ export class MCPTool implements EnhancedWritingTool {
     } catch (_error) {
       yield {
         success: false,
-        error: `MCP 流式操作失败: ${(error as Error).message}`
+        error: `MCP 流式操作失败: ${(_error as Error).message}`
       }
     }
   }
@@ -248,7 +248,7 @@ export class MCPTool implements EnhancedWritingTool {
       content += `**${server.name}** (${server.type}) ${status}\n`
       
       if (server.type === 'stdio') {
-        content += `   命令: ${server.command} ${(server._args || []).join(' ')}\n`
+        content += `   命令: ${server.command} ${(server.args || []).join(' ')}\n`
       } else if (server.type === 'sse') {
         content += `   URL: ${server.url}\n`
       }
@@ -297,7 +297,7 @@ export class MCPTool implements EnhancedWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `连接服务器失败: ${(error as Error).message}`
+        error: `连接服务器失败: ${(_error as Error).message}`
       }
     }
   }
@@ -328,7 +328,7 @@ export class MCPTool implements EnhancedWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `断开连接失败: ${(error as Error).message}`
+        error: `断开连接失败: ${(_error as Error).message}`
       }
     }
   }
@@ -370,7 +370,7 @@ export class MCPTool implements EnhancedWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `获取工具列表失败: ${(error as Error).message}`
+        error: `获取工具列表失败: ${(_error as Error).message}`
       }
     }
   }
@@ -462,7 +462,7 @@ export class MCPTool implements EnhancedWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `工具调用失败: ${(error as Error).message}`
+        error: `工具调用失败: ${(_error as Error).message}`
       }
     }
   }

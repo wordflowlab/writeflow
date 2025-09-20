@@ -31,7 +31,7 @@ export function HighlightedCode({
         return code
       }
     } catch (_error) {
-      console.error(`语法高亮失败 (${language}):`, error)
+      console.error(`语法高亮失败 (${language}):`, _error)
       // 发生错误时返回原始代码
       return code
     }

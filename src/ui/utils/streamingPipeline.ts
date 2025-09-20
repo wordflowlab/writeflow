@@ -271,9 +271,9 @@ export class StreamingPipeline extends EventEmitter {
       }
 
     } catch (_error) {
-      logWarn(`流式格式化失败 [${streamId}]:`, error)
+      logWarn(`流式格式化失败 [${streamId}]:`, _error)
       buffer.formatted = buffer.content // 降级到原始内容
-      this.emit('error', streamId, error)
+      this.emit('_error', streamId, _error)
     }
   }
 

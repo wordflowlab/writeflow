@@ -72,7 +72,7 @@ export const StreamingAIChat: React.FC<StreamingAIChatProps> = ({
 
   // 处理用户输入
   useInput((input, key) => {
-    if (key.return && isInputMode) {
+    if ((key as any).return && isInputMode) {
       if (userInput.trim()) {
         // 添加用户消息到历史
         setChatHistory(prev => [
@@ -88,7 +88,7 @@ export const StreamingAIChat: React.FC<StreamingAIChatProps> = ({
         aiStreaming.ask(userInput)
         setUserInput('')
       }
-    } else if (key.ctrl && input === 'c') {
+    } else if ((key as any).ctrl && input === 'c') {
       // Ctrl+C 停止流式处理
       if (aiStreaming.state.isStreaming) {
         aiStreaming.stop()
@@ -96,14 +96,14 @@ export const StreamingAIChat: React.FC<StreamingAIChatProps> = ({
       } else {
         process.exit(0)
       }
-    } else if (key.ctrl && input === 'r') {
+    } else if ((key as any).ctrl && input === 'r') {
       // Ctrl+R 重置聊天
       aiStreaming.reset()
       setChatHistory([])
       setUserInput('')
       setIsInputMode(true)
-    } else if (isInputMode && !key.ctrl && !key.meta) {
-      if (key.backspace) {
+    } else if (isInputMode && !(key as any).ctrl && !(key as any).meta) {
+      if ((key as any).backspace) {
         setUserInput(prev => prev.slice(0, -1))
       } else if (input && input.length === 1) {
         setUserInput(prev => prev + input)

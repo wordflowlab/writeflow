@@ -56,7 +56,7 @@ export function ModelEditor({ profile, onClose }: Props): React.ReactNode {
   }, [apiKey, baseURL, profile, manager, onClose])
 
   useInput((input, key) => {
-    if (key.escape) {
+    if ((key as any).escape) {
       // Esc 分步回退：confirm -> baseurl -> apikey -> 返回列表
       if (step === 'confirm') {
         setStep('baseurl')
@@ -65,7 +65,7 @@ export function ModelEditor({ profile, onClose }: Props): React.ReactNode {
       } else {
         onClose()
       }
-    } else if (key.return && step === 'confirm') {
+    } else if ((key as any).return && step === 'confirm') {
       handleSave()
     }
   })

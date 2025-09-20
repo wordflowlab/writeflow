@@ -1,6 +1,5 @@
-import { Todo, TodoStatus, TodoPriority, CreateTodoParams, UpdateTodoParams, TodoStats } from '../types/Todo.js'
+import { Todo, TodoStatus, TodoPriority, CreateTodoParams, UpdateTodoParams, TodoStats, STATUS_PRIORITIES, TASK_PRIORITIES } from '../types/Todo.js'
 import { TodoStorage } from './TodoStorage.js'
-import { STATUS_PRIORITIES, TASK_PRIORITIES } from '../types/Todo.js'
 
 import { logError } from './../utils/log.js'
 
@@ -76,19 +75,19 @@ export class TodoManager {
       priority: priority || TodoPriority.MEDIUM,
     }
     
-    return await this.storage.addTodo(params)
+    return this.storage.addTodo(params)
   }
 
   async updateTodoStatus(id: string, status: TodoStatus): Promise<Todo | null> {
-    return await this.storage.updateTodo({ id, status })
+    return this.storage.updateTodo({ id, status })
   }
 
   async updateTodo(params: UpdateTodoParams): Promise<Todo | null> {
-    return await this.storage.updateTodo(params)
+    return this.storage.updateTodo(params)
   }
 
   async removeTodo(id: string): Promise<boolean> {
-    return await this.storage.removeTodo(id)
+    return this.storage.removeTodo(id)
   }
 
   async getAllTodos(): Promise<Todo[]> {
@@ -97,7 +96,7 @@ export class TodoManager {
   }
 
   async getTodoById(id: string): Promise<Todo | null> {
-    return await this.storage.getTodoById(id)
+    return this.storage.getTodoById(id)
   }
 
   async clearAllTodos(): Promise<void> {
@@ -105,7 +104,7 @@ export class TodoManager {
   }
 
   async getStats(): Promise<TodoStats> {
-    return await this.storage.getStats()
+    return this.storage.getStats()
   }
 
   // 获取特定状态的 Todos
@@ -127,7 +126,7 @@ export class TodoManager {
       return null
     }
 
-    return await this.updateTodoStatus(id, TodoStatus.IN_PROGRESS)
+    return this.updateTodoStatus(id, TodoStatus.IN_PROGRESS)
   }
 
   // 完成任务 - 将状态改为 completed
@@ -137,12 +136,12 @@ export class TodoManager {
       return null
     }
 
-    return await this.updateTodoStatus(id, TodoStatus.COMPLETED)
+    return this.updateTodoStatus(id, TodoStatus.COMPLETED)
   }
 
   // 重置任务状态为 pending
   async resetTask(id: string): Promise<Todo | null> {
-    return await this.updateTodoStatus(id, TodoStatus.PENDING)
+    return this.updateTodoStatus(id, TodoStatus.PENDING)
   }
 
   // 查找任务 - 支持模糊搜索
@@ -250,7 +249,7 @@ export class TodoManager {
     } catch (_error) {
       return { 
         isValid: false, 
-        _error: _error instanceof Error ? _error.message : '验证失败', 
+        error: _error instanceof Error ? _error.message : '验证失败', 
       }
     }
   }
@@ -405,7 +404,7 @@ export class TodoManager {
       return {
         success: false,
         startedTask: null,
-        message: `启动队列执行失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        message: `启动队列执行失败: ${_error instanceof Error ? _error.message : '未知错误'}`,
       }
     }
   }

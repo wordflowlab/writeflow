@@ -83,14 +83,14 @@ export function useTextInput({
   const onInput = useCallback(
     (input: string, key: string) => {
       // 处理特殊按键
-      if (key.ctrl && input === 'c') {
+      if ((key as any).ctrl && input === 'c') {
         handleCtrlC()
         return
       }
 
       // 处理 Enter 键
-      if (key.return) {
-        if (multiline && !key.shift) {
+      if ((key as any).return) {
+        if (multiline && !(key as any).shift) {
           // 多行模式下，Enter 添加换行
           const newValue = originalValue + '\n'
           onChange(newValue)
@@ -103,7 +103,7 @@ export function useTextInput({
       }
 
       // 处理方向键
-      if (key.upArrow) {
+      if ((key as any).upArrow) {
         if (disableCursorMovementForUpDownKeys) {
           onHistoryUp?.()
           return
@@ -114,7 +114,7 @@ export function useTextInput({
         return
       }
 
-      if (key.downArrow) {
+      if ((key as any).downArrow) {
         if (disableCursorMovementForUpDownKeys) {
           onHistoryDown?.()
           return
@@ -125,20 +125,20 @@ export function useTextInput({
         return
       }
 
-      if (key.leftArrow) {
+      if ((key as any).leftArrow) {
         const newOffset = Math.max(0, offset - 1)
         setOffset(newOffset)
         return
       }
 
-      if (key.rightArrow) {
+      if ((key as any).rightArrow) {
         const newOffset = Math.min(originalValue.length, offset + 1)
         setOffset(newOffset)
         return
       }
 
       // 处理退格键
-      if (key.backspace || key.delete) {
+      if ((key as any).backspace || (key as any).delete) {
         if (offset > 0) {
           const newValue = originalValue.slice(0, offset - 1) + originalValue.slice(offset)
           onChange(newValue)
@@ -148,7 +148,7 @@ export function useTextInput({
       }
 
       // 处理普通字符输入
-      if (input && !key.ctrl && !key.meta && !key.escape) {
+      if (input && !(key as any).ctrl && !(key as any).meta && !(key as any).escape) {
         const newValue = originalValue.slice(0, offset) + input + originalValue.slice(offset)
         onChange(newValue)
         setOffset(offset + input.length)

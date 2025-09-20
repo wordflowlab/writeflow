@@ -136,7 +136,7 @@ export function CollapsibleContent({
     if (!isFocused) return
     
     // Ctrl+R 切换当前内容
-    if (key.ctrl && input === 'r') {
+    if ((key as any).ctrl && input === 'r') {
       toggle()
       return
     }
@@ -148,7 +148,7 @@ export function CollapsibleContent({
     }
     
     // Enter 键聚焦
-    if (key.return) {
+    if ((key as any).return) {
       handleFocus()
       return
     }

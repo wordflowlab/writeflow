@@ -80,10 +80,10 @@ export class WebSearchTool implements EnhancedWritingTool {
       const duration = Date.now() - startTime
       return {
         success: false,
-        error: `网络搜索失败: ${(error as Error).message}`,
+        error: `网络搜索失败: ${(_error as Error).message}`,
         metadata: {
           duration,
-          error: (error as Error).message
+          error: (_error as Error).message
         }
       }
     }
@@ -137,7 +137,7 @@ export class WebSearchTool implements EnhancedWritingTool {
     } catch (_error) {
       yield {
         success: false,
-        error: `搜索流程失败: ${(error as Error).message}`,
+        error: `搜索流程失败: ${(_error as Error).message}`,
         metadata: { duration: Date.now() - startTime }
       }
     }

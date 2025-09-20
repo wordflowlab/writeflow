@@ -28,7 +28,7 @@ export function useKeyboardShortcuts(
     if (!enabled) return
 
     // Handle Ctrl combinations
-    if (key.ctrl) {
+    if ((key as any).ctrl) {
       const shortcut = `ctrl+${input.toLowerCase()}`
       const handler = shortcuts[shortcut as keyof KeyboardShortcuts]
       
@@ -39,19 +39,19 @@ export function useKeyboardShortcuts(
     }
 
     // Handle Shift+Tab combination
-    if (key.shift && key.tab && shortcuts['shift+tab']) {
+    if ((key as any).shift && key.tab && shortcuts['shift+tab']) {
       shortcuts['shift+tab']()
       return
     }
 
     // Handle Tab key
-    if (key.tab && !key.shift && shortcuts.tab) {
+    if (key.tab && !(key as any).shift && shortcuts.tab) {
       shortcuts.tab()
       return
     }
 
     // Handle special keys
-    if (key.escape && shortcuts.escape) {
+    if ((key as any).escape && shortcuts.escape) {
       shortcuts.escape()
       return
     }

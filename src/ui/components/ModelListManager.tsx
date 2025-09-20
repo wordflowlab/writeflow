@@ -95,7 +95,7 @@ export function ModelListManager({ onClose }: Props): React.ReactNode {
   // Handle keyboard input
   const handleInput = useCallback(
     (input: string, key: any) => {
-      if (key.escape) {
+      if ((key as any).escape) {
         if (isDeleteMode) {
           setIsDeleteMode(false)
         } else if (showModelSelector) {
@@ -106,11 +106,11 @@ export function ModelListManager({ onClose }: Props): React.ReactNode {
         }
       } else if (input === 'd' && !isDeleteMode && availableModels.length > 1) {
         setIsDeleteMode(true)
-      } else if (key.upArrow) {
+      } else if ((key as any).upArrow) {
         setSelectedIndex(prev => Math.max(0, prev - 1))
-      } else if (key.downArrow) {
+      } else if ((key as any).downArrow) {
         setSelectedIndex(prev => Math.min(menuItems.length - 1, prev + 1))
-      } else if (key.return || input === ' ') {
+      } else if ((key as any).return || input === ' ') {
         const item = menuItems[selectedIndex]
 
         if (isDeleteMode && item.type === 'model') {

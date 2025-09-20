@@ -41,8 +41,7 @@ interface UseUnifiedCompletionProps {
 const INITIAL_STATE: CompletionState = {
   suggestions: [],
   selectedIndex: 0,
-  isActive: false,
-  context: null,
+  isActive: false, context: null,
   preview: null,
 }
 
@@ -76,20 +75,19 @@ export function useUnifiedCompletion({
       ...prev,
       suggestions: [],
       selectedIndex: 0,
-      isActive: false,
-      context: null,
+      isActive: false, context: null,
       preview: null,
     }))
   }, [])
 
   // 激活补全
-  const activateCompletion = useCallback((suggestions: CommandSuggestion[], context: CompletionContext) => {
+  const activateCompletion = useCallback((suggestions: CommandSuggestion[], _context: CompletionContext) => {
     setState(prev => ({
       ...prev,
       suggestions,
       selectedIndex: 0,
       isActive: true,
-      context,
+context: _context,
       preview: null,
     }))
   }, [])
@@ -172,37 +170,37 @@ export function useUnifiedCompletion({
   }, [])
 
   // 生成所有建议
-  const generateSuggestions = useCallback((context: CompletionContext): CommandSuggestion[] => {
-    if (context.type === 'command') {
-      return generateCommandSuggestions(context.prefix)
-    } else if (context.type === 'subcommand' && context.commandName) {
-      return generateSubcommandSuggestions(context.commandName, context.prefix)
+  const generateSuggestions = useCallback((_context: CompletionContext): CommandSuggestion[] => {
+    if (_context.type === 'command') {
+      return generateCommandSuggestions(_context.prefix)
+    } else if (_context.type === 'subcommand' && _context.commandName) {
+      return generateSubcommandSuggestions(_context.commandName, _context.prefix)
     }
     return []
   }, [generateCommandSuggestions, generateSubcommandSuggestions])
 
   // 应用补全
-  const completeWith = useCallback((suggestion: CommandSuggestion, context: CompletionContext) => {
+  const completeWith = useCallback((suggestion: CommandSuggestion, _context: CompletionContext) => {
     let completion: string
     
-    if (context.type === 'command') {
+    if (_context.type === 'command') {
       completion = `/${suggestion.value} `
     } else {
       completion = `${suggestion.value  } `
     }
     
-    const newInput = input.slice(0, context.startPos) + completion + input.slice(context.endPos)
+    const newInput = input.slice(0, _context.startPos) + completion + input.slice(_context.endPos)
     onInputChange(newInput)
-    setCursorOffset(context.startPos + completion.length)
+    setCursorOffset(_context.startPos + completion.length)
     resetCompletion()
   }, [input, onInputChange, setCursorOffset, resetCompletion])
 
   // 处理 Tab 键
   useInput((_, key) => {
-    if (!enabled || !key.tab || key.shift) return false
+    if (!enabled || !key.tab || (key as any).shift) return false
     
-    const context = getWordAtCursor()
-    if (!context) return false
+    const _context = getWordAtCursor()
+    if (!_context) return false
     
     // 如果菜单已显示，循环选择
     if (state.isActive && state.suggestions.length > 0) {
@@ -212,17 +210,17 @@ export function useUnifiedCompletion({
     }
     
     // 生成新建议
-    const suggestions = generateSuggestions(context)
+    const suggestions = generateSuggestions(_context)
     
     if (suggestions.length === 0) {
       return false
     } else if (suggestions.length === 1) {
       // 单个匹配：立即完成
-      completeWith(suggestions[0], context)
+      completeWith(suggestions[0], _context)
       return true
     } else {
       // 显示菜单
-      activateCompletion(suggestions, context)
+      activateCompletion(suggestions, _context)
       return true
     }
   })
@@ -232,7 +230,7 @@ export function useUnifiedCompletion({
     if (!enabled || !state.isActive || state.suggestions.length === 0) return false
     
     // Enter 键 - 确认选择
-    if (key.return) {
+    if ((key as any).return) {
       const selectedSuggestion = state.suggestions[state.selectedIndex]
       if (selectedSuggestion && state.context) {
         completeWith(selectedSuggestion, state.context)
@@ -241,7 +239,7 @@ export function useUnifiedCompletion({
     }
     
     // 上方向键
-    if (key.upArrow) {
+    if ((key as any).upArrow) {
       const nextIndex = state.selectedIndex === 0 
         ? state.suggestions.length - 1 
         : state.selectedIndex - 1
@@ -250,14 +248,14 @@ export function useUnifiedCompletion({
     }
     
     // 下方向键
-    if (key.downArrow) {
+    if ((key as any).downArrow) {
       const nextIndex = (state.selectedIndex + 1) % state.suggestions.length
       updateState({ selectedIndex: nextIndex })
       return true
     }
     
     // Esc 键 - 取消补全
-    if (key.escape) {
+    if ((key as any).escape) {
       resetCompletion()
       return true
     }
@@ -267,7 +265,7 @@ export function useUnifiedCompletion({
 
   // 处理删除键
   useInput((_, key) => {
-    if (key.backspace || key.delete) {
+    if ((key as any).backspace || (key as any).delete) {
       if (state.isActive) {
         resetCompletion()
         // 短暂抑制以避免立即重新触发
@@ -289,24 +287,24 @@ export function useUnifiedCompletion({
       return
     }
     
-    const context = getWordAtCursor()
+    const _context = getWordAtCursor()
     
-    if (context && context.type === 'command' && context.prefix.length >= 0) {
-      const suggestions = generateSuggestions(context)
+    if (_context && _context.type === 'command' && _context.prefix.length >= 0) {
+      const suggestions = generateSuggestions(_context)
       
       if (suggestions.length === 0) {
         resetCompletion()
-      } else if (suggestions.length === 1 && context.prefix === suggestions[0].value) {
+      } else if (suggestions.length === 1 && _context.prefix === suggestions[0].value) {
         // 完全匹配，隐藏
         resetCompletion()
       } else {
-        activateCompletion(suggestions, context)
+        activateCompletion(suggestions, _context)
       }
     } else if (state.context) {
       // 上下文发生重大变化
-      const contextChanged = !context ||
-        state.context.type !== context.type ||
-        state.context.startPos !== context.startPos
+      const contextChanged = !_context ||
+        state.context.type !== _context.type ||
+        state.context.startPos !== _context.startPos
       
       if (contextChanged) {
         resetCompletion()
@@ -317,7 +315,6 @@ export function useUnifiedCompletion({
   return {
     suggestions: state.suggestions,
     selectedIndex: state.selectedIndex,
-    isActive: state.isActive,
-    context: state.context,
+    isActive: state.isActive, context: state.context,
   }
 }

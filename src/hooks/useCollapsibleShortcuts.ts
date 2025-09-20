@@ -6,13 +6,13 @@
 import { debugLog } from './../utils/log.js'
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useInput } from 'ink'
-import type { 
-  CollapsibleManager, 
-  CollapsibleState,
-  CollapsibleStateChangeEvent,
-  KeyboardShortcuts,
+import {
+  DEFAULT_COLLAPSIBLE_OPTIONS,
+  type CollapsibleManager,
+  type CollapsibleState,
+  type CollapsibleStateChangeEvent,
+  type KeyboardShortcuts,
 } from '../types/CollapsibleContent.js'
-import { DEFAULT_COLLAPSIBLE_OPTIONS } from '../types/CollapsibleContent.js'
 
 interface UseCollapsibleShortcutsOptions {
   shortcuts?: Partial<KeyboardShortcuts>
@@ -203,7 +203,7 @@ export function useCollapsibleShortcuts({
     if (!enableGlobalShortcuts) return
     
     // Ctrl+R: 切换当前焦点的内容
-    if (key.ctrl && input === 'r') {
+    if ((key as any).ctrl && input === 'r') {
       if (manager.focusedId) {
         toggleCollapsible(manager.focusedId)
       } else if (manager.states.size > 0) {
@@ -220,18 +220,18 @@ export function useCollapsibleShortcuts({
     }
     
     // Ctrl+Shift+R: 全局切换
-    if (key.ctrl && key.shift && input === 'R') {
+    if ((key as any).ctrl && (key as any).shift && input === 'R') {
       toggleAll()
       return
     }
     
     // 方向键导航
-    if (key.upArrow) {
+    if ((key as any).upArrow) {
       navigatePrev()
       return
     }
     
-    if (key.downArrow) {
+    if ((key as any).downArrow) {
       navigateNext()
       return
     }
@@ -243,7 +243,7 @@ export function useCollapsibleShortcuts({
     }
     
     // Shift+Tab 反向循环焦点
-    if (key.shift && key.tab) {
+    if ((key as any).shift && key.tab) {
       navigatePrev()
       return
     }
@@ -329,7 +329,7 @@ export function useSimpleCollapsible(
   
   // 监听 Ctrl+R
   useInput((input, key) => {
-    if (key.ctrl && input === 'r') {
+    if ((key as any).ctrl && input === 'r') {
       toggle()
     }
   })
@@ -362,9 +362,9 @@ export function useCollapsibleFocus(
   
   // 监听 Enter 键获取焦点，Escape 键失去焦点
   useInput((input, key) => {
-    if (key.return) {
+    if ((key as any).return) {
       focus()
-    } else if (key.escape) {
+    } else if ((key as any).escape) {
       blur()
     }
   })

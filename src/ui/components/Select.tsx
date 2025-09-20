@@ -38,11 +38,11 @@ export function Select({
       return
     }
 
-    if (key.upArrow) {
+    if ((key as any).upArrow) {
       setSelectedIndex(prev => Math.max(0, prev - 1))
-    } else if (key.downArrow) {
+    } else if ((key as any).downArrow) {
       setSelectedIndex(prev => Math.min(options.length - 1, prev + 1))
-    } else if (key.return || input === ' ') {
+    } else if ((key as any).return || input === ' ') {
       const selectedOption = options[selectedIndex]
       if (selectedOption) {
         onChange?.(selectedOption.value)

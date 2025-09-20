@@ -82,7 +82,7 @@ export class GLMClientTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `GLM-4.5 API 调用失败: ${(error as Error).message}`
+        error: `GLM-4.5 API 调用失败: ${(_error as Error).message}`
       }
     }
   }

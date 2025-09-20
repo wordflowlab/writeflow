@@ -120,7 +120,7 @@ export class DeepSeekProvider {
             options: { verbose: false }
           }
           
-          const result = await writeFlowTool.call(_args, _context)
+          const result = await writeFlowTool.call(_args, context)
           
           // 如果返回 AsyncGenerator，收集所有结果
           if (result && typeof result[Symbol.asyncIterator] === 'function') {
@@ -248,7 +248,7 @@ export class DeepSeekProvider {
     
     // 如果启用了工具调用，则使用多轮对话机制
     if (request.enableToolCalls && request.allowedTools && request.allowedTools.length > 0) {
-      return await this.callDeepSeekWithTools(url, apiKey, profile, request)
+      return this.callDeepSeekWithTools(url, apiKey, profile, request)
     }
     
     // 标准调用（无工具）
@@ -282,7 +282,7 @@ export class DeepSeekProvider {
     
     // 如果是流式请求，处理流式响应
     if (request.stream) {
-      return await this.handleStreamingResponse(response, profile, request)
+      return this.handleStreamingResponse(response, profile, request)
     }
     
     // 非流式处理
@@ -462,7 +462,7 @@ export class DeepSeekProvider {
     
     // 如果没有工具或工具为空，回退到标准调用
     if (!tools || tools.length === 0) {
-      return await this.callDeepSeekAPI(profile, { ...request, enableToolCalls: false, allowedTools: undefined })
+      return this.callDeepSeekAPI(profile, { ...request, enableToolCalls: false, allowedTools: undefined })
     }
     
     let totalInputTokens = 0
@@ -550,7 +550,7 @@ export class DeepSeekProvider {
               id: `inline_${Date.now()}_${Math.random().toString(36).slice(2)}`,
               function: {
                 name: c.name,
-                arguments: JSON.stringify(c._args)
+                arguments: JSON.stringify(c.args)
               }
             }))
           )
@@ -687,8 +687,8 @@ export class DeepSeekProvider {
           messages.push(toolMessage)
           
         } catch (_error) {
-          const errorMsg = `工具执行异常: ${error instanceof Error ? error.message : '未知错误'}`
-          logError(`💥 [第${iteration + 1}轮-工具${i + 1}] ${toolName} 执行异常:`, error)
+          const errorMsg = `工具执行异常: ${_error instanceof Error ? _error.message : '未知错误'}`
+          logError(`💥 [第${iteration + 1}轮-工具${i + 1}] ${toolName} 执行异常:`, _error)
           
           if (!toolName.includes('todo')) {
             conversationHistory += `${toolName}工具: ${errorMsg}\n`
@@ -882,7 +882,7 @@ export class DeepSeekProvider {
           logWarn(`工具 ${toolName} 不在可用工具列表中，跳过`)
         }
       } catch (_error) {
-        logWarn(`获取工具 ${toolName} 失败:`, error)
+        logWarn(`获取工具 ${toolName} 失败:`, _error)
       }
     }
     
@@ -925,7 +925,7 @@ export class DeepSeekProvider {
         if (toolName === 'todo_write') {
           const { TodoWriteTool } = await import('../../../tools/writing/TodoWriteTool.js')
           const tool = new TodoWriteTool(sharedManager)
-          const res = await tool.execute(_args, { 
+          const res = await tool.execute(args, { 
             agentId: 'deepseek-ai', 
             abortController: new AbortController(), 
             options: { verbose: false } 
@@ -959,7 +959,7 @@ export class DeepSeekProvider {
         if (toolName === 'exit_plan_mode') {
           const { ExitPlanModeTool } = await import('../../../tools/ExitPlanMode.js')
           const tool = new ExitPlanModeTool()
-          const res = await tool.execute(_args)
+          const res = await tool.execute(args)
           return {
             toolName,
             callId: toolCall.id,
@@ -974,7 +974,7 @@ export class DeepSeekProvider {
           callId: toolCall.id,
           result: '',
           success: false,
-          _error: (_error as Error).message
+          error: (_error as Error).message
         }
       }
     }
@@ -991,10 +991,10 @@ export class DeepSeekProvider {
           safeMode: false,  // AI 调用时不启用安全模式
         },
       }
-      debugLog(`[DeepSeekProvider] 开始执行工具: ${toolName}, 参数:`, _args)
+      debugLog(`[DeepSeekProvider] 开始执行工具: ${toolName}, 参数:`, args)
       
       // executeToolQuick 在成功时返回结果，失败时抛出异常
-      const result = await executeToolQuick(toolName, _args, toolContext)
+      const result = await executeToolQuick(toolName, args, toolContext)
       
       debugLog(`[DeepSeekProvider] 工具执行完成: ${toolName}, 成功: true`)
       
@@ -1018,7 +1018,7 @@ export class DeepSeekProvider {
         callId: toolCall.id,
         result: '',
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: _error instanceof Error ? _error.message : String(_error)
       }
     }
   }
@@ -1051,7 +1051,7 @@ export class DeepSeekProvider {
           debugLog(`🛠️  提取工具: ${toolName}, 参数: ${argsStr.slice(0, 100)}...`)
           
           const args = JSON.parse(argsStr)
-          calls.push({ name: toolName, _args })
+          calls.push({ name: toolName, args })
           debugLog(`✅ 成功解析工具 ${toolName}`)
         } catch (e) {
           logWarn(`⚠️  工具调用解析失败: ${e instanceof Error ? e.message : String(e)}`)
@@ -1071,7 +1071,7 @@ export class DeepSeekProvider {
         const [fullMatch, name, argsStr] = match
         debugLog(`🔧 找到简化格式工具: ${name}`)
         const args = JSON.parse(argsStr)
-        calls.push({ name, _args })
+        calls.push({ name, args })
         cleaned = cleaned.replace(fullMatch, '')
         debugLog(`✅ 成功解析简化格式工具 ${name}`)
       } catch (e) {
@@ -1339,8 +1339,8 @@ export class DeepSeekProvider {
           break
         }
         
-        logError(`💥 [流式-第${iteration + 1}轮] 轮次异常:`, error)
-        throw error
+        logError(`💥 [流式-第${iteration + 1}轮] 轮次异常:`, _error)
+        throw _error
       } finally {
         // 确保清理资源
         clearTimeout(iterationTimeoutId)
@@ -1416,7 +1416,7 @@ export class DeepSeekProvider {
       if (_error instanceof Error && _error.name === 'AbortError') {
         throw new Error('DeepSeek API 请求超时 (60秒)')
       }
-      throw error
+      throw _error
     }
     
     if (!response.ok) {
@@ -1583,8 +1583,8 @@ export class DeepSeekProvider {
         throw new Error('流式响应超时 (30秒无数据)')
       }
       
-      logError(`💥 [流式] SSE 读取异常:`, error)
-      throw error
+      logError(`💥 [流式] SSE 读取异常:`, _error)
+      throw _error
     } finally {
       // 清理资源
       if (noDataTimeoutId) clearTimeout(noDataTimeoutId)
@@ -1602,7 +1602,7 @@ export class DeepSeekProvider {
             id: `inline_${Date.now()}_${Math.random().toString(36).slice(2)}`,
             function: {
               name: c.name,
-              arguments: JSON.stringify(c._args)
+              arguments: JSON.stringify(c.args)
             }
           }))
         )
@@ -1681,7 +1681,7 @@ export class DeepSeekProvider {
       
       return null
     } catch (_error) {
-      logWarn(`⚠️ 创建工具实例失败 ${toolName}:`, error)
+      logWarn(`⚠️ 创建工具实例失败 ${toolName}:`, _error)
       return null
     }
   }
@@ -1874,10 +1874,10 @@ export class DeepSeekProvider {
       }
       
     } catch (_error) {
-      logError(`💥 [工具执行] ${toolName} 执行异常:`, error)
+      logError(`💥 [工具执行] ${toolName} 执行异常:`, _error)
       yield createUserMessage([{
         type: 'tool_result',
-        content: `执行异常: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `执行异常: ${_error instanceof Error ? _error.message : '未知错误'}`,
         is_error: true,
         tool_use_id: toolUseID,
       }])

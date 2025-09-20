@@ -153,7 +153,7 @@ export class ShortTermMemory {
       
       return newMessage
     } catch (_error) {
-      console._error('💾 [ShortTermMemory] addMessage 错误:', _error)
+      console.error('💾 [ShortTermMemory] addMessage 错误:', _error)
       throw _error
     }
   }

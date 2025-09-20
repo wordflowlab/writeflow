@@ -82,7 +82,7 @@ export class QwenClientTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `Qwen3 API 调用失败: ${(error as Error).message}`
+        error: `Qwen3 API 调用失败: ${(_error as Error).message}`
       }
     }
   }

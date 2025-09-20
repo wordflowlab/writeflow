@@ -83,8 +83,7 @@ export interface WritingTool<
   
   /** 执行工具 */
   execute(
-    input: z.infer<TInput>,
-    context: ToolUseContext,
+    input: z.infer<TInput>, _context: ToolUseContext,
   ): Promise<ToolResult<TOutput>>
   
   // UI 渲染方法（可选）

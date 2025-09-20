@@ -93,18 +93,18 @@ export function logDebug(message: string, data?: any): void {
  * 便捷调试日志函数 - 用于替换debugLog
  * 只在调试模式下输出，生产环境零性能开销
  */
-export function debugLog(message: string, ..._args: any[]): void {
+export function debugLog(message: string, ...args: any[]): void {
   if (currentLogLevel >= LogLevel.DEBUG) {
-    console.log(message, ..._args)
+    console.log(message, ...args)
   }
 }
 
 /**
  * 便捷信息日志函数 - 用于重要的用户反馈
  */
-export function infoLog(message: string, ..._args: any[]): void {
+export function infoLog(message: string, ...args: any[]): void {
   if (currentLogLevel >= LogLevel.INFO) {
-    console.log(message, ..._args)
+    console.log(message, ...args)
   }
 }
 
@@ -117,6 +117,6 @@ export function createLogger(prefix: string) {
     warn: (message: string, data?: any) => logWarn(`${prefix}: ${message}`, data),
     info: (message: string, data?: any) => logInfo(`${prefix}: ${message}`, data),
     debug: (message: string, data?: any) => logDebug(`${prefix}: ${message}`, data),
-    debugLog: (message: string, ..._args: any[]) => debugLog(`${prefix}: ${message}`, ..._args),
+    debugLog: (message: string, ...args: any[]) => debugLog(`${prefix}: ${message}`, ...args),
   }
 }

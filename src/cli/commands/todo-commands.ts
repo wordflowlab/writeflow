@@ -1,4 +1,5 @@
 import { SlashCommand } from '../../types/command.js'
+import type { ToolUseContext } from '../../Tool.js'
 import { AgentContext } from '../../types/agent.js'
 import { TodoManager } from '../../tools/TodoManager.js'
 import { TodoStatus, TodoPriority } from '../../types/Todo.js'
@@ -57,7 +58,7 @@ export const todoAddCommand: SlashCommand = {
                       content.startsWith('删除') ? content.replace('删除', '正在删除') :
                       `正在处理：${content}`
 
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     const newTodo = await todoManager.addTodo(content, activeForm, taskPriority)
 
     return `✅ 任务已添加：\n• ID: ${newTodo.id}\n• 内容: ${newTodo.content}\n• 优先级: ${newTodo.priority}\n• 状态: ${newTodo.status}`
@@ -80,7 +81,7 @@ export const todoListCommand: SlashCommand = {
   userFacingName: () => '任务列表',
 
   async call(_args: string, _context: AgentContext): Promise<string> {
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     const status = _args.trim().toLowerCase() as TodoStatus
 
     let todos
@@ -128,7 +129,7 @@ export const todoUpdateCommand: SlashCommand = {
       return `错误: 无效状态 "${statusStr}"\n可用状态: pending, in_progress, completed`
     }
 
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     const updatedTodo = await todoManager.updateTodoStatus(id, status)
 
     if (!updatedTodo) {
@@ -162,7 +163,7 @@ export const todoRemoveCommand: SlashCommand = {
       return '错误: 请提供任务 ID。用法: /todo remove <ID>'
     }
 
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     const todo = await todoManager.getTodoById(id)
     
     if (!todo) {
@@ -189,7 +190,7 @@ export const todoStatsCommand: SlashCommand = {
   userFacingName: () => '任务统计',
 
   async call(_args: string, _context: AgentContext): Promise<string> {
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     const report = await todoManager.getProgressReport()
 
     let result = `📊 任务统计报告\n\n`
@@ -232,7 +233,7 @@ export const todoClearCommand: SlashCommand = {
   userFacingName: () => '清空任务',
 
   async call(_args: string, _context: AgentContext): Promise<string> {
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     await todoManager.clearAllTodos()
     return '🧹 所有任务已清空'
   }
@@ -254,7 +255,7 @@ export const todoStartCommand: SlashCommand = {
       return '错误: 请提供任务 ID。用法: /todo start <ID>'
     }
 
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     const todo = await todoManager.startTask(id)
 
     if (!todo) {
@@ -281,7 +282,7 @@ export const todoDoneCommand: SlashCommand = {
       return '错误: 请提供任务 ID。用法: /todo done <ID>'
     }
 
-    const todoManager = getTodoManager(context.sessionId)
+    const todoManager = getTodoManager(_context.sessionId)
     const todo = await todoManager.completeTask(id)
 
     if (!todo) {

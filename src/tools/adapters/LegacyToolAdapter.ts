@@ -16,8 +16,7 @@ export interface ExternalTool<TInput = any, TOutput = any> {
   
   // 生成器执行方法
   call: (
-    input: TInput,
-    context: any,
+    input: TInput, _context: any,
     canUseTool?: any
   ) => AsyncGenerator<
     { type: 'result'; data: TOutput; resultForAssistant?: string },
@@ -57,7 +56,7 @@ export class LegacyToolAdapter implements EnhancedWritingTool {
         this.description = await this.externalTool.description()
       }
     } catch (_error) {
-      logWarn(`Failed to load description for tool ${this.name}:`, error)
+      logWarn(`Failed to load description for tool ${this.name}:`, _error)
       this.description = `${this.name} 工具`
     }
   }
@@ -127,7 +126,7 @@ export class LegacyToolAdapter implements EnhancedWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `工具执行失败: ${(error as Error).message}`
+        error: `工具执行失败: ${(_error as Error).message}`
       }
     }
   }
@@ -164,7 +163,7 @@ export class LegacyToolAdapter implements EnhancedWritingTool {
     } catch (_error) {
       yield {
         success: false,
-        error: `流式执行失败: ${(error as Error).message}`
+        error: `流式执行失败: ${(_error as Error).message}`
       }
     }
   }
@@ -174,7 +173,7 @@ export class LegacyToolAdapter implements EnhancedWritingTool {
    */
   async getPrompt(options?: { safeMode?: boolean }): Promise<string> {
     if (this.externalTool.prompt) {
-      return await this.externalTool.prompt(options)
+      return this.externalTool.prompt(options)
     }
     return `这是 ${this.name} 工具的默认提示词。`
   }

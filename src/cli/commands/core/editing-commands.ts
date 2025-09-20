@@ -1,4 +1,5 @@
 import { SlashCommand } from '../../../types/command.js'
+import type { ToolUseContext } from '../../../Tool.js'
 import { AgentContext } from '../../../types/agent.js'
 
 /**

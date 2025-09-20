@@ -33,7 +33,7 @@ export const mcpCommands: SlashCommand[] = [
           if (s.type === 'sse') {
             out += `   url: ${s.url}\n`
           } else {
-            out += `   command: ${s.command} ${s._args?.join(' ') || ''}\n`
+            out += `   command: ${s.command} ${s.args?.join(' ') || ''}\n`
           }
         }
         out += '\n提示: 某些工具需要模型支持 function calling 或特定插件。'

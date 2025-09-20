@@ -35,7 +35,7 @@ export class BashHandler {
         : `✅ ${output}\n执行时间: ${executionTime}ms`
 
     } catch (_error) {
-      const errorMessage = `❌ 命令执行失败: ${(error as Error).message}`
+      const errorMessage = `❌ 命令执行失败: ${(_error as Error).message}`
       
       this.executionHistory.push({
         command,

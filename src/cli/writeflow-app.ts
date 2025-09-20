@@ -293,8 +293,8 @@ TODO 管理规范：
       debugLog(chalk.green('✅ WriteFlow 初始化完成'))
 
     } catch (_error) {
-      logError(chalk.red(`初始化失败: ${(error as Error).message}`))
-      throw error
+      logError(chalk.red(`初始化失败: ${(_error as Error).message}`))
+      throw _error
     }
   }
 
@@ -583,7 +583,7 @@ TODO 管理规范：
         }
 
       } catch (_error) {
-        logError(chalk.red(`错误: ${(error as Error).message}`))
+        logError(chalk.red(`错误: ${(_error as Error).message}`))
       }
 
       rl.prompt()
@@ -605,7 +605,7 @@ TODO 管理规范：
         // 将命令包装为消息并通过 h2A 队列处理（最小试点）
         const message = H2AAsyncMessageQueue.createMessage(
           MessageType.SlashCommand,
-          `${command} ${options?._args || ''}`.trim(),
+          `${command} ${options?.args || ''}`.trim(),
           MessagePriority.Normal,
           'cli',
         )
@@ -644,7 +644,7 @@ TODO 管理规范：
       if (result.shouldQuery && result.messages) {
         // 在Plan模式下使用专用的处理逻辑
         if (this.isInPlanMode()) {
-          return await this.processAIQuery(
+          return this.processAIQuery(
             result.messages, 
             result.allowedTools, 
             options.signal, 
@@ -652,7 +652,7 @@ TODO 管理规范：
             options.onToken,
           )
         } else {
-          return await this.processAIQuery(result.messages, result.allowedTools, options.signal, true, options.onToken)
+          return this.processAIQuery(result.messages, result.allowedTools, options.signal, true, options.onToken)
         }
       }
 
@@ -660,7 +660,7 @@ TODO 管理规范：
       return result.messages?.[0]?.content || '命令执行完成'
 
     } catch (_error) {
-      throw new Error(`命令执行失败: ${(error as Error).message}`)
+      throw new Error(`命令执行失败: ${(_error as Error).message}`)
     }
   }
 
@@ -836,7 +836,7 @@ ${fileList}
       // 直接返回响应内容，TODO 显示由 TodoPanel 处理
       return response.content
     } catch (_error) {
-      throw new Error(`AI查询失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      throw new Error(`AI查询失败: ${_error instanceof Error ? _error.message : '未知错误'}`)
     }
   }
 
@@ -1118,7 +1118,7 @@ ${systemPrompt}`
         const userConfig = JSON.parse(configContent)
         this.config = { ...this.config, ...userConfig }
       } catch (_error) {
-        logWarn(chalk.yellow(`配置文件加载失败: ${(error as Error).message}`))
+        logWarn(chalk.yellow(`配置文件加载失败: ${(_error as Error).message}`))
       }
     }
   }
@@ -1385,7 +1385,7 @@ ${input.plan.substring(0, 300)}${input.plan.length > 300 ? '...' : ''}`,
             // 兼容大小写/历史命名
             const name = (c.name || '').toLowerCase()
             const mapped = name === 'todowrite' ? 'todo_write' : name === 'todoread' ? 'todo_read' : c.name
-            toolCalls.push({ toolName: mapped, input: c._args })
+            toolCalls.push({ toolName: mapped, input: c.args })
           }
         }
         // 再兜底清理

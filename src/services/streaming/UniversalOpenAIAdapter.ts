@@ -117,7 +117,7 @@ export class UniversalOpenAIAdapter extends StreamAdapter {
           chunks.push({
             content: '',
             done: false,
-            error: `Failed to parse ${this.providerConfig.name} response: ${error}`,
+            error: `Failed to parse ${this.providerConfig.name} response: ${_error}`,
             raw: trimmed
           })
         }

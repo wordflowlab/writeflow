@@ -216,13 +216,13 @@ export class InteractiveExecutionManager {
         }
 
       } catch (_error) {
-        this.messageLogger.systemError(`工具执行异常: ${error}`, {
+        this.messageLogger.systemError(`工具执行异常: ${_error}`, {
           toolName: tool.toolName,
-          category: 'execution-error'
+          category: 'execution-_error'
         })
         
         if (options.allowInterruption) {
-          const choice = await this.promptForErrorAction(tool, error)
+          const choice = await this.promptForErrorAction(tool, _error)
           if (choice === UserChoice.CANCEL) {
             session.currentStage = ExecutionStage.CANCELLED
             return

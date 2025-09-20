@@ -84,7 +84,7 @@ export class AnthropicClientTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `Anthropic API 调用失败: ${(error as Error).message}`
+        error: `Anthropic API 调用失败: ${(_error as Error).message}`
       }
     }
   }

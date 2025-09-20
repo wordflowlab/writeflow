@@ -86,13 +86,13 @@ export function WriteFlowOnboarding({
       setWritingPreferences(preferences)
       onComplete()
     } catch (_error) {
-      console._error('保存配置时出错:', _error)
+      console.error('保存配置时出错:', _error)
     }
   }, [onComplete])
 
   // 处理通用的 Enter 键导航
   useInput((input, key) => {
-    if (key.return) {
+    if ((key as any).return) {
       if (currentStep.id === 'welcome' || currentStep.id === 'writing-mode') {
         if (isLastStep) {
           // 检查是否真正完成了所有必要的配置才标记引导完成
@@ -113,7 +113,7 @@ export function WriteFlowOnboarding({
             })
             onComplete()
           } catch (_error) {
-            console._error('保存引导完成状态时出错:', _error)
+            console.error('保存引导完成状态时出错:', _error)
           }
         } else {
           goToNextStep()

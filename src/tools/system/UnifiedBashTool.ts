@@ -158,7 +158,7 @@ class PersistentShell {
       // 构建实际执行的命令
       const wrappedCommand = this.buildWrappedCommand(command, statusFile, stdoutFile, stderrFile)
       
-      const child = spawn(this.shellType.bin, [...this.shellType._args, wrappedCommand], {
+      const child = spawn(this.shellType.bin, [...this.shellType.args, wrappedCommand], {
         stdio: 'pipe',
         env: { ...process.env },
         cwd: this.currentWorkingDir,
@@ -215,7 +215,7 @@ class PersistentShell {
             success: false,
             exitCode: null,
             stdout: '',
-            stderr: `结果读取失败: ${(error as Error).message}`,
+            stderr: `结果读取失败: ${(_error as Error).message}`,
             stdoutLines: 0,
             stderrLines: 0,
             duration: Date.now() - startTime,
@@ -433,10 +433,10 @@ export class UnifiedBashTool implements EnhancedWritingTool {
       const duration = Date.now() - startTime
       return {
         success: false,
-        error: `命令执行异常: ${(error as Error).message}`,
+        error: `命令执行异常: ${(_error as Error).message}`,
         metadata: {
           duration,
-          error: (error as Error).message
+          error: (_error as Error).message
         }
       }
     }

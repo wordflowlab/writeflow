@@ -113,7 +113,7 @@ export class OutputFormatter {
       }
 
     } catch (_error) {
-      logWarn(`输出格式化失败: ${error}`)
+      logWarn(`输出格式化失败: ${_error}`)
       return {
         content,
         hasCodeBlocks: false,

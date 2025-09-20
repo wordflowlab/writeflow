@@ -194,22 +194,22 @@ export class TodoQueueAgent extends NOMainAgentEngine {
       }
       
     } catch (_error) {
-      logError(`[TodoQueueAgent] 执行任务失败: ${todo.content}`, error)
+      logError(`[TodoQueueAgent] 执行任务失败: ${todo.content}`, _error)
       
       // 更新执行记录
       const record = this.executionHistory.find(r => r.todo.id === todo.id)
       if (record) {
         record.endTime = Date.now()
         record.result = 'failure'
-        record.error = error instanceof Error ? error.message : '未知错误'
+        record.error = _error instanceof Error ? _error.message : '未知错误'
       }
 
       yield {
         type: 'error',
-        content: `❌ 任务执行失败: **${todo.content}**\n错误: ${error instanceof Error ? error.message : '未知错误'}`,
+        content: `❌ 任务执行失败: **${todo.content}**\n错误: ${_error instanceof Error ? _error.message : '未知错误'}`,
         metadata: {
           todoId: todo.id,
-          error: error instanceof Error ? error.message : '未知错误'
+          error: _error instanceof Error ? _error.message : '未知错误'
         }
       }
     }

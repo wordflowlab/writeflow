@@ -241,7 +241,7 @@ export class ToolOrchestrator {
               
             } catch (_error) {
               result.status = ToolExecutionStatus.FAILED
-              result.error = new Error(`权限确认失败: ${error}`)
+              result.error = new Error(`权限确认失败: ${_error}`)
               result.endTime = Date.now()
               this.executionResults.set(executionId, result)
               return result
@@ -550,14 +550,13 @@ export function getToolOrchestrator(): ToolOrchestrator {
  */
 export async function executeToolQuick(
   toolName: string, 
-  input: any, 
-  context: ToolUseContext,
+  input: any, _context: ToolUseContext,
 ): Promise<any> {
   const orchestrator = getToolOrchestrator()
   const result = await orchestrator.executeTool({
     toolName,
     input,
-    context,
+    context: _context,
   })
   
   if (result.status === ToolExecutionStatus.COMPLETED) {

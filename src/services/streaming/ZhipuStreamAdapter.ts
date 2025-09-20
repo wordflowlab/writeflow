@@ -94,7 +94,7 @@ export class ZhipuStreamAdapter extends StreamAdapter {
           chunks.push({
             content: '',
             done: false,
-            error: `Failed to parse Zhipu AI response: ${error}`,
+            error: `Failed to parse Zhipu AI response: ${_error}`,
             raw: trimmed
           })
         }

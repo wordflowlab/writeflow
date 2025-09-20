@@ -83,7 +83,7 @@ export class OpenAIProvider {
     }
     
     if (request.stream) {
-      return await this.handleStreamingResponse(response, profile, request)
+      return this.handleStreamingResponse(response, profile, request)
     }
 
     const data = await response.json()

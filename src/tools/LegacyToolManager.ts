@@ -113,16 +113,16 @@ export class LegacyToolManager {
       // 回退到注册的工具
       const legacyTool = this.registeredTools.get(toolName)
       if (legacyTool && legacyTool.execute) {
-        return await legacyTool.execute(input)
+        return legacyTool.execute(input)
       }
       
       throw new Error(`工具 ${toolName} 不存在`)
       
     } catch (_error) {
-      logError(`工具 ${toolName} 执行失败:`, error)
+      logError(`工具 ${toolName} 执行失败:`, _error)
       return {
         success: false,
-        error: `工具执行失败: ${(error as Error).message}`,
+        _error: `工具执行失败: ${(_error as Error).message}`,
         content: `❌ 工具 ${toolName} 执行失败`,
       }
     }

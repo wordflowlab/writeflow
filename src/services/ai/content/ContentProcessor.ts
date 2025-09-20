@@ -1,3 +1,10 @@
+// ParsedResponse interface
+interface ParsedResponse {
+  content: string | any[]
+  metadata?: any
+  tool_calls?: any[]
+}
+
 /**
  * 内容处理器统一入口
  * 整合内容分析和折叠管理，提供统一的内容处理接口
@@ -90,6 +97,7 @@ export class ContentProcessor {
         options.collapsibleOptions
       )
     } else {
+      // @ts-ignore - ParsedResponse content can be string or array
       contentBlocks = parsedResponse?.content || [createTextBlock(processedContent)]
     }
 

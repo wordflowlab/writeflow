@@ -97,9 +97,9 @@ export class StreamingDisplay {
     } catch (_error) {
       logError('流式处理错误:', _error)
       await this.processMessage({
-        type: '_error',
-        message: `流式处理异常: ${error instanceof Error ? error.message : String(error)}`,
-        error: error as Error
+        type: "error",
+        message: `流式处理异常: ${_error instanceof Error ? _error.message : String(_error)}`,
+        error: _error as Error
       })
     } finally {
       this.state.isStreaming = false

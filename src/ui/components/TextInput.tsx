@@ -110,7 +110,7 @@ export default function TextInput({
     }
     
     // Handle backspace
-    if (key.backspace || key.delete || inputChar === '\b' || inputChar === '\x7f') {
+    if ((key as any).backspace || (key as any).delete || inputChar === '\b' || inputChar === '\x7f') {
       const nextCursor = cursor.backspace()
       if (!cursor.equals(nextCursor)) {
         onChangeCursorOffset(nextCursor.offset)
@@ -120,8 +120,8 @@ export default function TextInput({
     }
     
     // Handle Enter
-    if (key.return) {
-      if (multiline && key.shift) {
+    if ((key as any).return) {
+      if (multiline && (key as any).shift) {
         // Shift+Enter for new line in multiline mode
         const nextCursor = cursor.insert('\n')
         onChangeCursorOffset(nextCursor.offset)
@@ -134,26 +134,26 @@ export default function TextInput({
     }
     
     // Handle escape
-    if (key.escape) {
+    if ((key as any).escape) {
       onExit?.()
       return
     }
     
     // Handle arrow keys
-    if (key.leftArrow) {
+    if ((key as any).leftArrow) {
       const nextCursor = cursor.left()
       onChangeCursorOffset(nextCursor.offset)
       return
     }
     
-    if (key.rightArrow) {
+    if ((key as any).rightArrow) {
       const nextCursor = cursor.right()
       onChangeCursorOffset(nextCursor.offset)
       return
     }
     
     // Handle Ctrl combinations
-    if (key.ctrl) {
+    if ((key as any).ctrl) {
       switch (inputChar) {
         case 'a': // Ctrl+A - start of line
           onChangeCursorOffset(cursor.startOfLine().offset)

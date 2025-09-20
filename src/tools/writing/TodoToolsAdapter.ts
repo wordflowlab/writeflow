@@ -79,7 +79,7 @@ class TodoToolAdapter implements LegacyWritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `工具执行失败: ${error instanceof Error ? error.message : '未知错误'}`
+        error: `工具执行失败: ${_error instanceof Error ? _error.message : '未知错误'}`
       }
     }
   }

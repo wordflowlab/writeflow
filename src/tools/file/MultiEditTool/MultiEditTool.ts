@@ -120,8 +120,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
   }
 
   async *call(
-    input: MultiEditToolInput,
-    context: ToolUseContext,
+    input: MultiEditToolInput, _context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: MultiEditToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: MultiEditTool) {
       // 1. 路径处理和验证
@@ -132,7 +131,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
       try {
         originalContent = readFileSync(filePath, 'utf8')
       } catch (_error) {
-        throw new Error(`读取文件失败: ${error instanceof Error ? error.message : String(error)}`)
+        throw new Error(`读取文件失败: ${_error instanceof Error ? _error.message : String(_error)}`)
       }
 
       // 3. 执行编辑操作
@@ -166,7 +165,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
             index: i + 1,
             success: false,
             replacements: 0,
-            _error: errorMessage,
+            error: errorMessage,
           })
           
           // 如果任何一个操作失败，停止执行并抛出错误
@@ -178,7 +177,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
       try {
         writeFileSync(filePath, currentContent, 'utf8')
       } catch (_error) {
-        throw new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`)
+        throw new Error(`写入文件失败: ${_error instanceof Error ? _error.message : String(_error)}`)
       }
 
       // 5. 构建结果
@@ -221,7 +220,7 @@ export class MultiEditTool extends ToolBase<typeof MultiEditToolInputSchema, Mul
         resultForAssistant,
       }
 
-    }.bind(this), context)
+    }.bind(this), _context)
   }
 
   renderResultForAssistant(output: MultiEditToolOutput): string {

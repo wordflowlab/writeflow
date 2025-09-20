@@ -60,8 +60,7 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
   }
 
   async *call(
-    input: GlobToolInput,
-    context: ToolUseContext,
+    input: GlobToolInput, _context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: GlobToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: GlobTool) {
       debugLog(`[GlobTool] 开始执行，输入:`, input)
@@ -84,7 +83,7 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
         if ((_error as any).code === 'ENOENT') {
           throw new Error(`搜索路径不存在: ${searchPath}`)
         }
-        throw error
+        throw _error
       }
 
       // 3. 执行文件匹配（带性能保护）
@@ -146,7 +145,7 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
         resultForAssistant,
       }
 
-    }.bind(this), context)
+    }.bind(this), _context)
   }
 
   renderResultForAssistant(output: GlobToolOutput): string {
@@ -279,13 +278,13 @@ export class GlobTool extends ToolBase<typeof GlobToolInputSchema, GlobToolOutpu
             }
           }
         } catch (_error) {
-          debugLog(`[GlobTool] 无法访问文件/目录: ${fullEntryPath}`, (error as Error).message)
+          debugLog(`[GlobTool] 无法访问文件/目录: ${fullEntryPath}`, (_error as Error).message)
           // 忽略无法访问的文件/目录，继续处理
           continue
         }
       }
     } catch (_error) {
-      debugLog(`[GlobTool] 无法读取目录: ${fullPath}`, (error as Error).message)
+      debugLog(`[GlobTool] 无法读取目录: ${fullPath}`, (_error as Error).message)
       // 目录无法读取，但不应该终止整个搜索
       // 只是记录错误并返回已找到的结果
     }

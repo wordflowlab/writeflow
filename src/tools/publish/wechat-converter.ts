@@ -96,7 +96,7 @@ export class WeChatConverterTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `微信格式转换失败: ${(error as Error).message}`
+        error: `微信格式转换失败: ${(_error as Error).message}`
       }
     }
   }

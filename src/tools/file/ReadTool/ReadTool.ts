@@ -42,8 +42,7 @@ export class ReadTool extends ToolBase<typeof ReadToolInputSchema, ReadToolOutpu
   needsPermissions(): boolean { return false }
 
   async *call(
-    input: ReadToolInput,
-    context: ToolUseContext,
+    input: ReadToolInput, _context: ToolUseContext,
   ): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: ReadToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
     yield* this.executeWithErrorHandling(async function* (this: ReadTool): AsyncGenerator<{ type: 'result' | 'progress' | 'error'; data?: ReadToolOutput; message?: string; progress?: number; error?: Error; resultForAssistant?: string }, void, unknown> {
       const cwd = process.cwd()
@@ -117,7 +116,7 @@ export class ReadTool extends ToolBase<typeof ReadToolInputSchema, ReadToolOutpu
 
       const assistant = this.renderResultForAssistant(output)
       yield { type: 'result', data: output, resultForAssistant: assistant }
-    }.bind(this), context)
+    }.bind(this), _context)
   }
 
   renderResultForAssistant(output: ReadToolOutput): string {

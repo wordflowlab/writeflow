@@ -349,7 +349,7 @@ export class MemoryManager {
 
   // 手动触发压缩
   async forceCompression(): Promise<CompressionResult> {
-    return await this.performCompression()
+    return this.performCompression()
   }
 
   // 清空所有记忆

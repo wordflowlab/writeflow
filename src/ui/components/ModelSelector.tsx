@@ -91,7 +91,7 @@ export function ModelSelector({
 
   // Handle keyboard input for navigation
   const handleInput = useCallback((input: string, key: any) => {
-    if (key.escape) {
+    if ((key as any).escape) {
       // Esc：逐步回退
       if (currentStep === 'config') {
         setCurrentStep('apikey')
@@ -148,7 +148,7 @@ export function ModelSelector({
       modelManager.addModelProfile(newProfile)
       onDone()
     } catch (_error) {
-      console._error('添加模型配置失败:', _error)
+      console.error('添加模型配置失败:', _error)
       onCancel()
     }
   }, [selectedProvider, selectedModel, apiKey, modelName, maxTokens, contextLength, modelManager, onDone, onCancel])

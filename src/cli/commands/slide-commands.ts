@@ -4,6 +4,7 @@
  */
 
 import { debugLog, logWarn } from './../../utils/log.js'
+import type { ToolUseContext } from '../../Tool.js'
 import { SlashCommand } from '../../types/command.js'
 import { AgentContext } from '../../types/agent.js'
 import { AgentLoader } from '../../utils/agentLoader.js'
@@ -292,7 +293,7 @@ ${content ? `\n当前内容：\n${content}\n` : ''}
  * 判断输入参数是否为主题内容（应该使用 intelligent 模式）
  */
 function isTopicLike(_args: string): boolean {
-  const trimmed = args.trim()
+  const trimmed = _args.trim()
   if (!trimmed) return false
   
   // 引号包围的内容，明确是主题
@@ -336,7 +337,7 @@ export const slideCreateCommand: SlashCommand = {
 
   async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
     // 委托给主命令
-    return slideCommand.getPromptForCommand!(`create ${_args}`, context)
+    return slideCommand.getPromptForCommand!(`create ${_args}`, _context)
   },
 
   allowedTools: ['SlidevGenerator'],
@@ -359,7 +360,7 @@ export const slideConvertCommand: SlashCommand = {
 
   async getPromptForCommand(_args: string, _context: AgentContext): Promise<string> {
     // 委托给主命令
-    return slideCommand.getPromptForCommand!(`convert ${_args}`, context)
+    return slideCommand.getPromptForCommand!(`convert ${_args}`, _context)
   },
 
   allowedTools: ['SlideConverter'],
@@ -586,7 +587,7 @@ npx @slidev/cli ${targetFile} --open
 - 网络连接是否正常`
       }
     } catch (_error) {
-      return `❌ 启动失败：${error}
+      return `❌ 启动失败：${_error}
 
 🔧 故障排除：
 1. 检查 Node.js 和 npm 是否正常工作
@@ -651,7 +652,7 @@ async function checkSlidevDependency(): Promise<{
   } catch (_error) {
     return {
       available: false,
-      message: `依赖检查失败: ${error}`,
+      message: `依赖检查失败: ${_error}`,
       solutions: [
         '检查 Node.js 和 npm 是否正确安装',
         '重启终端并重试',

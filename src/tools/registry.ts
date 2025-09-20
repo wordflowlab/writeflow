@@ -61,7 +61,7 @@ export async function getAvailableTools(): Promise<WriteFlowTool[]> {
   const enabledResults = await Promise.all(
     allTools.map(async tool => {
       if (typeof tool.isEnabled === 'function') {
-        return await tool.isEnabled()
+        return tool.isEnabled()
       }
       return true // 默认启用
     }),
@@ -84,7 +84,7 @@ export async function getReadOnlyTools(): Promise<WriteFlowTool[]> {
   const enabledResults = await Promise.all(
     readOnlyTools.map(async tool => {
       if (typeof tool.isEnabled === 'function') {
-        return await tool.isEnabled()
+        return tool.isEnabled()
       }
       return true
     }),

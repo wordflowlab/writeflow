@@ -191,7 +191,7 @@ export default function TextInput({
     }, 100)
   }
 
-  const wrappedOnInput = (input: string, key: string): void => {
+  const wrappedOnInput = (input: string, key: any): void => {
     // Check for special key combinations first
     if (onSpecialKey && onSpecialKey(input, key)) {
       // Special key was handled, don't process further
@@ -200,15 +200,15 @@ export default function TextInput({
     
     // Special handling for backspace or delete
     if (
-      key.backspace ||
-      key.delete ||
+      (key as any).backspace ||
+      (key as any).delete ||
       input === '\b' ||
       input === '\x7f' ||
       input === '\x08'
     ) {
       // Ensure backspace is handled directly
       onInput(input, {
-        ...key,
+        ...(key as any),
         backspace: true,
       })
       return

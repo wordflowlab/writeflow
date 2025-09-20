@@ -176,8 +176,7 @@ export class PermissionManager {
    */
   async checkToolPermission(
     tool: WriteFlowTool, 
-    input: any, 
-    context: ToolUseContext,
+    input: any, _context: ToolUseContext,
   ): Promise<PermissionResult> {
     const toolName = tool.name
     
@@ -222,7 +221,7 @@ export class PermissionManager {
       }
       
       // 检查是否为自动授权模式（CLI 模式）
-      if (context.options?.autoApprove === true) {
+      if (_context.options?.autoApprove === true) {
         return { isAllowed: true }
       }
       

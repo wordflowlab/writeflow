@@ -105,7 +105,7 @@ export class DeepSeekStreamAdapter extends OpenAIStreamAdapter {
           chunks.push({
             content: '',
             done: false,
-            error: `Failed to parse DeepSeek response: ${error}`,
+            error: `Failed to parse DeepSeek response: ${_error}`,
             raw: trimmed
           })
         }

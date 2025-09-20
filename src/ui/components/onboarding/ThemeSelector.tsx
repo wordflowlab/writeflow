@@ -63,19 +63,19 @@ export function ThemeSelector({
   const theme = getTheme(previewTheme)
 
   useInput((input, key) => {
-    if (key.upArrow) {
+    if ((key as any).upArrow) {
       const newIndex = selectedIndex > 0 ? selectedIndex - 1 : THEME_OPTIONS.length - 1
       setSelectedIndex(newIndex)
       const newTheme = THEME_OPTIONS[newIndex].value
       setPreviewTheme(newTheme)
       onThemePreview?.(newTheme)
-    } else if (key.downArrow) {
+    } else if ((key as any).downArrow) {
       const newIndex = selectedIndex < THEME_OPTIONS.length - 1 ? selectedIndex + 1 : 0
       setSelectedIndex(newIndex) 
       const newTheme = THEME_OPTIONS[newIndex].value
       setPreviewTheme(newTheme)
       onThemePreview?.(newTheme)
-    } else if (key.return) {
+    } else if ((key as any).return) {
       onThemeSelect(THEME_OPTIONS[selectedIndex].value)
     }
   })

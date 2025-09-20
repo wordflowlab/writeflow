@@ -28,7 +28,7 @@ export class MCPListTool implements WritingTool {
       if (type === 'sse') {
         out += `   url: ${s?.url || '-'}\n`
       } else {
-        out += `   command: ${s?.command || '-'} ${(s?._args || []).join(' ')}\n`
+        out += `   command: ${s?.command || '-'} ${(s?.args || []).join(' ')}\n`
       }
     }
     return { success: true, content: out }

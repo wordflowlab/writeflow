@@ -76,7 +76,7 @@ export class SlideConverter implements Tool {
     } catch (_error) {
       return {
         success: false,
-        error: `转换失败: ${error instanceof Error ? error.message : String(error)}`
+        error: `转换失败: ${_error instanceof Error ? _error.message : String(_error)}`
       }
     }
   }

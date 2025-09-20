@@ -95,7 +95,7 @@ export class SixLayerSecurityValidator {
       
       return {
         allowed: false,
-        reason: `安全验证错误: ${(error as Error).message}`,
+        reason: `安全验证错误: ${(_error as Error).message}`,
         warnings,
         risks,
         mitigations

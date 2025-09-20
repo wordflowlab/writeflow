@@ -88,7 +88,7 @@ export class OpenAIStreamAdapter extends StreamAdapter {
           chunks.push({
             content: '',
             done: false,
-            error: `Failed to parse OpenAI response: ${error}`,
+            error: `Failed to parse OpenAI response: ${_error}`,
             raw: trimmed
           })
         }

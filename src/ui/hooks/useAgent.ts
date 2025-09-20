@@ -63,12 +63,12 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
       const errorMessage = (_error as Error).message
       
       updateExecution(execution.id, {
-        status: '_error',
-        _error: errorMessage,
+        status: 'error',
+        error: errorMessage,
         endTime: new Date()
       })
       
-      throw error
+      throw _error
       
     } finally {
       setIsProcessing(false)
@@ -108,8 +108,8 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
       const errorMessage = (_error as Error).message
       
       updateExecution(execution.id, {
-        status: '_error',
-        _error: errorMessage,
+        status: 'error',
+        error: errorMessage,
         endTime: new Date()
       })
       
@@ -145,8 +145,8 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
       
     } catch (_error) {
       updateExecution(execution.id, {
-        status: '_error',
-        _error: (_error as Error).message,
+        status: 'error',
+        error: (_error as Error).message,
         endTime: new Date()
       })
     }
@@ -155,7 +155,7 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
   const processInput = useCallback(async (input: string, inputMode: InputMode): Promise<string> => {
     switch (inputMode) {
       case InputMode.Bash:
-        return await executeBash(input)
+        return executeBash(input)
         
       case InputMode.Memory:
         await saveMemoryNote(input)
@@ -163,10 +163,10 @@ export function useAgent(writeFlowApp: WriteFlowApp) {
         
       default:
         if (input.startsWith('/')) {
-          return await executeCommand(input)
+          return executeCommand(input)
         } else {
           // 自由文本处理
-          return await executeCommand(input)
+          return executeCommand(input)
         }
     }
   }, [executeCommand, executeBash, saveMemoryNote])

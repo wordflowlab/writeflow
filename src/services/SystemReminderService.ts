@@ -337,7 +337,7 @@ export class SystemReminderService {
       try {
         callback(context)
       } catch (_error) {
-        logError(`Error in event listener for ${event}:`, error)
+        logError(`Error in event listener for ${event}:`, _error)
       }
     })
   }

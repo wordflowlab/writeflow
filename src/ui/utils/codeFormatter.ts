@@ -57,7 +57,7 @@ export function formatCode(code: string, options: CodeFormatOptions = {}): Forma
     }
   } catch (_error) {
     // 高亮失败时使用原始代码
-    logWarn(`代码高亮失败: ${error}`)
+    logWarn(`代码高亮失败: ${_error}`)
     highlightedCode = code
   }
 

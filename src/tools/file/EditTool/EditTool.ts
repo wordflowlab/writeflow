@@ -54,11 +54,10 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
   }
 
   async checkPermissions(
-    input: EditToolInput,
-    context: ToolUseContext
+    input: EditToolInput, _context: ToolUseContext
   ): Promise<PermissionResult> {
     // 基础权限检查
-    const baseResult = await super.checkPermissions(input, context)
+    const baseResult = await super.checkPermissions(input, _context)
     if (!baseResult.isAllowed) {
       return baseResult
     }
@@ -66,7 +65,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
     try {
       // 检查文件读写权限
       const resolvedPath = resolve(input.file_path)
-      await this.checkFilePermissions(resolvedPath, 'write', context)
+      await this.checkFilePermissions(resolvedPath, 'write', _context)
       
       // 验证文件存在
       if (!existsSync(resolvedPath)) {
@@ -100,7 +99,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
       try {
         originalContent = readFileSync(filePath, 'utf8')
       } catch (_error) {
-        throw new Error(`读取文件失败: ${error instanceof Error ? error.message : String(error)}`)
+        throw new Error(`读取文件失败: ${_error instanceof Error ? _error.message : String(_error)}`)
       }
 
       // 3. 验证输入
@@ -149,7 +148,7 @@ export class EditTool extends ToolBase<typeof EditToolInputSchema, EditToolOutpu
       try {
         writeFileSync(filePath, newContent, 'utf8')
       } catch (_error) {
-        throw new Error(`写入文件失败: ${error instanceof Error ? error.message : String(error)}`)
+        throw new Error(`写入文件失败: ${_error instanceof Error ? _error.message : String(_error)}`)
       }
 
       // 7. 构建结果

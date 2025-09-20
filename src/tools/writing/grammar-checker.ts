@@ -79,7 +79,7 @@ export class GrammarCheckerTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `语法检查失败: ${(error as Error).message}`
+        error: `语法检查失败: ${(_error as Error).message}`
       }
     }
   }
@@ -207,10 +207,10 @@ export class GrammarCheckerTool implements WritingTool {
     
     // 常见拼写错误
     const spellingErrors = [
-      { wrong: '即时', correct: '即使', context: '即时.*也' },
-      { wrong: '做为', correct: '作为', context: '做为.*来说' },
-      { wrong: '即然', correct: '既然', context: '即然.*就' },
-      { wrong: '既使', correct: '即使', context: '既使.*也' }
+      { wrong: '即时', correct: '即使', _context: '即时.*也' },
+      { wrong: '做为', correct: '作为', _context: '做为.*来说' },
+      { wrong: '即然', correct: '既然', _context: '即然.*就' },
+      { wrong: '既使', correct: '即使', _context: '既使.*也' }
     ]
 
     const lines = content.split('\n')

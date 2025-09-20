@@ -91,8 +91,7 @@ const darkTheme: Theme = {
     diff: {
       added: chalk.green,
       removed: chalk.red,
-      modified: chalk.yellow,
-      context: chalk.dim,
+      modified: chalk.yellow, context: chalk.dim,
       header: chalk.bold.white
     },
     
@@ -139,8 +138,7 @@ const lightTheme: Theme = {
     diff: {
       added: chalk.green,
       removed: chalk.red,
-      modified: chalk.rgb(184, 134, 11),
-      context: chalk.gray,
+      modified: chalk.rgb(184, 134, 11), context: chalk.gray,
       header: chalk.bold.black
     },
     
@@ -334,8 +332,7 @@ export class ThemeManager {
         diff: {
           added: noColor as any,
           removed: noColor as any,
-          modified: noColor as any,
-          context: noColor as any,
+          modified: noColor as any, context: noColor as any,
           header: noColor as any
         },
         border: noColor as any,

@@ -88,7 +88,7 @@ export class AnthropicProvider {
     }
     
     if (request.stream) {
-      return await this.handleAnthropicStreamingResponse(response, profile, request)
+      return this.handleAnthropicStreamingResponse(response, profile, request)
     }
 
     const data = await response.json()

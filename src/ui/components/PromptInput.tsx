@@ -89,7 +89,7 @@ export function PromptInput({
   
   // Simple input handling (will be enhanced with TextInput later)
   const handleInput = useCallback((inputChar: string, key: any) => {
-    if (key.ctrl && inputChar === 'c') {
+    if ((key as any).ctrl && inputChar === 'c') {
       setExitMessage({ show: true, key: 'Ctrl-C' })
       setTimeout(() => {
         process.exit(0)
@@ -105,7 +105,7 @@ export function PromptInput({
       return
     }
     
-    if (key.return) {
+    if ((key as any).return) {
       // 优先处理文件补全
       if (fileCompletionState.isActive && fileCompletionState.suggestions.length > 0) {
         applySelectedFile()
@@ -121,14 +121,14 @@ export function PromptInput({
       return
     }
     
-    if (key.backspace || key.delete) {
+    if ((key as any).backspace || (key as any).delete) {
       onInputChange(input.slice(0, -1))
       setCursorOffset(Math.max(0, input.length - 1))
       return
     }
     
     // Mode switching
-    if (key.ctrl && inputChar === 'm') {
+    if ((key as any).ctrl && inputChar === 'm') {
       const modes: WriteMode[] = ['writing', 'editing', 'reviewing']
       const currentIndex = modes.indexOf(mode)
       const nextMode = modes[(currentIndex + 1) % modes.length]

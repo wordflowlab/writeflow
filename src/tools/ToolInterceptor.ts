@@ -56,10 +56,9 @@ export class ToolInterceptor {
    */
   async interceptToolCall(
     tool: WritingTool,
-    input: ToolInput,
-    context: ToolCallContext,
+    input: ToolInput, _context: ToolCallContext,
   ): Promise<ToolCallResult> {
-    const { toolName, currentMode } = context
+    const { toolName, currentMode } = _context
 
     try {
       // 1. 权限检查
@@ -73,16 +72,16 @@ export class ToolInterceptor {
       // 2. 生成系统提醒
       let reminder: SystemReminder | undefined
       if (this.config.enableSystemReminders) {
-        reminder = this.reminderInjector.generateToolCallReminder(context) || undefined
+        reminder = this.reminderInjector.generateToolCallReminder(_context) || undefined
       }
 
       // 3. 特殊工具处理
       if (toolName === 'exit_plan_mode' && currentMode === PlanMode.Plan) {
-        return await this.handleExitPlanMode(tool, input, context, reminder)
+        return this.handleExitPlanMode(tool, input, _context, reminder)
       }
 
       // 4. 执行工具调用
-      const result = await this.executeToolCall(tool, input, context)
+      const result = await this.executeToolCall(tool, input, _context)
 
       return {
         success: true,
@@ -93,8 +92,8 @@ export class ToolInterceptor {
     } catch (_error) {
       return {
         success: false,
-        _error: _error instanceof Error ? _error.message : '工具执行失败',
-        reminder: this.reminderInjector.generateToolCallReminder(context) || undefined,
+        error: _error instanceof Error ? _error.message : '工具执行失败',
+        reminder: this.reminderInjector.generateToolCallReminder(_context) || undefined,
       }
     }
   }
@@ -143,13 +142,12 @@ export class ToolInterceptor {
    */
   private async handleExitPlanMode(
     tool: WritingTool,
-    input: ToolInput,
-    context: ToolCallContext,
+    input: ToolInput, _context: ToolCallContext,
     reminder?: SystemReminder,
   ): Promise<ToolCallResult> {
     try {
       // 执行 exit_plan_mode 工具
-      const result = await this.executeToolCall(tool, input, context)
+      const result = await this.executeToolCall(tool, input, _context)
       
       // 如果计划被批准，生成模式切换提醒
       const exitResult = result.metadata as any
@@ -174,7 +172,7 @@ export class ToolInterceptor {
     } catch (_error) {
       return {
         success: false,
-        _error: _error instanceof Error ? _error.message : 'Exit plan mode 执行失败',
+        error: _error instanceof Error ? _error.message : 'Exit plan mode 执行失败',
         reminder,
       }
     }
@@ -185,10 +183,9 @@ export class ToolInterceptor {
    */
   private async executeToolCall(
     tool: WritingTool,
-    input: ToolInput,
-    context: ToolCallContext,
+    input: ToolInput, _context: ToolCallContext,
   ): Promise<ToolResult> {
-    return await tool.execute(input)
+    return tool.execute(input)
   }
 
   /**

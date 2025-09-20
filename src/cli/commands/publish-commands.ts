@@ -1,4 +1,5 @@
 import { SlashCommand } from '../../types/command.js'
+import type { ToolUseContext } from '../../Tool.js'
 import { AgentContext } from '../../types/agent.js'
 import { getTool } from '../../tools/index.js'
 
@@ -51,7 +52,7 @@ export const publishCommands: SlashCommand[] = [
             options: { verbose: false, safeMode: true }
           }
           
-          const callResult = readTool.call({ file_path: filePath }, context)
+          const callResult = readTool.call({ file_path: filePath }, { ..._context, abortController: new AbortController(), readFileTimestamps: new Map() } as unknown as ToolUseContext)
           let result = null
           
           if (Symbol.asyncIterator in callResult) {
@@ -85,7 +86,7 @@ export const publishCommands: SlashCommand[] = [
             throw new Error(`无法读取文件: ${(result as any)?.error || '未知错误'}`)
           }
         } catch (_error) {
-          throw new Error(`读取文件失败: ${(error as Error).message}`)
+          throw new Error(`读取文件失败: ${(_error as Error).message}`)
         }
       } else {
         fileContent = filePath // 直接内容
@@ -166,7 +167,7 @@ ${getPlatformRequirements(platform)}
             options: { verbose: false, safeMode: true }
           }
           
-          const callResult = readTool.call({ file_path: filePath }, context)
+          const callResult = readTool.call({ file_path: filePath }, { ..._context, abortController: new AbortController(), readFileTimestamps: new Map() } as unknown as ToolUseContext)
           let result = null
           
           if (Symbol.asyncIterator in callResult) {
@@ -202,7 +203,7 @@ ${getPlatformRequirements(platform)}
             throw new Error(`无法读取文件: ${(result as any)?.error || '未知错误'}`)
           }
         } catch (_error) {
-          throw new Error(`读取文件失败: ${(error as Error).message}`)
+          throw new Error(`读取文件失败: ${(_error as Error).message}`)
         }
       } else {
         fileContent = filePath // 直接内容

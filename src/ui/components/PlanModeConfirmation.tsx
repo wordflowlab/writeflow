@@ -34,13 +34,13 @@ export function PlanModeConfirmation({ plan, onConfirm, onCancel }: PlanModeConf
   ]
 
   useInput((input, key) => {
-    if (key.upArrow && selectedOption > 0) {
+    if ((key as any).upArrow && selectedOption > 0) {
       setSelectedOption(selectedOption - 1)
-    } else if (key.downArrow && selectedOption < options.length - 1) {
+    } else if ((key as any).downArrow && selectedOption < options.length - 1) {
       setSelectedOption(selectedOption + 1)
-    } else if (key.return) {
+    } else if ((key as any).return) {
       onConfirm(options[selectedOption].key)
-    } else if (key.escape && onCancel) {
+    } else if ((key as any).escape && onCancel) {
       onCancel()
     } else if (input >= '1' && input <= '3') {
       const index = parseInt(input) - 1

@@ -1,5 +1,4 @@
-import { promises as fs } from 'fs'
-import fsSync from 'fs'
+import fsSync, { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
 import { z } from 'zod'

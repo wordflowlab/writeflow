@@ -244,7 +244,7 @@ async function runAllExamples() {
       await example.fn()
       
     } catch (_error) {
-      logError(`❌ ${example.name} 执行失败:`, (error as Error).message)
+      logError(`❌ ${example.name} 执行失败:`, (_error as Error).message)
     }
     
     if (i < examples.length - 1) {

@@ -44,7 +44,7 @@ export function renderMarkdown(content: string, options: MarkdownRenderOptions =
 
     return rendered.trim()
   } catch (_error) {
-    logWarn(`Markdown 渲染失败: ${error}`)
+    logWarn(`Markdown 渲染失败: ${_error}`)
     return formatInlineCode(content)
   }
 }

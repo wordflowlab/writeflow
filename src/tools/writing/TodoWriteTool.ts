@@ -87,8 +87,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
 
   // 执行工具
   async execute(
-    input: z.infer<typeof InputSchema>,
-    context: ToolUseContext
+    input: z.infer<typeof InputSchema>, _context: ToolUseContext
   ): Promise<ToolResult<string>> {
     try {
       const { todos } = input
@@ -121,7 +120,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
       const successMessage = `✅ 任务列表更新成功！${changeAnalysis}\n\n${formattedTodos}\n\n🔄 请继续使用任务列表跟踪您的进度并继续执行当前任务。`
 
       // 触发系统提醒事件
-      this.emitTodoChangedEvent(oldTodos, todoList, context)
+      this.emitTodoChangedEvent(oldTodos, todoList, _context)
 
       return {
         success: true,
@@ -131,12 +130,12 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
           oldTodosCount: oldTodos.length,
           newTodosCount: todoList.length,
           timestamp: new Date().toISOString(),
-          agentId: context.agentId || 'default'
+          agentId: _context.agentId || 'default'
         }
       }
 
     } catch (_error) {
-      const errorMessage = `更新任务列表失败: ${error instanceof Error ? error.message : '未知错误'}`
+      const errorMessage = `更新任务列表失败: ${_error instanceof Error ? _error.message : '未知错误'}`
       
       return {
         success: false,
@@ -145,7 +144,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
         metadata: {
           error: errorMessage,
           timestamp: new Date().toISOString(),
-          agentId: context.agentId || 'default'
+          agentId: _context.agentId || 'default'
         }
       }
     }
@@ -242,8 +241,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
   // 触发 Todo 变化事件
   private emitTodoChangedEvent(
     oldTodos: Todo[],
-    newTodos: Todo[],
-    context: ToolUseContext
+    newTodos: Todo[], _context: ToolUseContext
   ): void {
     // 判断变化类型
     let changeType: 'added' | 'removed' | 'modified' = 'modified'
@@ -257,7 +255,7 @@ export class TodoWriteTool implements WritingTool<typeof InputSchema, string> {
       oldTodos,
       newTodos,
       timestamp: Date.now(),
-      agentId: context.agentId || 'default',
+      agentId: _context.agentId || 'default',
       changeType
     }
 

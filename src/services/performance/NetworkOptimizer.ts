@@ -228,7 +228,7 @@ export class NetworkOptimizer extends EventEmitter {
         return this.retryRequest(requestId, url, options, startTime, connection.requestCount)
       }
       
-      throw error
+      throw _error
     }
   }
 

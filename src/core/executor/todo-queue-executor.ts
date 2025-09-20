@@ -128,7 +128,7 @@ export class TodoQueueExecutor {
       }
 
     } catch (_error) {
-      this.log('_error', '❌ TODO 队列执行失败:', _error)
+      this.log('error', '❌ TODO 队列执行失败:', _error)
       
       return {
         success: false,
@@ -341,7 +341,7 @@ export class TodoQueueExecutor {
   /**
    * 日志记录
    */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ..._args: any[]): void {
+  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]): void {
     const levels = { debug: 0, info: 1, warn: 2, error: 3 }
     const configLevel = levels[this.config.logLevel]
     const messageLevel = levels[level]
@@ -352,16 +352,16 @@ export class TodoQueueExecutor {
       
       switch (level) {
         case 'debug':
-          console.debug(prefix, message, ..._args)
+          console.debug(prefix, message, ...args)
           break
         case 'info':
-          debugLog(prefix, message, ..._args)
+          debugLog(prefix, message, ...args)
           break
         case 'warn':
-          logWarn(`${prefix} ${message}`, _args.length > 0 ? args[0] : undefined)
+          logWarn(`${prefix} ${message}`, args.length > 0 ? args[0] : undefined)
           break
         case 'error':
-          logError(`${prefix} ${message}`, _args.length > 0 ? args[0] : undefined)
+          logError(`${prefix} ${message}`, args.length > 0 ? args[0] : undefined)
           break
       }
     }
@@ -383,6 +383,6 @@ export class TodoQueueExecutor {
    */
   public static async execute(options?: Parameters<typeof TodoQueueExecutor.create>[0]): Promise<ReturnType<TodoQueueExecutor['executeTodoQueue']>> {
     const executor = TodoQueueExecutor.create(options)
-    return await executor.executeTodoQueue()
+    return executor.executeTodoQueue()
   }
 }

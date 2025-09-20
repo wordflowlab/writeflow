@@ -360,8 +360,7 @@ function getThemeColors(theme: 'light' | 'dark') {
   if (theme === 'light') {
     return {
       addition: chalk.green,
-      deletion: chalk.red,
-      context: chalk.gray,
+      deletion: chalk.red, context: chalk.gray,
       header: chalk.bold.blue,
       hunk: chalk.cyan,
       lineNumber: chalk.dim.gray,
@@ -372,8 +371,7 @@ function getThemeColors(theme: 'light' | 'dark') {
   } else {
     return {
       addition: chalk.green,
-      deletion: chalk.red,
-      context: chalk.dim,
+      deletion: chalk.red, context: chalk.dim,
       header: chalk.bold.white,
       hunk: chalk.cyan,
       lineNumber: chalk.dim.gray,

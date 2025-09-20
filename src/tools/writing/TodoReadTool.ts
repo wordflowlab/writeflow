@@ -52,8 +52,7 @@ export class TodoReadTool implements WritingTool<typeof InputSchema, string> {
 
   // 执行工具
   async execute(
-    input: z.infer<typeof InputSchema>,
-    context: ToolUseContext
+    input: z.infer<typeof InputSchema>, _context: ToolUseContext
   ): Promise<ToolResult<string>> {
     try {
       // 获取当前任务列表
@@ -75,12 +74,12 @@ export class TodoReadTool implements WritingTool<typeof InputSchema, string> {
           hasInProgress: todos.some(t => t.status === TodoStatus.IN_PROGRESS),
           hasCompleted: todos.some(t => t.status === TodoStatus.COMPLETED),
           timestamp: new Date().toISOString(),
-          agentId: context.agentId || 'default'
+          agentId: _context.agentId || 'default'
         }
       }
 
     } catch (_error) {
-      const errorMessage = `读取任务列表失败: ${error instanceof Error ? error.message : '未知错误'}`
+      const errorMessage = `读取任务列表失败: ${_error instanceof Error ? _error.message : '未知错误'}`
       
       return {
         success: false,
@@ -89,7 +88,7 @@ export class TodoReadTool implements WritingTool<typeof InputSchema, string> {
         metadata: {
           error: errorMessage,
           timestamp: new Date().toISOString(),
-          agentId: context.agentId || 'default'
+          agentId: _context.agentId || 'default'
         }
       }
     }

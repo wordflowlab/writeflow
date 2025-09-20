@@ -37,11 +37,11 @@ export function PermissionRequest({
   ]
 
   useInput((input, key) => {
-    if (key.upArrow && selectedIndex > 0) {
+    if ((key as any).upArrow && selectedIndex > 0) {
       setSelectedIndex(selectedIndex - 1)
-    } else if (key.downArrow && selectedIndex < options.length - 1) {
+    } else if ((key as any).downArrow && selectedIndex < options.length - 1) {
       setSelectedIndex(selectedIndex + 1)
-    } else if (key.return) {
+    } else if ((key as any).return) {
       const selectedOption = options[selectedIndex]
       switch (selectedOption.value) {
         case 'yes':
@@ -54,7 +54,7 @@ export function PermissionRequest({
           onDeny()
           break
       }
-    } else if (key.escape) {
+    } else if ((key as any).escape) {
       onDeny()
     }
   })

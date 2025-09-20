@@ -1,3 +1,4 @@
+import type { ToolUseContext } from "../../../Tool.js"
 import { logWarn } from '../../../utils/log.js'
 
 /**
@@ -323,7 +324,7 @@ export class ToolExecutionManager {
 
     } catch (_error) {
       // 记录异常错误
-      logToolProgress(executionId, `执行异常: ${error instanceof Error ? error.message : String(error)}`, 'error')
+      logToolProgress(executionId, `执行异常: ${_error instanceof Error ? _error.message : String(_error)}`, 'error')
       
       const errorResult: ToolExecutionResult = {
         toolName,
@@ -332,7 +333,7 @@ export class ToolExecutionManager {
         endTime: Date.now(),
         executionId,
         result: null,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: _error instanceof Error ? _error : new Error(String(_error)),
         logs: ['执行异常'],
         metrics: { duration: 0 }
       }
@@ -443,7 +444,7 @@ export class ToolExecutionManager {
       const tool = getTool(toolName)
       return tool || null
     } catch (_error) {
-      logWarn(`获取工具 ${toolName} 信息失败:`, error)
+      logWarn(`获取工具 ${toolName} 信息失败:`, _error)
       return null
     }
   }

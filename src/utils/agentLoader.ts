@@ -37,7 +37,7 @@ export class AgentLoader {
   private agentConfig: AgentConfig | null = null
   private tools: Map<string, AgentTool> = new Map()
   private lastAccessTime: number = Date.now()
-  private unloadTimer?: NodeJS.Timeout
+  private unloadTimer?: ReturnType<typeof setTimeout>
 
   private constructor(private agentName: string) {}
 
@@ -194,7 +194,7 @@ export class AgentLoader {
           logWarn(`无法加载工具 ${toolName}: 未找到对应的工具类`)
         }
       } catch (_error) {
-        logWarn(`无法加载工具 ${toolName}:`, error)
+        logWarn(`无法加载工具 ${toolName}:`, _error)
       }
     }
   }

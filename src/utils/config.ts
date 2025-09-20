@@ -15,19 +15,19 @@ function cloneDeep<T>(obj: T): T {
   
   const cloned = {} as T
   for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
       cloned[key] = cloneDeep(obj[key])
     }
   }
   return cloned
 }
 
-function memoize<T extends (..._args: any[]) => any>(fn: T): T & { cache: Map<string, any> } {
+function memoize<T extends (...args: any[]) => any>(fn: T): T & { cache: Map<string, any> } {
   const cache = new Map()
-  const memoized = ((..._args: any[]) => {
-    const key = JSON.stringify(_args)
+  const memoized = ((...args: any[]) => {
+    const key = JSON.stringify(args)
     if (cache.has(key)) return cache.get(key)
-    const result = fn(..._args)
+    const result = fn(...args)
     cache.set(key, result)
     return result
   }) as T & { cache: Map<string, any> }
@@ -87,8 +87,7 @@ export type ProjectConfig = {
 }
 
 const DEFAULT_PROJECT_CONFIG: ProjectConfig = {
-  allowedTools: [],
-  context: {},
+  allowedTools: [], context: {},
   history: [],
   dontCrawlDirectory: false,
   enableArchitectTool: false,

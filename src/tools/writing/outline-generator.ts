@@ -60,7 +60,7 @@ export class OutlineGeneratorTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `大纲生成失败: ${(error as Error).message}`
+        error: `大纲生成失败: ${(_error as Error).message}`
       }
     }
   }

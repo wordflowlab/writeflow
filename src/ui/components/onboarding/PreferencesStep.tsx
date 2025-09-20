@@ -115,11 +115,11 @@ export function PreferencesStep({
   useInput((input, key) => {
     const options = getCurrentOptions()
     
-    if (key.upArrow) {
+    if ((key as any).upArrow) {
       setSelectedIndex(selectedIndex > 0 ? selectedIndex - 1 : options.length - 1)
-    } else if (key.downArrow) {
+    } else if ((key as any).downArrow) {
       setSelectedIndex(selectedIndex < options.length - 1 ? selectedIndex + 1 : 0)
-    } else if (key.return) {
+    } else if ((key as any).return) {
       updatePreference(options[selectedIndex].value)
     }
   })

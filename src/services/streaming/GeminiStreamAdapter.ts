@@ -95,7 +95,7 @@ export class GeminiStreamAdapter extends StreamAdapter {
         chunks.push({
           content: '',
           done: false,
-          error: `Failed to parse Gemini response: ${error}`,
+          error: `Failed to parse Gemini response: ${_error}`,
           raw: jsonBlock
         })
       }

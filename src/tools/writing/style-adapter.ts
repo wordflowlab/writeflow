@@ -61,7 +61,7 @@ export class StyleAdapterTool implements WritingTool {
     } catch (_error) {
       return {
         success: false,
-        error: `风格调整失败: ${(error as Error).message}`
+        error: `风格调整失败: ${(_error as Error).message}`
       }
     }
   }
